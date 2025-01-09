@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "@repo/ui": "workspace:*",
-    "next": "^15.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+	"next": "14.2.15",
+    "react": "^18",
+    "react-day-picker": "^9.4.1",
+    "react-dom": "^18"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

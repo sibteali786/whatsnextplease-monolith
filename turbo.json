@@ -1,21 +1,56 @@
 {
-  "$schema": "https://turbo.build/schema.json",
-  "ui": "tui",
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "check-types": {
-      "dependsOn": ["^check-types"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    }
-  }
+	"$schema": "https://turbo.build/schema.json",
+	"globalDependencies": [
+		"**/.env.*local"
+	],
+	"tasks": {
+		"topo": {
+			"dependsOn": [
+				"^topo"
+			]
+		},
+		"build": {
+			"dependsOn": [
+				"^build"
+			],
+			"outputs": [
+				"dist/**",
+				".next/**",
+				"!.next/cache/**"
+			]
+		},
+		"lint": {
+			"dependsOn": [
+				"^topo"
+			]
+		},
+		"format": {
+			"dependsOn": [
+				"^topo"
+			]
+		},
+		"lint:fix": {
+			"dependsOn": [
+				"^topo"
+			]
+		},
+		"format:fix": {
+			"dependsOn": [
+				"^topo"
+			]
+		},
+		"check-types": {},
+		"dev": {
+			"cache": false,
+			"persistent": true
+		},
+		"add-shadcn-component": {
+			"dependsOn": [
+				"^topo"
+			]
+		},
+		"clean": {
+			"cache": false
+		}
+	}
 }

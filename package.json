@@ -2,10 +2,17 @@
   "name": "whatsnextplease-monolith",
   "private": true,
   "scripts": {
+	"changeset": "changeset",
+    "publish:packages": "changeset publish",
+    "version:packages": "turbo build && changeset version",
+    "add-shadcn-component": "turbo run add-shadcn-component -- --",
     "build": "turbo build",
     "dev": "turbo dev",
-    "lint": "turbo lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "turbo format --continue --",
+    "format:fix": "turbo format --continue -- --write",
+    "lint": "turbo lint --continue --",
+    "lint:fix": "turbo lint --continue -- --apply",
+    "clean": "turbo clean"
   },
   "devDependencies": {
     "prettier": "^3.2.5",
