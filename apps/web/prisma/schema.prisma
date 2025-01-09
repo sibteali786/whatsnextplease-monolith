@@ -1,0 +1,473 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema file
+
+// Generator and Datasource
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql" // Adjust this if you're using a different database
+    url      = env("DATABASE_URL")
+}
+
+//// =========================================
+// Users and Roles
+//// =========================================
+enum Roles {
+    SUPER_USER
+    DISTRICT_MANAGER
+    TERRITORY_MANAGER
+    ACCOUNT_EXECUTIVE
+    TASK_SUPERVISOR
+    TASK_AGENT
+    CLIENT
+}
+
+model Role {
+    id          String   @id @default(uuid())
+    name        Roles    @unique @default(SUPER_USER)
+    description String?
+    users       User[]
+    clients     Client[]
+}
+
+model User {
+    id                  String               @id @default(uuid())
+    firstName           String
+    lastName            String
+    username            String               @unique
+    email               String               @unique
+    passwordHash        String
+    phone               String?
+    address             String?
+    city                String?
+    state               String?
+    zipCode             String?
+    avatarUrl           String?
+    roleId              String?
+    role                Role?                @relation(fields: [roleId], references: [id])
+    designation         String?
+    userSkills          UserSkill[]
+    tasksCreated        Task[]               @relation("TasksCreatedByUser")
+    tasksAssigned       Task[]               @relation("TaskAssignedTo")
+    messagesSent        Message[]
+    messageParticipants MessageParticipant[]
+    auditLogs           AuditLog[]
+    notifications       Notification[]
+    files               File[]               @relation("UserFiles")
+    userTerritories     UserTerritory[]
+    userSchedules       UserSchedule[]
+    TaskHistory         TaskHistory[]        @relation("TaskHistoryChangedBy")
+    createdAt           DateTime             @default(now())
+    updatedAt           DateTime             @updatedAt
+}
+
+model UserSkill {
+    userId  String
+    user    User   @relation(fields: [userId], references: [id])
+    skillId String
+    skill   Skill  @relation(fields: [skillId], references: [id])
+
+    @@id([userId, skillId])
+}
+
+//// =========================================
+// Clients and Contacts
+//// =========================================
+
+model Client {
+    id            String         @id @default(uuid())
+    email         String         @unique
+    username      String         @unique
+    passwordHash  String
+    companyName   String
+    contactName   String?
+    phone         String?
+    website       String?
+    address1      String?
+    address2      String?
+    city          String?
+    state         String?
+    zipCode       String?
+    tasksCreated  Task[]         @relation("TasksCreatedByClient")
+    clientBilling ClientBilling?
+    files         File[]         @relation("ClientFiles")
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    Invoice       Invoice[]
+    avatarUrl     String?
+    roleId        String?
+    role          Role?          @relation(fields: [roleId], references: [id])
+    notifications Notification[]
+}
+
+//// =========================================
+// Tasks and Task Management
+//// =========================================
+
+enum TaskPriorityEnum {
+    URGENT
+    LOW_PRIORITY
+    NORMAL
+}
+
+model TaskPriority {
+    id           String           @id @default(uuid())
+    priorityName TaskPriorityEnum @default(NORMAL)
+    tasks        Task[]
+    rates        Rate[]
+}
+
+enum TaskStatusEnum {
+    NEW
+    OVERDUE
+    IN_PROGRESS
+    COMPLETED
+}
+
+model TaskStatus {
+    id            String         @id @default(uuid())
+    statusName    TaskStatusEnum @default(NEW)
+    tasks         Task[]
+    taskHistories TaskHistory[]
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+}
+
+// FIXME: taskCategoryName should be decided if it can be an enum or something user can add or modify over time.
+model TaskCategory {
+    id            String         @id @default(uuid())
+    categoryName  String
+    tasks         Task[]
+    taskOfferings TaskOffering[]
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+}
+
+// TODO: Task can be created by Client / Super User / Task SuperVisor, modify schema to reflect this, A
+// TODO: Also add ability to attach files with a task, overtime, time to complete a task, required hours to complete task.
+// Updated Task model
+model Task {
+    id                String        @id @default(uuid())
+    title             String
+    description       String
+    priorityId        String
+    priority          TaskPriority  @relation(fields: [priorityId], references: [id])
+    statusId          String
+    status            TaskStatus    @relation(fields: [statusId], references: [id])
+    taskCategoryId    String
+    taskCategory      TaskCategory  @relation(fields: [taskCategoryId], references: [id])
+    assignedToId      String?
+    assignedTo        User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+    createdByUserId   String? // Nullable, used if created by User
+    createdByUser     User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
+    createdByClientId String? // Nullable, used if created by Client
+    createdByClient   Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
+    creatorType       CreatorType
+    dueDate           DateTime?
+    timeForTask       Decimal       @db.Decimal(10, 2) // Time to complete the task in hours
+    overTime          Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
+    taskHistories     TaskHistory[]
+    invoices          Invoice[]
+    taskSkills        TaskSkill[]
+    taskFiles         TaskFile[] // Relation to TaskFile for attachments
+    createdAt         DateTime      @default(now())
+    updatedAt         DateTime      @updatedAt
+}
+
+// Enum to distinguish between User and Client as the creator
+enum CreatorType {
+    USER
+    CLIENT
+}
+
+// New model to handle many-to-many relationship between Task and File
+model TaskFile {
+    id     String @id @default(uuid())
+    taskId String
+    task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    fileId String
+    file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+    @@unique([taskId, fileId]) // Ensure no duplicate task-file associations
+}
+
+model TaskSkill {
+    taskId  String
+    task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    skillId String
+    skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+    @@id([taskId, skillId])
+}
+
+//// =========================================
+// Messaging
+//// =========================================
+
+model MessageThread {
+    id           String               @id @default(uuid())
+    subject      String?
+    createdAt    DateTime             @default(now())
+    messages     Message[]
+    participants MessageParticipant[]
+    updatedAt    DateTime             @updatedAt
+}
+
+model Message {
+    id        String        @id @default(uuid())
+    threadId  String
+    senderId  String
+    content   String
+    createdAt DateTime      @default(now())
+    thread    MessageThread @relation(fields: [threadId], references: [id])
+    sender    User          @relation(fields: [senderId], references: [id])
+    updatedAt DateTime      @updatedAt
+}
+
+model MessageParticipant {
+    threadId String
+    userId   String
+    thread   MessageThread @relation(fields: [threadId], references: [id])
+    user     User          @relation(fields: [userId], references: [id])
+
+    @@id([threadId, userId])
+}
+
+//// =========================================
+// Skills and Task Offerings
+//// =========================================
+
+model SkillCategory {
+    id           String   @id @default(uuid())
+    categoryName String
+    skills       Skill[]
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+}
+
+model Skill {
+    id              String        @id @default(uuid())
+    name            String
+    description     String?
+    skillCategoryId String
+    skillCategory   SkillCategory @relation(fields: [skillCategoryId], references: [id])
+    userSkills      UserSkill[]
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+    taskSkills      TaskSkill[]
+}
+
+model TaskOffering {
+    id             String       @id @default(uuid())
+    description    String?
+    taskCategoryId String
+    taskCategory   TaskCategory @relation(fields: [taskCategoryId], references: [id])
+    rates          Rate[]
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+}
+
+//// =========================================
+// Rates and Billing
+//// =========================================
+
+model Rate {
+    id             String       @id @default(uuid())
+    rateAmount     Decimal      @db.Decimal(10, 2)
+    taskOfferingId String
+    taskOffering   TaskOffering @relation(fields: [taskOfferingId], references: [id])
+    priorityId     String
+    priority       TaskPriority @relation(fields: [priorityId], references: [id])
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+}
+
+model ClientBilling {
+    id           String   @id @default(uuid())
+    prepaidHours Decimal  @default(0.0) @db.Decimal(5, 2)
+    clientId     String   @unique
+    client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+}
+
+enum InvoiceStatus {
+    PAID
+    PENDING
+    OVERDUE
+}
+
+model Invoice {
+    id            String        @id @default(uuid())
+    clientId      String
+    client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+    taskId        String
+    task          Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    invoiceNumber String        @unique
+    date          DateTime      @default(now())
+    amount        Decimal       @db.Decimal(10, 2)
+    status        InvoiceStatus @default(PENDING) // Default to PENDING   
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+}
+
+//// =========================================
+// File Management
+//// =========================================
+
+model FileCategory {
+    id           String   @id @default(uuid())
+    categoryName String
+    files        File[]
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+}
+
+model File {
+    id             String        @id @default(uuid())
+    fileName       String
+    filePath       String // URL or path to where the file is stored
+    fileSize       String
+    uploadedAt     DateTime      @default(now())
+    fileCategoryId String?
+    fileCategory   FileCategory? @relation(fields: [fileCategoryId], references: [id])
+    ownerUserId    String?
+    ownerUser      User?         @relation("UserFiles", fields: [ownerUserId], references: [id])
+    ownerClientId  String?
+    ownerClient    Client?       @relation("ClientFiles", fields: [ownerClientId], references: [id])
+    tasks          TaskFile[] // Relation to TaskFile for task attachments
+    createdAt      DateTime      @default(now())
+    updatedAt      DateTime      @updatedAt
+    uploadedBy     String // Name of the user who uploaded the file
+}
+
+//// =========================================
+// Picklists
+//// =========================================
+
+model Picklist {
+    id           String   @id @default(uuid())
+    picklistName String
+    value        String
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+}
+
+//// =========================================
+// Districts and Territories
+//// =========================================
+
+model District {
+    id           String      @id @default(uuid())
+    districtName String
+    territories  Territory[]
+    createdAt    DateTime    @default(now())
+    updatedAt    DateTime    @updatedAt
+}
+
+model Territory {
+    id              String          @id @default(uuid())
+    territoryName   String
+    districtId      String
+    district        District        @relation(fields: [districtId], references: [id])
+    userTerritories UserTerritory[]
+    createdAt       DateTime        @default(now())
+    updatedAt       DateTime        @updatedAt
+}
+
+model UserTerritory {
+    userId      String
+    user        User      @relation(fields: [userId], references: [id])
+    territoryId String
+    territory   Territory @relation(fields: [territoryId], references: [id])
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+
+    @@id([userId, territoryId])
+}
+
+//// =========================================
+// Schedules and Availability
+//// =========================================
+
+model UserSchedule {
+    id            String    @id @default(uuid())
+    availableFrom DateTime?
+    availableTo   DateTime?
+    dayOfWeek     String?
+    userId        String
+    user          User      @relation(fields: [userId], references: [id])
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+}
+
+//// =========================================
+// Audit Logs
+//// =========================================
+
+model AuditLog {
+    id        String   @id @default(uuid())
+    action    String
+    timestamp DateTime @default(now())
+    userId    String
+    user      User     @relation(fields: [userId], references: [id])
+}
+
+//// =========================================
+// Notifications and Alerts
+//// =========================================
+
+enum NotificationType {
+    TASK_ASSIGNED
+    TASK_COMPLETED
+    TASK_MODIFIED
+    MESSAGE_RECEIVED
+    SYSTEM_ALERT
+    PAYMENT_RECEIVED
+}
+
+enum NotificationStatus {
+    UNREAD
+    READ
+    ARCHIVED
+}
+
+model Notification {
+    id        String             @id @default(uuid())
+    type      NotificationType
+    status    NotificationStatus @default(UNREAD)
+    message   String
+    data      Json? // Additional payload
+    userId    String?
+    user      User?              @relation(fields: [userId], references: [id])
+    clientId  String?
+    client    Client?            @relation(fields: [clientId], references: [id])
+    createdAt DateTime           @default(now())
+    updatedAt DateTime           @updatedAt
+
+    @@index([userId, status])
+    @@index([clientId, status])
+}
+
+//// =========================================
+// Additional Tables
+//// =========================================
+
+model TaskHistory {
+    id          String     @id @default(uuid())
+    changedAt   DateTime   @default(now())
+    taskId      String
+    task        Task       @relation(fields: [taskId], references: [id])
+    statusId    String
+    status      TaskStatus @relation(fields: [statusId], references: [id])
+    changedById String
+    changedBy   User?      @relation("TaskHistoryChangedBy", fields: [changedById], references: [id])
+    createdAt   DateTime   @default(now())
+    updatedAt   DateTime   @updatedAt
+}
