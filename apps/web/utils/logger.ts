@@ -5,18 +5,21 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const logger = pino({
   level: isProduction ? "info" : "debug",
-  // Disable worker threads by using a custom transport or destination
-  transport: isProduction
-    ? undefined // In production, use default synchronous logging
-    : {
-        target: "pino-pretty", // For development, pretty-print logs
-        options: {
-          colorize: true,
-          translateTime: "SYS:standard",
-          ignore: "pid,hostname",
-        },
-      },
-  redact: [], // prevent logging of sensitive data
-}); // Use synchronous logging
+  browser: {
+    asObject: true,
+    write: (o) => {
+      console.log(JSON.stringify(o));
+    }
+  },
+  // Configure for both environments without worker threads
+  transport: {
+    target: isProduction ? "pino" : "pino-pretty",
+    options: {
+      colorize: !isProduction,
+      translateTime: "SYS:standard",
+      ignore: "pid,hostname",
+    },
+  }
+});
 
 export default logger;

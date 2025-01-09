@@ -181,6 +181,7 @@ export const updateTaskById = async (
         taskCategoryName: responseData.task.taskCategory.categoryName,
       },
     };
+	logger.info({ updatedTask }, "Task updated successfully");
     return UpdateTaskResponseSchema.parse(responseDataMod);
   } catch (error) {
     logger.error({ error }, "Error in updateTask");
