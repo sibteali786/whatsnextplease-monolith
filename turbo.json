@@ -17,6 +17,17 @@
 				"dist/**",
 				".next/**",
 				"!.next/cache/**"
+			],
+			"env": [
+				"NODE_ENV",
+				"SECRET",
+				"API_GATEWAY_SECRET_NAME",
+				"AWS_ACCESS_KEY_ID",
+				"AWS_REGION",
+				"AWS_SECRET_ACCESS_KEY",
+				"DATABASE_URL",
+				"S3_BUCKET_NAME",
+				"API_URL"
 			]
 		},
 		"lint": {
