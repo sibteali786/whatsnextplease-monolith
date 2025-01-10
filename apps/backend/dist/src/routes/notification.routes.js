@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.notificationRoutes = void 0;
+const express_1 = require("express");
+const notificaton_controller_1 = require("../controller/notificaton.controller");
+const router = (0, express_1.Router)();
+const controller = new notificaton_controller_1.NotificationController();
+router.get("/subscribe/:userId", controller.subscribe);
+router.post("/", controller.create);
+router.get("/:userId", controller.getUserNotifications);
+router.patch("/:id/read", controller.markAsRead);
+exports.notificationRoutes = router;

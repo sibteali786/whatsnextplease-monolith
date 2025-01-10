@@ -33,7 +33,11 @@
     "zod": "^3.23.8"
   },
   "lint-staged": {
-    "apps/**/*.{js,jsx,ts,tsx}": [
+    "apps/web/*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "apps/backend/*.ts": [
       "prettier --write",
       "eslint --fix"
     ],
