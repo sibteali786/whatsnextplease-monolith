@@ -9,7 +9,16 @@
     "build:cdk": "npm --prefix cdk run build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+	"db:studio": "npx prisma studio",
+    "db:delete-file": "tsx deleteFile.ts",
+    "db:deleteData": "tsx deleteData.ts",
+	"dev:setup": "npm run db:up && npm run db:ready && npm run db:migrate && npm run db:seed && npm run dev",
+    "db:up": "docker-compose up -d",
+    "db:ready": "bash ./scripts/wait-for-db.sh",
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "npm run db:seed:script",
+    "db:seed:script": "tsx seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.679.0",

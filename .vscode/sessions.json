@@ -1,0 +1,62 @@
+{
+  "$schema": "https://cdn.statically.io/gh/nguyenngoclongdev/cdn/main/schema/v10/terminal-keeper.json",
+  "theme": "tribe",
+  "active": "default",
+  "activateOnStartup": true,
+  "keepExistingTerminals": false,
+  "sessions": {
+    "default": [
+      {
+        "name": "frontend",
+        "autoExecuteCommands": true,
+        "icon": "home",
+        "color": "terminal.ansiGreen",
+        "commands": ["cd apps/web && pnpm dev"]
+      },
+      {
+        "name": "backend",
+        "autoExecuteCommands": true,
+        "icon": "server",
+        "color": "terminal.ansiBlue",
+        "commands": ["cd apps/backend && PORT=5001 pnpm dev"]
+      },
+      {
+        "name": "db-studio-backend",
+        "icon": "database",
+        "commands": ["cd apps/backend && npx prisma studio"]
+      },
+      {
+        "name": "db-studio-web",
+        "icon": "database",
+        "autoExecuteCommands": true,
+        "commands": ["cd apps/web && pnpm run db:studio"]
+      },
+      {
+        "name": "git",
+        "icon": "git-commit",
+        "commands": ["git add ."]
+      },
+      {
+        "name": "cdk",
+        "commands": ["cd apps/web && cd cdk"],
+        "autoExecuteCommands": true
+      },
+      {
+        "name": "seed",
+        "commands": ["cd apps/web && pnpm run db:seed"]
+      },
+      {
+        "name": "runDBInstance",
+        "commands": ["docker start wnpdb_dev"],
+		"autoExecuteCommands": true
+      }
+    ],
+    "saved-session": [
+      {
+        "name": "connect",
+        "commands": [""]
+      }
+    ]
+  }
+}
+
