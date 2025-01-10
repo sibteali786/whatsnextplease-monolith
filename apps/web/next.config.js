@@ -15,7 +15,6 @@ const nextConfig = {
 	  if (isServer) {
 		// Handle server-side modules
 		config.externals = [...config.externals, 
-		  'pino-pretty',
 		  'thread-stream'
 		];
 	  }
