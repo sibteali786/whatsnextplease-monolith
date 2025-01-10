@@ -25,3 +25,4 @@ packages/*/dist.turbo
 /playwright-report/
 /playwright/.cache/
 .turbo
+/apps/backend/dist/
