@@ -26,3 +26,4 @@ packages/*/dist.turbo
 /playwright/.cache/
 .turbo
 /apps/backend/dist/
+.vercel
