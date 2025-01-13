@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { NotificationList } from "@wnp/types/src";
+import { NotificationList } from "@wnp/types";
 import { formatDistance as dateFnsFormatDistance } from "date-fns";
 import { MoreHorizontal, Loader2 } from "lucide-react";
 import {

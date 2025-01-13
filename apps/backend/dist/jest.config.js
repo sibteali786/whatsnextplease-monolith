@@ -1,22 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const config = {
-    preset: "ts-jest",
-    testEnvironment: "node",
-    roots: ["<rootDir>/src"],
-    testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
+    preset: 'ts-jest',
+    testEnvironment: 'node',
+    roots: ['<rootDir>/src'],
+    testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
     transform: {
-        "^.+\\.ts$": "ts-jest",
+        '^.+\\.ts$': 'ts-jest',
     },
-    moduleFileExtensions: ["ts", "js", "json", "node"],
+    moduleFileExtensions: ['ts', 'js', 'json', 'node'],
     moduleNameMapper: {
-        "^@/(.*)$": "<rootDir>/src/$1",
+        '^@/(.*)$': '<rootDir>/src/$1',
     },
-    setupFilesAfterEnv: ["<rootDir>/src/test/mockPrisma.ts"],
+    setupFilesAfterEnv: ['<rootDir>/src/test/mockPrisma.ts'],
     clearMocks: true,
     collectCoverage: true,
-    coverageDirectory: "coverage",
-    coverageProvider: "v8",
-    testPathIgnorePatterns: ["/node_modules/"],
+    coverageDirectory: 'coverage',
+    coverageProvider: 'v8',
+    testPathIgnorePatterns: ['/node_modules/'],
 };
 exports.default = config;

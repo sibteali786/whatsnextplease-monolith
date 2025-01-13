@@ -2,14 +2,15 @@
   "name": "@wnp/types",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-	"@repo/typescript-config": "workspace:*",
-	"typescript": "^5"
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5"
   },
   "keywords": [],
   "author": "",

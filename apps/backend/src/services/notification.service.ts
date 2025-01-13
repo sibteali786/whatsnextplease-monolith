@@ -1,5 +1,5 @@
 import { NotificationStatus, Roles } from '@prisma/client';
-import { CreateNotificationDto } from '@wnp/types/src/index';
+import { CreateNotificationDto } from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
 import prisma from '../config/db';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NotificationResponse } from "@wnp/types/src";
+import { NotificationResponse } from "@wnp/types";
 import { fetchNotifications } from "@/db/repositories/notifications/getNotifications";
 import { markAsReadNotification } from "@/db/repositories/notifications/markAsReadById";
 import { NotificationStatus } from "@prisma/client";

@@ -16,6 +16,9 @@ export async function createServer() {
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });
   });
-
+  // Handle 404
+  app.use((req, res) => {
+    res.status(404).json({ message: 'Not Found' });
+  });
   return app;
 }

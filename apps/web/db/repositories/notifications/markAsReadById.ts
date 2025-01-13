@@ -1,5 +1,5 @@
 "use server";
-import { NotificationMarkAsReadResponse } from "@wnp/types/src";
+import { NotificationMarkAsReadResponse } from "@wnp/types";
 
 export const markAsReadNotification = async (
   id: string,

@@ -3,7 +3,7 @@ import {
   CreateNotificationDto,
   ErrorResponse,
   NotificationResponse,
-} from "@wnp/types/src";
+} from "@wnp/types";
 
 export const createNotification = async (
   params: CreateNotificationDto,

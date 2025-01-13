@@ -11,11 +11,11 @@ import {
   NotificationMarkAsReadParams,
   NotificationMarkAsReadResponse,
   NotificationMarkAsReadResponseSchema,
-} from '@wnp/types/src';
+} from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
 import { ZodError } from 'zod';
 import { Roles } from '@prisma/client';
-import { GetNotificationInputParams } from '@wnp/types/src';
+import { GetNotificationInputParams } from '@wnp/types';
 
 export class NotificationController {
   private notificationService: NotificationService;

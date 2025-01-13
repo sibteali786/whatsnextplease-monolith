@@ -1,5 +1,5 @@
 "use server";
-import { NotificationListResponse } from "@wnp/types/src";
+import { NotificationListResponse } from "@wnp/types";
 
 export const fetchNotifications = async (userId: string, role: string) => {
   console.log("response", userId, role);
