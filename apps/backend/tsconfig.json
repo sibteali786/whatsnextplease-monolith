@@ -5,5 +5,6 @@
     "target": "ESNext",
     "strict": true,
     "esModuleInterop": true
-  }
+  },
+  "include": ["api/**/*"] // Add this to specify what files to compile
 }

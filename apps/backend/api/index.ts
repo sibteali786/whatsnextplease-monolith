@@ -1,22 +1,26 @@
 import { createServer } from './server';
 import prisma from './config/db';
-import { Request, Response, Express } from 'express';
+import { Express } from 'express';
 
 let app: Express | null = null;
 
 // Create and configure the server
 const initializeServer = async () => {
   if (!app) {
+    console.log('Connecting to database...');
     await prisma.$connect();
+    console.log('Database connected successfully');
+
     app = await createServer();
   }
   return app;
 };
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 5000;
-  initializeServer().then(server => {
+const PORT = process.env.PORT || 3000;
+
+// Start server
+initializeServer()
+  .then(server => {
     server.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
@@ -30,28 +34,8 @@ if (process.env.NODE_ENV !== 'production') {
 
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
+  })
+  .catch(error => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   });
-}
-
-// For Vercel serverless
-export default async function handler(req: Request, res: Response) {
-  try {
-    const server = await initializeServer();
-
-    // Create a promise that resolves with the response
-    return new Promise(resolve => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      server(req, res, (err: any) => {
-        if (err) {
-          console.error('Error handling request:', err);
-          res.status(500).json({ message: 'Internal Server Error' });
-        }
-        resolve(undefined);
-      });
-    });
-  } catch (error) {
-    console.error('Server initialization error:', error);
-    res.status(500).json({ message: 'Server Initialization Error' });
-    return Promise.resolve();
-  }
-}

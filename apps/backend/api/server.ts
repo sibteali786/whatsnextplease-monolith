@@ -16,6 +16,14 @@ export async function createServer() {
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });
   });
+
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
   // Handle 404
   app.use((req, res) => {
     res.status(404).json({ message: 'Not Found' });
