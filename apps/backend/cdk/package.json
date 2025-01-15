@@ -9,6 +9,8 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
+	"bootstrap:dev":"STAGE=development cdk bootstrap",
+	"bootstrap:prod":"STAGE=production cdk bootstrap",
 	"deploy:dev": "STAGE=development cdk deploy",
     "deploy:prod": "STAGE=production cdk deploy",
     "diff:dev": "STAGE=development cdk diff",

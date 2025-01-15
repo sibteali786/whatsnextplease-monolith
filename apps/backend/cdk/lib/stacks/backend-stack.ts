@@ -37,7 +37,7 @@ export class WnpBackendStack extends cdk.Stack {
     this.ecrRepository = new ecr.Repository(this, 'BackendRepo', {
       repositoryName: `wnp-backend-repo-${props.stage}`,
       removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
-      autoDeleteImages: !isProduction,
+      emptyOnDelete: !isProduction,
       lifecycleRules: [
         {
           maxImageCount: isProduction ? 100 : 20,
@@ -54,28 +54,32 @@ export class WnpBackendStack extends cdk.Stack {
     );
     // Configure service based on stage
     const serviceConfig = this.getServiceConfiguration(isProduction);
-    this.ecsService = new ecs_patterns.ApplicationLoadBalancedFargateService(
-      this,
-      'WnpBackendService',
-      {
-        cluster,
-        ...serviceConfig,
-        taskImageOptions: {
-          image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository),
-          environment: {
-            NODE_ENV: props.stage,
+    // Skip Fargate service creation in first deployment as it looks for empty ECR repository
+    if (process.env.SKIP_FARGATE !== 'true') {
+      // Create Fargate service only in second deployment
+      this.ecsService = new ecs_patterns.ApplicationLoadBalancedFargateService(
+        this,
+        'WnpBackendService',
+        {
+          cluster,
+          ...serviceConfig,
+          taskImageOptions: {
+            image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository),
+            environment: {
+              NODE_ENV: props.stage,
+            },
+            secrets: {
+              DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
+            },
+            containerPort: 3000,
           },
-          secrets: {
-            DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
-          },
-          containerPort: 3000,
-        },
-        publicLoadBalancer: true,
-        loadBalancerName: `wnp-backend-lb-${props.stage}`,
-        serviceName: `wnp-backend-service-${props.stage}`,
-        healthCheckGracePeriod: cdk.Duration.seconds(60),
-      }
-    );
+          publicLoadBalancer: true,
+          loadBalancerName: `wnp-backend-lb-${props.stage}`,
+          serviceName: `wnp-backend-service-${props.stage}`,
+          healthCheckGracePeriod: cdk.Duration.seconds(60),
+        }
+      );
+    }
     // Configure autoscaling for production
     if (isProduction) {
       this.configureAutoScaling(this.ecsService);
@@ -136,11 +140,13 @@ export class WnpBackendStack extends cdk.Stack {
   }
 
   private addStackOutputs(stage: string) {
-    new cdk.CfnOutput(this, 'LoadBalancerDNS', {
-      value: this.ecsService.loadBalancer.loadBalancerDnsName,
-      description: 'Load Balancer DNS Name',
-      exportName: `LoadBalancerDNS-${stage}`,
-    });
+    if (process.env.SKIP_FARGATE !== 'true') {
+      new cdk.CfnOutput(this, 'LoadBalancerDNS', {
+        value: this.ecsService.loadBalancer.loadBalancerDnsName,
+        description: 'Load Balancer DNS Name',
+        exportName: `LoadBalancerDNS-${stage}`,
+      });
+    }
 
     new cdk.CfnOutput(this, 'ECRRepositoryURI', {
       value: this.ecrRepository.repositoryUri,
