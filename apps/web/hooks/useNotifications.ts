@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { NotificationResponse } from "@wnp/types";
-import { fetchNotifications } from "@/db/repositories/notifications/getNotifications";
-import { markAsReadNotification } from "@/db/repositories/notifications/markAsReadById";
-import { NotificationStatus } from "@prisma/client";
+import { useState, useEffect } from 'react';
+import { NotificationResponse } from '@wnp/types';
+import { fetchNotifications } from '@/db/repositories/notifications/getNotifications';
+import { markAsReadNotification } from '@/db/repositories/notifications/markAsReadById';
+import { NotificationStatus } from '@prisma/client';
 
 interface UseNotificationsProps {
   userId: string;
@@ -10,30 +10,26 @@ interface UseNotificationsProps {
 }
 
 export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
-  const [notifications, setNotifications] = useState<NotificationResponse[]>(
-    [],
-  );
+  const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [markingRead, setMarkingRead] = useState<string[]>([]);
 
   const markAsRead = async (id: string) => {
     try {
-      setMarkingRead((prev) => [...prev, id]);
+      setMarkingRead(prev => [...prev, id]);
       await markAsReadNotification(id);
-      setNotifications((prev) =>
-        prev.map((notification) =>
+      setNotifications(prev =>
+        prev.map(notification =>
           notification.id === id
             ? { ...notification, status: NotificationStatus.READ }
-            : notification,
-        ),
+            : notification
+        )
       );
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error("Failed to mark as read"),
-      );
+      setError(err instanceof Error ? err : new Error('Failed to mark as read'));
     } finally {
-      setMarkingRead((prev) => prev.filter((item) => item !== id));
+      setMarkingRead(prev => prev.filter(item => item !== id));
     }
   };
 
@@ -43,11 +39,7 @@ export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
         const response = await fetchNotifications(userId, role);
         setNotifications(response.notifications);
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err
-            : new Error("Failed to fetch notifications"),
-        );
+        setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
       } finally {
         setIsLoading(false);
       }
@@ -55,19 +47,16 @@ export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
 
     loadInitialNotifications();
   }, [userId, role]);
-
   useEffect(() => {
-    const eventSource = new EventSource(
-      `http://localhost:5001/notifications/subscribe/${userId}`,
-    );
+    const eventSource = new EventSource(`${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}`);
 
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = event => {
       const notification = JSON.parse(event.data);
-      setNotifications((prev) => [notification, ...prev]);
+      setNotifications(prev => [notification, ...prev]);
     };
 
     eventSource.onerror = () => {
-      setError(new Error("SSE connection error"));
+      setError(new Error('SSE connection error'));
       eventSource.close();
     };
 
