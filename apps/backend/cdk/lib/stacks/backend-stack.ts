@@ -64,9 +64,10 @@ export class WnpBackendStack extends cdk.Stack {
           cluster,
           ...serviceConfig,
           taskImageOptions: {
-            image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository),
+            image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, 'latest'),
             environment: {
               NODE_ENV: props.stage,
+              PORT: '3000',
             },
             secrets: {
               DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
@@ -76,9 +77,17 @@ export class WnpBackendStack extends cdk.Stack {
           publicLoadBalancer: true,
           loadBalancerName: `wnp-backend-lb-${props.stage}`,
           serviceName: `wnp-backend-service-${props.stage}`,
-          healthCheckGracePeriod: cdk.Duration.seconds(60),
+          healthCheckGracePeriod: cdk.Duration.seconds(180),
+          healthCheck: {
+            command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
+            interval: cdk.Duration.seconds(30),
+            timeout: cdk.Duration.seconds(5),
+          },
         }
       );
+      this.ecsService.targetGroup.configureHealthCheck({
+        path: '/health',
+      });
     }
     // Configure autoscaling for production
     if (isProduction) {

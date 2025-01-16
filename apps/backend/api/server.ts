@@ -24,6 +24,11 @@ export async function createServer() {
       uptime: process.uptime(),
     });
   });
+  app.get('/', (req, res) => {
+    res
+      .status(200)
+      .json({ status: 'healthy', message: 'Welcome to the WNP API', uptime: process.uptime() });
+  });
   // Handle 404
   app.use((req, res) => {
     res.status(404).json({ message: 'Not Found' });
