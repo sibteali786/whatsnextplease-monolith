@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20-alpine AS builder
+FROM --platform=linux/amd64 node:20-alpine AS builder
 # Install necessary build tools
 RUN apk add --no-cache libc6-compat python3 make g++ openssl openssl-dev
 RUN corepack enable && corepack prepare pnpm@latest --activate
@@ -26,7 +26,7 @@ RUN pnpm dlx prisma generate
 RUN pnpm tsc
 
 # Production Stage
-FROM node:20-alpine AS runner
+FROM --platform=linux/amd64 node:20-alpine AS runner
 # Install curl and OpenSSL for health checks and Prisma
 RUN apk add --no-cache curl openssl openssl-dev
 RUN corepack enable && corepack prepare pnpm@latest --activate
