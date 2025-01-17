@@ -1,15 +1,13 @@
 'use client';
-
 import { State } from '@/components/DataState';
 import NotificationsList from '@/components/notifications/NotificationsList';
-import { NotificationProvider, useNotifications } from '@/contexts/NotificationContext';
-import { getCurrentUser, UserState } from '@/utils/user';
-import { Roles } from '@prisma/client';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { Bell, Loader2, XCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
-const NotificationsContent = () => {
-  const { notifications, isLoading, error, markAsRead, markingRead } = useNotifications();
+export default function Notifications() {
+  const { notifications, isLoading, error, markAsRead, markingRead, unreadCount } = useNotifications();
+  
+  console.log('Notifications page rendering:', { notifications, unreadCount });
 
   if (isLoading) {
     return (
@@ -51,28 +49,5 @@ const NotificationsContent = () => {
         markingRead={markingRead}
       />
     </div>
-  );
-};
-
-export default function Notifications({ params }: { params: { userId: string } }) {
-  const [user, setUser] = useState<UserState>();
-
-  useEffect(() => {
-    const fetchDependencies = async () => {
-      const loggedInUser = await getCurrentUser();
-      setUser(loggedInUser);
-    };
-    fetchDependencies();
-  }, []);
-
-  if (!user) return null;
-
-  return (
-    <NotificationProvider
-      userId={user.id ?? params?.userId}
-      role={user.role.name ?? Roles.TASK_AGENT}
-    >
-      <NotificationsContent />
-    </NotificationProvider>
   );
 }

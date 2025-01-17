@@ -8,12 +8,24 @@ import Link from 'next/link';
 import { Button } from './ui/button';
 import { ActiveVerticalMenu } from './common/ActiveVerticalMenu';
 import { NotificationBell } from './notifications/NotificationBell';
-import { NotificationProvider, useNotifications } from '@/contexts/NotificationContext';
-import { Roles } from '@prisma/client';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { useEffect, useState } from 'react';
 
-const TopBarContent = ({ user }: { user: UserState }) => {
-  const { unreadCount } = useNotifications();
+const TopBar = () => {
+  const [user, setUser] = useState<UserState | null>(null);
+  const { unreadCount, notifications } = useNotifications();
+  
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      const loggedInUser = await getCurrentUser();
+      setUser(loggedInUser);
+    };
+    fetchDependencies();
+  }, []);
+
+  console.log('TopBar rendering with unreadCount:', unreadCount, 'notifications:', notifications);
+
+  if (!user) return null;
 
   return (
     <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10 ">
@@ -49,26 +61,6 @@ const TopBarContent = ({ user }: { user: UserState }) => {
         <div className="w-10"></div>
       </div>
     </header>
-  );
-};
-
-const TopBar = () => {
-  const [user, setUser] = useState<UserState | null>(null);
-
-  useEffect(() => {
-    const fetchDependencies = async () => {
-      const loggedInUser = await getCurrentUser();
-      setUser(loggedInUser);
-    };
-    fetchDependencies();
-  }, []);
-
-  if (!user) return null;
-
-  return (
-    <NotificationProvider userId={user.id} role={user.role.name ?? Roles.TASK_AGENT}>
-      <TopBarContent user={user} />
-    </NotificationProvider>
   );
 };
 
