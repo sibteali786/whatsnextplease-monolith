@@ -1,14 +1,35 @@
-import { Bell, ListChecks, MessageSquareText, Search } from "lucide-react";
-import { Input } from "./ui/input";
-import { ModeToggle } from "@/utils/modeToggle";
-import { NavUser } from "./common/NavUser";
-import { getCurrentUser } from "@/utils/user";
-import Link from "next/link";
-import { Button } from "./ui/button";
-import { ActiveVerticalMenu } from "./common/ActiveVerticalMenu";
+'use client';
+import { ListChecks, MessageSquareText, Search } from 'lucide-react';
+import { Input } from './ui/input';
+import { ModeToggle } from '@/utils/modeToggle';
+import { NavUser } from './common/NavUser';
+import { getCurrentUser, UserState } from '@/utils/user';
+import Link from 'next/link';
+import { Button } from './ui/button';
+import { ActiveVerticalMenu } from './common/ActiveVerticalMenu';
+import { NotificationBell } from './notifications/NotificationBell';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useEffect, useState } from 'react';
+import { Roles } from '@prisma/client';
+import { useParams } from 'next/navigation';
 
-const TopBar = async () => {
-  const user = await getCurrentUser();
+const TopBar = () => {
+  const params = useParams();
+  const [user, setUser] = useState<UserState | null>(null);
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      const loggedInUser = await getCurrentUser();
+      setUser(loggedInUser);
+    };
+    fetchDependencies();
+  }, []);
+  const { unreadCount } = useNotifications({
+    userId: user?.id ?? (params.userId as string) ?? '',
+    role: user?.role.name ?? Roles.TASK_AGENT,
+  });
+  if (!user) {
+    return;
+  }
   return (
     <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10 ">
       <div className="flex-grow">
@@ -31,21 +52,16 @@ const TopBar = async () => {
             </Button>
           </Link>
         </div>
-        <Button variant={"ghost"}>
+        <Button variant={'ghost'}>
           <MessageSquareText size={24} className="text-textPrimary" />
         </Button>
         <ModeToggle />
         <div className="flex flex-col items-center">
-          <ActiveVerticalMenu activePath="/notifications" />
-          <Link href={`/notifications/${user.id}`}>
-            <Button variant={"ghost"}>
-              <Bell size={24} className="text-textPrimary" />
-            </Button>
-          </Link>
+          {user && <NotificationBell userId={user.id} unreadCount={unreadCount} />}
         </div>
         <div className="ml-auto flex items-center gap-2">
           {/* Profile / Logout options */}
-          <NavUser user={user} />
+          {user && <NavUser user={user} />}
         </div>
         <div className="w-10"></div>
       </div>
