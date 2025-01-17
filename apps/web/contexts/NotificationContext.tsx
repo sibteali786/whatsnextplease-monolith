@@ -1,15 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { NotificationResponse } from '@wnp/types';
 import { fetchNotifications } from '@/db/repositories/notifications/getNotifications';
 import { markAsReadNotification } from '@/db/repositories/notifications/markAsReadById';
 import { NotificationStatus } from '@prisma/client';
 
-interface UseNotificationsProps {
+interface NotificationContextType {
+  notifications: NotificationResponse[];
+  unreadCount: number;
+  isLoading: boolean;
+  error: Error | null;
+  markAsRead: (id: string) => Promise<void>;
+  markingRead: string[];
+}
+
+const NotificationContext = createContext<NotificationContextType | null>(null);
+
+interface NotificationProviderProps {
+  children: React.ReactNode;
   userId: string;
   role: string;
 }
 
-export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
+export const NotificationProvider = ({ children, userId, role }: NotificationProviderProps) => {
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,40 +29,29 @@ export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
   const [markingRead, setMarkingRead] = useState<string[]>([]);
 
   // Update unread count whenever notifications change
-  const updateUnreadCount = useCallback(() => {
+  useEffect(() => {
     const count = notifications.filter(n => n.status === NotificationStatus.UNREAD).length;
     setUnreadCount(count);
   }, [notifications]);
 
-  // Call updateUnreadCount whenever notifications change
-  useEffect(() => {
-    updateUnreadCount();
-  }, [notifications, updateUnreadCount]);
+  const markAsRead = async (id: string) => {
+    try {
+      setMarkingRead(prev => [...prev, id]);
+      await markAsReadNotification(id);
 
-  const markAsRead = useCallback(
-    async (id: string) => {
-      try {
-        setMarkingRead(prev => [...prev, id]);
-        await markAsReadNotification(id);
-
-        setNotifications(prev =>
-          prev.map(notification =>
-            notification.id === id
-              ? { ...notification, status: NotificationStatus.READ }
-              : notification
-          )
-        );
-
-        // Explicitly update unread count after marking as read
-        updateUnreadCount();
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to mark as read'));
-      } finally {
-        setMarkingRead(prev => prev.filter(item => item !== id));
-      }
-    },
-    [updateUnreadCount]
-  );
+      setNotifications(prev =>
+        prev.map(notification =>
+          notification.id === id
+            ? { ...notification, status: NotificationStatus.READ }
+            : notification
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to mark as read'));
+    } finally {
+      setMarkingRead(prev => prev.filter(item => item !== id));
+    }
+  };
 
   useEffect(() => {
     const loadInitialNotifications = async () => {
@@ -64,10 +65,14 @@ export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
       }
     };
 
-    loadInitialNotifications();
+    if (userId && role) {
+      loadInitialNotifications();
+    }
   }, [userId, role]);
 
   useEffect(() => {
+    if (!userId) return;
+
     const eventSource = new EventSource(
       `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}`
     );
@@ -85,13 +90,26 @@ export const useNotifications = ({ userId, role }: UseNotificationsProps) => {
     return () => eventSource.close();
   }, [userId]);
 
-  return {
-    notifications,
-    isLoading,
-    error,
-    totalNotifications: notifications.length,
-    unreadCount,
-    markAsRead,
-    markingRead,
-  };
+  return (
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        isLoading,
+        error,
+        markAsRead,
+        markingRead,
+      }}
+    >
+      {children}
+    </NotificationContext.Provider>
+  );
+};
+
+export const useNotifications = () => {
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
 };

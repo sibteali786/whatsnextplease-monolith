@@ -8,28 +8,13 @@ import Link from 'next/link';
 import { Button } from './ui/button';
 import { ActiveVerticalMenu } from './common/ActiveVerticalMenu';
 import { NotificationBell } from './notifications/NotificationBell';
-import { useNotifications } from '@/hooks/useNotifications';
-import { useEffect, useState } from 'react';
+import { NotificationProvider, useNotifications } from '@/contexts/NotificationContext';
 import { Roles } from '@prisma/client';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-const TopBar = () => {
-  const params = useParams();
-  const [user, setUser] = useState<UserState | null>(null);
-  useEffect(() => {
-    const fetchDependencies = async () => {
-      const loggedInUser = await getCurrentUser();
-      setUser(loggedInUser);
-    };
-    fetchDependencies();
-  }, []);
-  const { unreadCount } = useNotifications({
-    userId: user?.id ?? (params.userId as string) ?? '',
-    role: user?.role.name ?? Roles.TASK_AGENT,
-  });
-  if (!user) {
-    return;
-  }
+const TopBarContent = ({ user }: { user: UserState }) => {
+  const { unreadCount } = useNotifications();
+
   return (
     <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10 ">
       <div className="flex-grow">
@@ -41,7 +26,6 @@ const TopBar = () => {
             className="w-full rounded-full bg-background pl-12 md:w-[200px] lg:w-[336px]"
           />
         </div>
-        {/* Placeholder for search bar or any top actions */}
       </div>
       <div className="flex flex-row gap-6 items-center justify-around">
         <div className="flex flex-col items-center">
@@ -57,15 +41,34 @@ const TopBar = () => {
         </Button>
         <ModeToggle />
         <div className="flex flex-col items-center">
-          {user && <NotificationBell userId={user.id} unreadCount={unreadCount} />}
+          <NotificationBell userId={user.id} unreadCount={unreadCount} />
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {/* Profile / Logout options */}
-          {user && <NavUser user={user} />}
+          <NavUser user={user} />
         </div>
         <div className="w-10"></div>
       </div>
     </header>
+  );
+};
+
+const TopBar = () => {
+  const [user, setUser] = useState<UserState | null>(null);
+
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      const loggedInUser = await getCurrentUser();
+      setUser(loggedInUser);
+    };
+    fetchDependencies();
+  }, []);
+
+  if (!user) return null;
+
+  return (
+    <NotificationProvider userId={user.id} role={user.role.name ?? Roles.TASK_AGENT}>
+      <TopBarContent user={user} />
+    </NotificationProvider>
   );
 };
 
