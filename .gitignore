@@ -22,6 +22,7 @@ next-env.d.ts# intellij
 /dist
 packages/*/dist.turbo
 packages/types/dist/
+/packages/logger/dist/
 /test-results/
 /playwright-report/
 /playwright/.cache/
@@ -29,3 +30,13 @@ packages/types/dist/
 /apps/backend/dist/
 /apps/backend/coverage/
 .vercel
+# envs
+.env
+.env.*
+!.env.example
+apps/*/.env
+apps/*/.env.*
+!apps/*/.env.example
+packages/*/.env
+packages/*/.env.*
+!packages/*/.env.example
