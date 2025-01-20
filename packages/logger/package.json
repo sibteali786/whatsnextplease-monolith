@@ -1,0 +1,28 @@
+{
+  "name": "@wnp/logger",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"build": "tsc",
+	"dev": "tsc -w",
+	"lint": "eslint src",
+	"lint:fix": "eslint src --fix"
+  },
+  "dependencies": {
+    "pino": "^8.17.0",
+    "pino-pretty": "^10.3.0"
+  },
+  "peerDependencies": {
+    "@wnp/types": "workspace:*",
+	"@repo/typescript-config": "workspace:*",
+    "typescript": "^5",
+	"eslint": "^8.56.0",
+    "typescript-eslint": "^7.0.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
