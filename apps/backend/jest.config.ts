@@ -3,16 +3,16 @@ import type { Config } from 'jest';
 const config: Config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/api'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/(.*)$': '<rootDir>/api/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/src/test/mockPrisma.ts'],
+  setupFilesAfterEnv: ['<rootDir>/api/test/mockPrisma.ts'],
   clearMocks: true,
   collectCoverage: true,
   coverageDirectory: 'coverage',

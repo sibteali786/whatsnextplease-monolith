@@ -16,6 +16,7 @@ describe('NotificationService', () => {
   const mockCreateNotification = prismaMock.notification.create as jest.Mock;
   const mockFindNotification = prismaMock.notification.findMany as jest.Mock;
   const mockUpdateNotification = prismaMock.notification.update as jest.Mock;
+  const mockUpdateManyNotification = prismaMock.notification.updateMany as jest.Mock;
 
   beforeEach(() => {
     service = new NotificationService();
@@ -157,6 +158,39 @@ describe('NotificationService', () => {
       mockUpdateNotification.mockRejectedValue(new Error('Invalid notification ID'));
 
       await expect(service.markAsRead('invalid-id')).rejects.toThrow('Invalid notification ID');
+    });
+  });
+
+  describe('mark all notifications as read', () => {
+    it('should update all notifications status to READ and return updated count for TASK_AGENT', async () => {
+      const userId = 'user-123';
+      const role = Roles.TASK_AGENT;
+      const updatedNotificationsCount = { count: 3 };
+      mockUpdateManyNotification.mockResolvedValue(updatedNotificationsCount);
+      const result = await service.markAllAsRead(userId, role);
+      expect(result).toEqual(updatedNotificationsCount);
+      expect(mockUpdateManyNotification).toHaveBeenCalledWith({
+        where: { userId, status: NotificationStatus.UNREAD },
+        data: { status: NotificationStatus.READ },
+      });
+    });
+    it('should update all notifications status to READ and return updated count for CLIENT', async () => {
+      const userId = 'user-123';
+      const role = Roles.CLIENT;
+      const updatedNotificationsCount = { count: 3 };
+      mockUpdateManyNotification.mockResolvedValue(updatedNotificationsCount);
+      const result = await service.markAllAsRead(userId, role);
+      expect(result).toEqual(updatedNotificationsCount);
+      expect(mockUpdateManyNotification).toHaveBeenCalledWith({
+        where: { clientId: userId, status: NotificationStatus.UNREAD },
+        data: { status: NotificationStatus.READ },
+      });
+    });
+    it('should return error when userId is not found ', async () => {
+      const userId = 'user-123';
+      const role = Roles.CLIENT;
+      mockUpdateManyNotification.mockRejectedValue(new Error('User not found'));
+      await expect(service.markAllAsRead(userId, role)).rejects.toThrow('User not found');
     });
   });
 });

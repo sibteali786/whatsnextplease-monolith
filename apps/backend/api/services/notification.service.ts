@@ -51,4 +51,18 @@ export class NotificationService {
 
     return notification;
   }
+  async markAllAsRead(userId: string, role: Roles) {
+    if (role === Roles.CLIENT) {
+      const updatedNotificationsCount = await prisma.notification.updateMany({
+        where: { clientId: userId, status: NotificationStatus.UNREAD },
+        data: { status: NotificationStatus.READ },
+      });
+      return updatedNotificationsCount;
+    }
+    const updatedNotificationsCount = await prisma.notification.updateMany({
+      where: { userId, status: NotificationStatus.UNREAD },
+      data: { status: NotificationStatus.READ },
+    });
+    return updatedNotificationsCount;
+  }
 }
