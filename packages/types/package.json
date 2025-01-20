@@ -8,7 +8,9 @@
     "build": "tsc",
     "dev": "tsc -w",
     "clean": "rm -rf dist",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"lint": "eslint src",
+    "lint:fix": "eslint src --fix"
   },
   "exports": {
     ".": {
@@ -18,7 +20,9 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "typescript": "^5"
+    "typescript": "^5",
+	"eslint": "^8.56.0",
+    "typescript-eslint": "^7.0.1"
   },
   "keywords": [],
   "author": "",
