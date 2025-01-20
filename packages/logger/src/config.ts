@@ -1,3 +1,4 @@
+// packages/logger/src/config.ts
 import { pino } from 'pino';
 import { LoggerConfig } from '@wnp/types';
 import { DEFAULT_REDACT } from './constants';
@@ -9,9 +10,10 @@ export const createLogger = (config: LoggerConfig = {}) => {
     redact = DEFAULT_REDACT,
   } = config;
 
-  const transport = development
-    ? {
-        transport: {
+  return pino({
+    level,
+    transport: development
+      ? {
           target: 'pino-pretty',
           options: {
             colorize: true,
@@ -19,13 +21,8 @@ export const createLogger = (config: LoggerConfig = {}) => {
             translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss'Z'",
             ignore: 'pid,hostname',
           },
-        },
-      }
-    : {};
-
-  return pino({
-    ...transport,
-    level,
+        }
+      : undefined,
     redact: {
       paths: redact,
       remove: true,

@@ -2,6 +2,7 @@ import { PrismaErrorMapper } from '../utils/errors/prisma-error-mapper';
 import prisma from '../config/db';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { NotFoundError } from '@wnp/types';
+import { logger } from './logger';
 
 export async function checkIfUserExists(userId: string): Promise<boolean> {
   try {
@@ -10,6 +11,7 @@ export async function checkIfUserExists(userId: string): Promise<boolean> {
     });
 
     if (!user) {
+      logger.warn({ userId }, 'User not found');
       throw new NotFoundError('User', { userId });
     }
 
