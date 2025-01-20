@@ -21,9 +21,11 @@ next-env.d.ts# intellij
 .ideadist/**
 /dist
 packages/*/dist.turbo
+packages/types/dist/
 /test-results/
 /playwright-report/
 /playwright/.cache/
 .turbo
 /apps/backend/dist/
+/apps/backend/coverage/
 .vercel
