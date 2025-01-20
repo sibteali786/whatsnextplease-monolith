@@ -81,3 +81,4 @@ export const NotificationMarkAsReadResponseSchema = z.object({
 export type NotificationMarkAsReadResponse = z.infer<typeof NotificationMarkAsReadResponseSchema>;
 
 export * from './errors';
+export * from './logger';
