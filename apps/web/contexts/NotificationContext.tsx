@@ -87,8 +87,8 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     };
 
     eventSource.onerror = () => {
-      setError(new Error('SSE connection error'));
       eventSource.close();
+      throw new Error('SSE connection error');
     };
 
     return () => eventSource.close();
