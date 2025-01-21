@@ -80,5 +80,21 @@ export const NotificationMarkAsReadResponseSchema = z.object({
 
 export type NotificationMarkAsReadResponse = z.infer<typeof NotificationMarkAsReadResponseSchema>;
 
+export const NotificationMarkAllAsReadParams = z.object({
+  userId: z.string(),
+  role: z.nativeEnum(Roles),
+});
+
+export type NotificationMarkAllAsReadParams = z.infer<typeof NotificationMarkAllAsReadParams>;
+
+export const NotificationMarkAllAsReadResponseSchema = z.object({
+  count: z.number(),
+  message: z.string(),
+});
+
+export type NotificationMarkAllAsReadResponse = z.infer<
+  typeof NotificationMarkAllAsReadResponseSchema
+>;
+
 export * from './errors';
 export * from './logger';

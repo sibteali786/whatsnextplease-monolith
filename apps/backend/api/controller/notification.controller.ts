@@ -11,11 +11,15 @@ import {
   NotificationMarkAsReadParams,
   NotificationMarkAsReadResponse,
   NotificationMarkAsReadResponseSchema,
+  NotificationMarkAllAsReadParams,
+  NotificationMarkAllAsReadResponse,
+  NotificationMarkAllAsReadResponseSchema,
 } from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
 import { ZodError } from 'zod';
 import { Roles } from '@prisma/client';
 import { GetNotificationInputParams } from '@wnp/types';
+import { logger } from '../utils/logger';
 
 export class NotificationController {
   private notificationService: NotificationService;
@@ -152,6 +156,58 @@ export class NotificationController {
         error: 'Failed to mark notification as read',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
+      res.status(500).json(errorResponse);
+      return;
+    }
+  };
+  markAllAsRead = async (
+    req: Request,
+    res: Response<NotificationMarkAllAsReadResponse | ErrorResponse>
+  ) => {
+    try {
+      const userIdFromParams = req.params.userId;
+      const roleFromQuery = req.query.role;
+
+      // Validate input parameters
+      const { userId, role } = NotificationMarkAllAsReadParams.parse({
+        userId: userIdFromParams,
+        role: roleFromQuery,
+      });
+
+      const result = await this.notificationService.markAllAsRead(userId, role as Roles);
+
+      const validatedResponse = NotificationMarkAllAsReadResponseSchema.parse({
+        count: result.count,
+        message: `Successfully marked ${result.count} notifications as read`,
+      });
+
+      res.status(200).json(validatedResponse);
+      return;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errorResponse = ErrorResponseSchema.parse({
+          error: 'Validation error',
+          message: error.errors.map(e => e.message).join(', '),
+        });
+        res.status(400).json(errorResponse);
+        return;
+      }
+
+      logger.error('Mark all as read error:', error);
+      const errorResponse = ErrorResponseSchema.parse({
+        error: 'Failed to mark all notifications as read',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      // If the error is about user/client not found, return 404
+      if (
+        error instanceof Error &&
+        (error.message === 'User not found' || error.message === 'Client not found')
+      ) {
+        res.status(404).json(errorResponse);
+        return;
+      }
+
       res.status(500).json(errorResponse);
       return;
     }

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotificationController } from '../notificaton.controller';
+import { NotificationController } from '../notification.controller';
 import { NotificationService } from '../../services/notification.service';
 import { sseManager } from '../../utils/SSEManager';
 import { NotificationStatus, NotificationType, Roles } from '@prisma/client';
