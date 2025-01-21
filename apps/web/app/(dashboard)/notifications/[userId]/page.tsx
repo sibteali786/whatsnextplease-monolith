@@ -5,10 +5,8 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { Bell, Loader2, XCircle } from 'lucide-react';
 
 export default function Notifications() {
-  const { notifications, isLoading, error, markAsRead, markingRead, unreadCount } = useNotifications();
-  
-  console.log('Notifications page rendering:', { notifications, unreadCount });
-
+  const { notifications, isLoading, error, markAsRead, markingRead, markAllAsRead } =
+    useNotifications();
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
@@ -44,6 +42,7 @@ export default function Notifications() {
   return (
     <div className="p-4">
       <NotificationsList
+        onMarkAllRead={markAllAsRead}
         notifications={notifications}
         markAsRead={markAsRead}
         markingRead={markingRead}

@@ -1,21 +1,15 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { NotificationList } from "@wnp/types";
-import { formatDistance as dateFnsFormatDistance } from "date-fns";
-import { MoreHorizontal, Loader2 } from "lucide-react";
+import * as React from 'react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { NotificationList } from '@wnp/types';
+import { formatDistance as dateFnsFormatDistance } from 'date-fns';
+import { MoreHorizontal, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,25 +17,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { NotificationStatus } from "@prisma/client";
+} from '../ui/dropdown-menu';
+import { NotificationStatus } from '@prisma/client';
+
 interface NotificationsListProps {
   notifications: NotificationList[];
   markAsRead: (id: string) => Promise<void>;
   markingRead: string[];
+  onMarkAllRead: () => void;
 }
 
-function formatDistance(
-  date1: Date,
-  date2: Date,
-  options: { addSuffix: boolean },
-): string {
+function formatDistance(date1: Date, date2: Date, options: { addSuffix: boolean }): string {
   return dateFnsFormatDistance(date1, date2, options);
 }
+
 export default function NotificationsList({
   notifications,
   markAsRead,
   markingRead,
+  onMarkAllRead: markAllAsRead,
 }: NotificationsListProps) {
   return (
     <div className="p-4">
@@ -62,7 +56,7 @@ export default function NotificationsList({
                 <TabsTrigger value="unread">Unread</TabsTrigger>
               </TabsList>
               <div className="space-x-2">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead}>
                   Mark all as read
                 </Button>
                 <Button variant="ghost" size="sm">
@@ -76,7 +70,7 @@ export default function NotificationsList({
             {/* TABS CONTENT */}
             <TabsContent value="all">
               <ScrollArea className="h-[450px] pr-5">
-                {notifications.map((item) => (
+                {notifications.map(item => (
                   <div
                     key={item.id}
                     className="group flex items-center gap-4 py-4 px-6 mb-2 rounded-lg transition-all duration-200 hover:bg-muted/50 relative"
@@ -92,12 +86,12 @@ export default function NotificationsList({
                         {item.data?.avatarUrl ? (
                           <AvatarImage
                             src={item.data.avatarUrl}
-                            alt={item.data?.name || "User"}
+                            alt={item.data?.name || 'User'}
                             className="object-cover"
                           />
                         ) : (
                           <AvatarFallback className="bg-primary-foreground text-primary">
-                            {item.data?.name?.charAt(0).toUpperCase() || "U"}
+                            {item.data?.name?.charAt(0).toUpperCase() || 'U'}
                           </AvatarFallback>
                         )}
                       </Avatar>
@@ -105,9 +99,7 @@ export default function NotificationsList({
 
                     {/* Content with better structure */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-none mb-1">
-                        {item.message}
-                      </p>
+                      <p className="text-sm font-medium leading-none mb-1">{item.message}</p>
                       <p className="text-xs text-muted-foreground">
                         {formatDistance(new Date(item.createdAt), new Date(), {
                           addSuffix: true,
@@ -126,11 +118,7 @@ export default function NotificationsList({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              navigator.clipboard.writeText(item.id)
-                            }
-                          >
+                          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(item.id)}>
                             Copy ID
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -149,15 +137,13 @@ export default function NotificationsList({
                             ) : (
                               <>
                                 {item.status === NotificationStatus.READ
-                                  ? "Already read"
-                                  : "Mark as Read"}
+                                  ? 'Already read'
+                                  : 'Mark as Read'}
                               </>
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() =>
-                              console.log(`Delete Notification: ${item.id}`)
-                            }
+                            onClick={() => console.log(`Delete Notification: ${item.id}`)}
                           >
                             Delete Notification
                           </DropdownMenuItem>

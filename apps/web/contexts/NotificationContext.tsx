@@ -3,6 +3,8 @@ import { NotificationResponse } from '@wnp/types';
 import { fetchNotifications } from '@/db/repositories/notifications/getNotifications';
 import { markAsReadNotification } from '@/db/repositories/notifications/markAsReadById';
 import { NotificationStatus } from '@prisma/client';
+import { useToast } from '@/hooks/use-toast';
+import { markAllAsReadNotifications } from '@/db/repositories/notifications/markAllRead';
 
 interface NotificationContextType {
   notifications: NotificationResponse[];
@@ -11,6 +13,7 @@ interface NotificationContextType {
   error: Error | null;
   markAsRead: (id: string) => Promise<void>;
   markingRead: string[];
+  markAllAsRead: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -27,6 +30,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [markingRead, setMarkingRead] = useState<string[]>([]);
+  const { toast } = useToast();
 
   // Update unread count whenever notifications change
   useEffect(() => {
@@ -90,6 +94,28 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     return () => eventSource.close();
   }, [userId]);
 
+  const markAllAsRead = async () => {
+    try {
+      await markAllAsReadNotifications(userId, role);
+      setNotifications(prev =>
+        prev.map(notification => ({
+          ...notification,
+          status: NotificationStatus.READ,
+        }))
+      );
+      toast({
+        title: 'Success',
+        description: 'All notifications marked as read',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to mark all as read',
+      });
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -99,6 +125,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         error,
         markAsRead,
         markingRead,
+        markAllAsRead,
       }}
     >
       {children}
