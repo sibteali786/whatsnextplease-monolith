@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import { notificationRoutes } from './routes/notification.routes';
-import { verifyToken } from './middleware/auth';
 
 export async function createServer() {
   const app = express();
@@ -11,7 +10,7 @@ export async function createServer() {
   app.use(express.json());
 
   // Routes
-  app.use('/notifications', verifyToken, notificationRoutes);
+  app.use('/notifications', notificationRoutes);
 
   // Health check route
   app.get('/ping', (req, res) => {

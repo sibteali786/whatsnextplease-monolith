@@ -5,6 +5,7 @@ import { markAsReadNotification } from '@/db/repositories/notifications/markAsRe
 import { NotificationStatus } from '@prisma/client';
 import { useToast } from '@/hooks/use-toast';
 import { markAllAsReadNotifications } from '@/db/repositories/notifications/markAllRead';
+import { COOKIE_NAME } from '@/utils/constant';
 
 interface NotificationContextType {
   notifications: NotificationResponse[];
@@ -76,9 +77,18 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
   useEffect(() => {
     if (!userId) return;
-
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+    };
+    const token = getCookie(COOKIE_NAME);
+    if (!token) {
+      console.error('No authentication token found');
+      return;
+    }
     const eventSource = new EventSource(
-      `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}`
+      `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}`
     );
 
     eventSource.onmessage = event => {
