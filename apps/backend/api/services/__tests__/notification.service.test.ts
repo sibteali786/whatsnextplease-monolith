@@ -6,11 +6,18 @@ import {
   createMockNotification,
   createMockNotifications,
 } from '../../test/factories/notificaton.factory';
+import { checkIfClientExists, checkIfUserExists } from '../../utils/helperHandlers';
+import { NotFoundError } from '@wnp/types';
 
 jest.mock('@/utils/SSEManager', () => ({
   sseManager: { sendNotification: jest.fn() },
 }));
+// Mock the helper functions
+jest.mock('./../../utils/helperHandlers');
 
+// Type the mocked functions
+const mockedCheckIfUserExists = jest.mocked(checkIfUserExists);
+const mockedCheckIfClientExists = jest.mocked(checkIfClientExists);
 describe('NotificationService', () => {
   let service: NotificationService;
   const mockCreateNotification = prismaMock.notification.create as jest.Mock;
@@ -162,12 +169,36 @@ describe('NotificationService', () => {
   });
 
   describe('mark all notifications as read', () => {
+    const mockTransaction = jest.fn();
+
+    beforeEach(() => {
+      // Setup transaction mock
+      prismaMock.$transaction.mockImplementation(mockTransaction);
+    });
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
     it('should update all notifications status to READ and return updated count for TASK_AGENT', async () => {
       const userId = 'user-123';
       const role = Roles.TASK_AGENT;
       const updatedNotificationsCount = { count: 3 };
+
+      // Mock the user check to return true
+      mockedCheckIfUserExists.mockResolvedValue(true);
+
+      // Mock the transaction to resolve with the updated count
+      mockTransaction.mockImplementation(async callback => {
+        return callback({
+          notification: {
+            updateMany: mockUpdateManyNotification,
+          },
+        });
+      });
+
+      // Mock the notification update
       mockUpdateManyNotification.mockResolvedValue(updatedNotificationsCount);
       const result = await service.markAllAsRead(userId, role);
+      console.log(result);
       expect(result).toEqual(updatedNotificationsCount);
       expect(mockUpdateManyNotification).toHaveBeenCalledWith({
         where: { userId, status: NotificationStatus.UNREAD },
@@ -178,7 +209,17 @@ describe('NotificationService', () => {
       const userId = 'user-123';
       const role = Roles.CLIENT;
       const updatedNotificationsCount = { count: 3 };
+      // mocking the transaction to resolve with the updated count
+      mockTransaction.mockImplementation(async callback => {
+        return callback({
+          notification: {
+            updateMany: mockUpdateManyNotification,
+          },
+        });
+      });
+      mockedCheckIfClientExists.mockResolvedValue(true);
       mockUpdateManyNotification.mockResolvedValue(updatedNotificationsCount);
+
       const result = await service.markAllAsRead(userId, role);
       expect(result).toEqual(updatedNotificationsCount);
       expect(mockUpdateManyNotification).toHaveBeenCalledWith({
@@ -188,9 +229,24 @@ describe('NotificationService', () => {
     });
     it('should return error when userId is not found ', async () => {
       const userId = 'user-123';
-      const role = Roles.CLIENT;
-      mockUpdateManyNotification.mockRejectedValue(new Error('User not found'));
-      await expect(service.markAllAsRead(userId, role)).rejects.toThrow('User not found');
+      const role = Roles.TASK_AGENT;
+
+      // Mock the user check to throw NotFoundError
+      mockedCheckIfUserExists.mockRejectedValue(new NotFoundError('User', { userId }));
+
+      // The transaction should not be called in this case
+      mockTransaction.mockImplementation(async callback => {
+        return callback({
+          notification: {
+            updateMany: mockUpdateManyNotification,
+          },
+        });
+      });
+
+      await expect(service.markAllAsRead(userId, role)).rejects.toThrow(NotFoundError);
+
+      // Verify updateMany was not called
+      expect(mockUpdateManyNotification).not.toHaveBeenCalled();
     });
   });
 });

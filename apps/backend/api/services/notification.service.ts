@@ -2,6 +2,8 @@ import { NotificationStatus, Roles } from '@prisma/client';
 import { CreateNotificationDto } from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
 import prisma from '../config/db';
+import { checkIfClientExists, checkIfUserExists } from '../utils/helperHandlers';
+import { logger } from '../utils/logger';
 
 export class NotificationService {
   async create(data: CreateNotificationDto) {
@@ -52,17 +54,30 @@ export class NotificationService {
     return notification;
   }
   async markAllAsRead(userId: string, role: Roles) {
-    if (role === Roles.CLIENT) {
-      const updatedNotificationsCount = await prisma.notification.updateMany({
-        where: { clientId: userId, status: NotificationStatus.UNREAD },
-        data: { status: NotificationStatus.READ },
-      });
-      return updatedNotificationsCount;
-    }
-    const updatedNotificationsCount = await prisma.notification.updateMany({
-      where: { userId, status: NotificationStatus.UNREAD },
-      data: { status: NotificationStatus.READ },
+    return await prisma.$transaction(async tx => {
+      if (role !== Roles.CLIENT) {
+        const doesUserExist = await checkIfUserExists(userId);
+        if (!doesUserExist) {
+          logger.warn({ userId }, 'User not found');
+          throw new Error('User not found');
+        }
+        const updatedNotificationsCount = await tx.notification.updateMany({
+          where: { userId, status: NotificationStatus.UNREAD },
+          data: { status: NotificationStatus.READ },
+        });
+        return updatedNotificationsCount;
+      } else {
+        const doesClientExist = await checkIfClientExists(userId);
+        if (!doesClientExist) {
+          logger.warn({ userId }, 'Client not found');
+          throw new Error('Client not found');
+        }
+        const updatedNotificationsCount = await tx.notification.updateMany({
+          where: { clientId: userId, status: NotificationStatus.UNREAD },
+          data: { status: NotificationStatus.READ },
+        });
+        return updatedNotificationsCount;
+      }
     });
-    return updatedNotificationsCount;
   }
 }
