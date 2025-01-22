@@ -1,4 +1,4 @@
-import { BaseError, InternalServerError } from '@wnp/types/src/errors';
+import { BaseError, InternalServerError } from '@wnp/types';
 import type { Logger } from '@wnp/types';
 import { Response } from 'express';
 

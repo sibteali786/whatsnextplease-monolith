@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { notificationRoutes } from './routes/notification.routes';
+import { errorMiddleware } from './middleware/error/error.middleware';
 
 export async function createServer() {
   const app = express();
@@ -33,5 +34,9 @@ export async function createServer() {
   app.use((req, res) => {
     res.status(404).json({ message: 'Not Found' });
   });
+
+  // error Middleware
+  app.use(errorMiddleware);
+
   return app;
 }
