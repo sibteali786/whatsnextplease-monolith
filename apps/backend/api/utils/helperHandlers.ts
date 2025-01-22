@@ -1,10 +1,10 @@
 import { PrismaErrorMapper } from '../utils/errors/prisma-error-mapper';
 import prisma from '../config/db';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { NotFoundError } from '@wnp/types';
+import { NotFoundError, InternalServerError } from '@wnp/types';
 import { logger } from './logger';
 
-export async function checkIfUserExists(userId: string): Promise<boolean> {
+export async function checkIfUserExists(userId: string): Promise<void> {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -15,31 +15,24 @@ export async function checkIfUserExists(userId: string): Promise<boolean> {
       logger.warn({ userId }, 'User not found');
       throw new NotFoundError('User', { userId });
     }
-
-    return true;
   } catch (error) {
-    if (error instanceof Error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
+    // Handle Prisma specific errors
+    if (error instanceof PrismaClientKnownRequestError) {
+      throw PrismaErrorMapper.mapError(error);
+    }
 
-      // Handle Prisma specific errors
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code &&
-        error.code.startsWith('P')
-      ) {
-        throw PrismaErrorMapper.mapError(error);
-      }
-
-      // Log and rethrow any other unexpected errors
+    // Rethrow NotFoundError or any known BaseError
+    if (error instanceof NotFoundError) {
       throw error;
     }
-    return false;
+
+    // For any other error, log and throw internal server error
+    logger.error('Unexpected error in checkIfUserExists:', error);
+    throw new InternalServerError('Failed to check user existence', { userId });
   }
 }
 
-export async function checkIfClientExists(clientId: string): Promise<boolean> {
+export async function checkIfClientExists(clientId: string): Promise<void> {
   try {
     const client = await prisma.client.findUnique({
       where: { id: clientId },
@@ -50,26 +43,19 @@ export async function checkIfClientExists(clientId: string): Promise<boolean> {
       logger.warn({ clientId }, 'Client not found');
       throw new NotFoundError('Client', { clientId });
     }
-
-    return true;
   } catch (error) {
-    if (error instanceof Error) {
-      if (error instanceof NotFoundError) {
-        throw error;
-      }
+    // Handle Prisma specific errors
+    if (error instanceof PrismaClientKnownRequestError) {
+      throw PrismaErrorMapper.mapError(error);
+    }
 
-      // Handle Prisma specific errors
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code &&
-        error.code.startsWith('P')
-      ) {
-        throw PrismaErrorMapper.mapError(error);
-      }
-
-      // Log and rethrow any other unexpected errors
+    // Rethrow NotFoundError or any known BaseError
+    if (error instanceof NotFoundError) {
       throw error;
     }
-    return false;
+
+    // For any other error, log and throw internal server error
+    logger.error('Unexpected error in checkIfClientExists:', error);
+    throw new InternalServerError('Failed to check client existence', { clientId });
   }
 }

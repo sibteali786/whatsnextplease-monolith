@@ -7,6 +7,7 @@ export class ErrorHandler {
 
   public handleError(error: Error | BaseError, res: Response): void {
     if (error instanceof BaseError) {
+      this.logger.debug({ error }, 'Error Handler called');
       const response = error.toResponse();
 
       this.logger.error({
