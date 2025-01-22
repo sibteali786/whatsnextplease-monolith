@@ -1,215 +1,111 @@
-import { Request, Response } from 'express';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Request, Response, NextFunction } from 'express';
 import { NotificationService } from '../services/notification.service';
 import {
   CreateNotificationDtoSchema,
   NotificationResponse,
-  ErrorResponse,
   NotificationListResponse,
-  NotificationResponseSchema,
-  ErrorResponseSchema,
-  NotificationListResponseSchema,
-  NotificationMarkAsReadParams,
   NotificationMarkAsReadResponse,
-  NotificationMarkAsReadResponseSchema,
-  NotificationMarkAllAsReadParams,
   NotificationMarkAllAsReadResponse,
+  NotificationMarkAsReadParams,
+  NotificationMarkAllAsReadParams,
   NotificationMarkAllAsReadResponseSchema,
+  NotificationMarkAsReadResponseSchema,
 } from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
-import { ZodError } from 'zod';
 import { Roles } from '@prisma/client';
 import { GetNotificationInputParams } from '@wnp/types';
-import { logger } from '../utils/logger';
+import { BadRequestError } from '@wnp/types';
+import { asyncHandler } from '../utils/handlers/asyncHandler';
 
 export class NotificationController {
-  private notificationService: NotificationService;
+  constructor(
+    private readonly notificationService: NotificationService = new NotificationService()
+  ) {}
 
-  constructor(notificationService?: NotificationService) {
-    // If none passed in, default to a new NotificationService
-    this.notificationService = notificationService ?? new NotificationService();
-  }
-
-  subscribe = async (req: Request, res: Response<never | ErrorResponse>) => {
-    try {
-      const userId = req.params.userId;
-      sseManager.addClient(userId, res);
-      return;
-    } catch (error) {
-      const errorResponse = ErrorResponseSchema.parse({
-        error: 'Subscription failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-      res.status(500).json(errorResponse);
-      return;
-    }
-  };
-
-  create = async (req: Request, res: Response<NotificationResponse | ErrorResponse>) => {
-    try {
-      const validatedData = CreateNotificationDtoSchema.parse(req.body);
-
-      // Ensure at least one of userId or clientId is provided
-      if (!validatedData.userId && !validatedData.clientId) {
-        const errorResponse = ErrorResponseSchema.parse({
-          error: 'Validation error',
-          message: 'Either userId or clientId must be provided',
-        });
-        res.status(400).json(errorResponse);
-        return;
-      }
-
-      const notification = await this.notificationService.create(validatedData);
-      const validatedResponse = NotificationResponseSchema.parse(notification);
-
-      res.status(201).json(validatedResponse);
-    } catch (error) {
-      console.error(error);
-      if (error instanceof ZodError) {
-        const errorResponse = ErrorResponseSchema.parse({
-          error: 'Validation error',
-          message: error.errors.map(e => e.message).join(', '),
-        });
-        res.status(400).json(errorResponse);
-        return;
-      }
-
-      console.error('Notification creation error:', error);
-      const errorResponse = ErrorResponseSchema.parse({
-        error: 'Failed to create notification',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-      res.status(500).json(errorResponse);
-      return;
-    }
-  };
-
-  getUserNotifications = async (
+  // Handler implementations
+  private handleSubscribe = async (
     req: Request,
-    res: Response<NotificationListResponse | ErrorResponse>
-  ) => {
-    try {
-      const userIdFromParams = req.params.userId;
-      const roleFromQuery = req.query.role;
-      const { role, userId } = GetNotificationInputParams.parse({
-        userId: userIdFromParams,
-        role: roleFromQuery,
-      });
-      const notifications = await this.notificationService.getUserNotifications(
-        userId,
-        role as Roles
-      );
-      const validatedResponse = NotificationListResponseSchema.parse({
-        notifications,
-        total: notifications.length,
-      });
-
-      res.json(validatedResponse);
-      return;
-    } catch (error) {
-      console.log(error);
-      if (error instanceof ZodError) {
-        const errorResponse = ErrorResponseSchema.parse({
-          error: 'Validation error',
-          message: error.errors.map(e => e.message).join(', '),
-        });
-        res.status(400).json(errorResponse);
-        return;
-      }
-      if (error instanceof Error) {
-        const errorResponse = ErrorResponseSchema.parse({
-          error: 'Failed to fetch notifications',
-          message: error.message,
-        });
-        res.status(500).json(errorResponse);
-        return;
-      }
-    }
+    res: Response,
+    _next: NextFunction
+  ): Promise<void> => {
+    const userId = req.params.userId;
+    sseManager.addClient(userId, res);
   };
 
-  markAsRead = async (
+  private handleCreate = async (
     req: Request,
-    res: Response<NotificationMarkAsReadResponse | ErrorResponse>
-  ) => {
-    try {
-      const notificationIdFromParams = req.params.id;
-      const { id } = NotificationMarkAsReadParams.parse({
-        id: notificationIdFromParams,
-      });
-
-      const notification = await this.notificationService.markAsRead(id);
-      const validatedResponse = NotificationMarkAsReadResponseSchema.parse(notification);
-      res.status(200).json(validatedResponse);
-      return;
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = ErrorResponseSchema.parse({
-          error: 'Validation error',
-          message: error.errors[0].message,
-        });
-
-        res.status(400).json(errorResponse);
-        return;
-      }
-
-      console.error('Mark as read error:', error);
-      const errorResponse = ErrorResponseSchema.parse({
-        error: 'Failed to mark notification as read',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-      res.status(500).json(errorResponse);
-      return;
+    res: Response<NotificationResponse>,
+    _next: NextFunction
+  ): Promise<void> => {
+    const validatedData = CreateNotificationDtoSchema.parse(req.body);
+    if (!validatedData.userId && !validatedData.clientId) {
+      throw new BadRequestError('Either userId or clientId must be provided');
     }
+
+    const notification = await this.notificationService.create(validatedData);
+    res.status(201).json(notification);
   };
-  markAllAsRead = async (
+
+  private handleGetUserNotifications = async (
     req: Request,
-    res: Response<NotificationMarkAllAsReadResponse | ErrorResponse>
-  ) => {
-    try {
-      const userIdFromParams = req.params.userId;
-      const roleFromQuery = req.query.role;
+    res: Response<NotificationListResponse>,
+    _next: NextFunction
+  ): Promise<void> => {
+    const { role, userId } = GetNotificationInputParams.parse({
+      userId: req.params.userId,
+      role: req.query.role,
+    });
 
-      // Validate input parameters
-      const { userId, role } = NotificationMarkAllAsReadParams.parse({
-        userId: userIdFromParams,
-        role: roleFromQuery,
-      });
+    const notifications = await this.notificationService.getUserNotifications(
+      userId,
+      role as Roles
+    );
 
-      const result = await this.notificationService.markAllAsRead(userId, role as Roles);
-
-      const validatedResponse = NotificationMarkAllAsReadResponseSchema.parse({
-        count: result.count,
-        message: `Successfully marked ${result.count} notifications as read`,
-      });
-
-      res.status(200).json(validatedResponse);
-      return;
-    } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = ErrorResponseSchema.parse({
-          error: 'Validation error',
-          message: error.errors.map(e => e.message).join(', '),
-        });
-        res.status(400).json(errorResponse);
-        return;
-      }
-
-      logger.error('Mark all as read error:', error);
-      const errorResponse = ErrorResponseSchema.parse({
-        error: 'Failed to mark all notifications as read',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      });
-
-      // If the error is about user/client not found, return 404
-      if (
-        error instanceof Error &&
-        (error.message === 'User not found' || error.message === 'Client not found')
-      ) {
-        res.status(404).json(errorResponse);
-        return;
-      }
-
-      res.status(500).json(errorResponse);
-      return;
-    }
+    res.json({
+      notifications,
+      total: notifications.length,
+    });
   };
+
+  private handleMarkAsRead = async (
+    req: Request,
+    res: Response<NotificationMarkAsReadResponse>,
+    _next: NextFunction
+  ): Promise<void> => {
+    const { id } = NotificationMarkAsReadParams.parse({
+      id: req.params.id,
+    });
+
+    const notification = await this.notificationService.markAsRead(id);
+    const validatedResponse = NotificationMarkAsReadResponseSchema.parse(notification);
+    res.status(200).json(validatedResponse);
+  };
+
+  private handleMarkAllAsRead = async (
+    req: Request,
+    res: Response<NotificationMarkAllAsReadResponse>,
+    _next: NextFunction
+  ): Promise<void> => {
+    const { userId, role } = NotificationMarkAllAsReadParams.parse({
+      userId: req.params.userId,
+      role: req.query.role,
+    });
+
+    const result = await this.notificationService.markAllAsRead(userId, role as Roles);
+
+    const response = NotificationMarkAllAsReadResponseSchema.parse({
+      count: result.count,
+      message: `Successfully marked ${result.count} notifications as read`,
+    });
+
+    res.status(200).json(response);
+  };
+
+  // Public route handlers wrapped with asyncHandler
+  subscribe = asyncHandler(this.handleSubscribe);
+  create = asyncHandler(this.handleCreate);
+  getUserNotifications = asyncHandler(this.handleGetUserNotifications);
+  markAsRead = asyncHandler(this.handleMarkAsRead);
+  markAllAsRead = asyncHandler(this.handleMarkAllAsRead);
 }

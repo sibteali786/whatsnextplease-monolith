@@ -3,7 +3,6 @@ import { CreateNotificationDto } from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
 import prisma from '../config/db';
 import { checkIfClientExists, checkIfUserExists } from '../utils/helperHandlers';
-import { logger } from '../utils/logger';
 
 export class NotificationService {
   async create(data: CreateNotificationDto) {
@@ -28,13 +27,14 @@ export class NotificationService {
   }
 
   async getUserNotifications(userId: string, role: Roles) {
-    console.log(userId, role);
     if (role === Roles.CLIENT) {
+      await checkIfClientExists(userId);
       return prisma.notification.findMany({
         where: { clientId: userId },
         orderBy: { createdAt: 'desc' },
       });
     }
+    await checkIfUserExists(userId);
     return prisma.notification.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -56,22 +56,18 @@ export class NotificationService {
   async markAllAsRead(userId: string, role: Roles) {
     return await prisma.$transaction(async tx => {
       if (role !== Roles.CLIENT) {
-        const doesUserExist = await checkIfUserExists(userId);
-        if (!doesUserExist) {
-          logger.warn({ userId }, 'User not found');
-          throw new Error('User not found');
-        }
+        // This will throw if user doesn't exist
+        await checkIfUserExists(userId);
+
         const updatedNotificationsCount = await tx.notification.updateMany({
           where: { userId, status: NotificationStatus.UNREAD },
           data: { status: NotificationStatus.READ },
         });
         return updatedNotificationsCount;
       } else {
-        const doesClientExist = await checkIfClientExists(userId);
-        if (!doesClientExist) {
-          logger.warn({ userId }, 'Client not found');
-          throw new Error('Client not found');
-        }
+        // This will throw if client doesn't exist
+        await checkIfClientExists(userId);
+
         const updatedNotificationsCount = await tx.notification.updateMany({
           where: { clientId: userId, status: NotificationStatus.UNREAD },
           data: { status: NotificationStatus.READ },

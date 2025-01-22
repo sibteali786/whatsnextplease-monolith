@@ -37,13 +37,8 @@ export const errorMiddleware = (
     // Handle Prisma related Errors
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       const mappedError = PrismaErrorMapper.mapError(error);
-      // Create new instance with combined details
-      const errorWithContext = Object.assign(
-        Object.create(Object.getPrototypeOf(mappedError)),
-        mappedError,
-        { details: { ...(mappedError.details as object), requestContext } }
-      );
-      errorHandler.handleError(errorWithContext, res);
+      mappedError.details = { ...(mappedError.details as object), requestContext };
+      errorHandler.handleError(mappedError, res);
       return;
     }
     // Handle custom BaseError instances
