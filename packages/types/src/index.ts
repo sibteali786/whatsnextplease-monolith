@@ -96,5 +96,10 @@ export type NotificationMarkAllAsReadResponse = z.infer<
   typeof NotificationMarkAllAsReadResponseSchema
 >;
 
+export const UpdateProfilePictureSchema = z.object({
+  id: z.string(),
+  profileUrl: z.string().url(),
+});
+export type UpdateProfilePictureDto = z.infer<typeof UpdateProfilePictureSchema>;
 export * from './errors';
 export * from './logger';

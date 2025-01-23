@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { notificationRoutes } from './routes/notification.routes';
 import { errorMiddleware } from './middleware/error/error.middleware';
+import { userRoutes } from './routes/user.routes';
 
 export async function createServer() {
   const app = express();
@@ -12,6 +13,7 @@ export async function createServer() {
 
   // Routes
   app.use('/notifications', notificationRoutes);
+  app.use('/user', userRoutes);
 
   // Health check route
   app.get('/ping', (req, res) => {
