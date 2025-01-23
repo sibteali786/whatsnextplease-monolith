@@ -54,3 +54,10 @@ export class DatabaseError extends BaseError {
     Object.setPrototypeOf(this, DatabaseError.prototype);
   }
 }
+
+export class FileUploadError extends BaseError {
+  constructor(message: string, details?: ErrorDetails) {
+    super(message, HttpStatus.BAD_GATEWAY, ErrorCodes.FILE_UPLOAD_FAILED, details);
+    Object.setPrototypeOf(this, FileUploadError.prototype);
+  }
+}
