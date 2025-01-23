@@ -24,6 +24,7 @@
     "@aws-sdk/s3-request-presigner": "^3.679.0",
     "aws-cdk-lib": "2.164.1",
     "constructs": "^10.0.0",
+    "jsonwebtoken": "^9.0.2",
     "source-map-support": "^0.5.21"
   }
 }
