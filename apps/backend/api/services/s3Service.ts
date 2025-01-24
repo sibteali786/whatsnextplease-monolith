@@ -1,6 +1,7 @@
 import { DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import { InternalServerError } from '@wnp/types';
+import { logger } from '../utils/logger';
 
 export class S3BucketService {
   private s3Client: S3Client;
@@ -68,6 +69,7 @@ export class S3BucketService {
     type: 'user' | 'task',
     taskId?: string
   ): string {
+    logger.debug({ fileName, type }, 'Debug Service');
     const sanitizedFileName = this.sanitizeFileName(fileName);
     return type === 'user'
       ? `users/${userId}/profile/${sanitizedFileName}`
