@@ -52,18 +52,27 @@ export class S3Stack extends cdk.Stack {
         origin: origins.S3BucketOrigin.withOriginAccessControl(this.bucket, {
           originAccessControl: oac,
         }),
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL, // Allow all HTTP methods including OPTIONS
+        cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
+        responseHeadersPolicy: new cloudfront.ResponseHeadersPolicy(this, 'CorsHeadersPolicy', {
+          corsBehavior: {
+            accessControlAllowCredentials: false,
+            accessControlAllowHeaders: ['Authorization', 'Content-Type'],
+            accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS'],
+            accessControlAllowOrigins: ['*'],
+            originOverride: true,
+          },
+        }),
         edgeLambdas: [
           {
             functionVersion: authFunction.currentVersion,
             eventType: cloudfront.LambdaEdgeEventType.VIEWER_REQUEST,
-            includeBody: true, // Enable if you need to access request body
+            includeBody: true,
           },
         ],
-        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-        originRequestPolicy: cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
       },
-      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
     });
 
     // Add S3 bucket policy for CloudFront access

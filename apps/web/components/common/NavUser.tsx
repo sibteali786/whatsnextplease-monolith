@@ -1,4 +1,4 @@
-'use client';
+import { useEffect, useRef } from 'react';
 import { BadgeCheck, ChevronsUpDown, Copy, CreditCard, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { signout } from '@/utils/user';
+import { COOKIE_NAME } from '@/utils/constant';
 
 interface NavUserProps {
   user: {
@@ -22,22 +23,62 @@ interface NavUserProps {
   };
 }
 
+const SecureAvatar = ({
+  url,
+  alt,
+  className,
+}: {
+  url: string | null;
+  alt: string;
+  className?: string;
+}) => {
+  const imgRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    if (url) {
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+      };
+      const token = getCookie(COOKIE_NAME);
+      console.log('Token', token);
+      fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(response => response.blob())
+        .then(blob => {
+          if (imgRef.current) {
+            imgRef.current.src = URL.createObjectURL(blob);
+          }
+        })
+        .catch(() => {
+          if (imgRef.current) {
+            imgRef.current.src = 'https://github.com/shadcn.png';
+          }
+        });
+    }
+  }, [url]);
+
+  return (
+    <Avatar className={className || 'h-8 w-8 rounded-lg'}>
+      <AvatarImage
+        ref={imgRef}
+        src="https://github.com/shadcn.png" // Fallback initially
+        alt={alt}
+        className="rounded-lg"
+      />
+      <AvatarFallback className="rounded-lg">{alt.substring(0, 2).toUpperCase()}</AvatarFallback>
+    </Avatar>
+  );
+};
+
 export const NavUser: React.FC<NavUserProps> = ({ user }) => {
-  console.log(user);
   return (
     <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="flex gap-2 items-center cursor-pointer">
-            <Avatar className="h-8 w-8 rounded-lg">
-              <AvatarImage
-                src={user.avatarUrl ?? 'https://github.com/shadcn.png'}
-                alt={user.name ?? 'avatar'}
-              />
-              <AvatarFallback className="rounded-lg">
-                {user.name ? user.name.substring(2).toUpperCase() : 'CN'}
-              </AvatarFallback>
-            </Avatar>
+            <SecureAvatar url={user.avatarUrl} alt={user.name ?? 'avatar'} />
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-semibold">{user.name}</span>
               <span className="truncate text-xs">{user.email}</span>
@@ -51,15 +92,9 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           sideOffset={4}
         >
           <DropdownMenuLabel className="p-0 font-normal">
-            <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage
-                  src={user.avatarUrl ?? 'https://github.com/shadcn.png'}
-                  alt={user.name ?? 'avatar'}
-                />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
+            <div className="flex items-center gap-2 px-1 py-1.5 text-sm">
+              <SecureAvatar url={user.avatarUrl} alt={user.name ?? 'avatar'} />
+              <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
@@ -68,21 +103,21 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem>
-              <BadgeCheck />
+              <BadgeCheck className="mr-2" />
               Account
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <CreditCard />
+              <CreditCard className="mr-2" />
               Billing
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.id)}>
-              <Copy />
+              <Copy className="mr-2" />
               Copy User Id
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signout()}>
-            <LogOut />
+            <LogOut className="mr-2" />
             Log out
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -90,3 +125,5 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
     </div>
   );
 };
+
+export default NavUser;
