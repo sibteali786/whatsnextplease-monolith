@@ -26,6 +26,7 @@ export class S3Stack extends cdk.Stack {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT],
           allowedOrigins: ['*'],
           allowedHeaders: ['*'],
+          exposedHeaders: ['ETag'],
         },
       ],
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
