@@ -1,12 +1,6 @@
-"use client";
-import {
-  BadgeCheck,
-  ChevronsUpDown,
-  Copy,
-  CreditCard,
-  LogOut,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+'use client';
+import { BadgeCheck, ChevronsUpDown, Copy, CreditCard, LogOut } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +9,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { signout } from "@/utils/user";
+} from '../ui/dropdown-menu';
+import { signout } from '@/utils/user';
 
 interface NavUserProps {
   user: {
@@ -29,6 +23,7 @@ interface NavUserProps {
 }
 
 export const NavUser: React.FC<NavUserProps> = ({ user }) => {
+  console.log(user);
   return (
     <div>
       <DropdownMenu>
@@ -36,11 +31,11 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           <div className="flex gap-2 items-center cursor-pointer">
             <Avatar className="h-8 w-8 rounded-lg">
               <AvatarImage
-                src={user.avatarUrl ?? "https://github.com/shadcn.png"}
-                alt={user.name ?? "avatar"}
+                src={user.avatarUrl ?? 'https://github.com/shadcn.png'}
+                alt={user.name ?? 'avatar'}
               />
               <AvatarFallback className="rounded-lg">
-                {user.name ? user.name.substring(2).toUpperCase() : "CN"}
+                {user.name ? user.name.substring(2).toUpperCase() : 'CN'}
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
@@ -59,8 +54,8 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
             <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={user.avatarUrl ?? "https://github.com/shadcn.png"}
-                  alt={user.name ?? "avatar"}
+                  src={user.avatarUrl ?? 'https://github.com/shadcn.png'}
+                  alt={user.name ?? 'avatar'}
                 />
                 <AvatarFallback className="rounded-lg">CN</AvatarFallback>
               </Avatar>
@@ -80,9 +75,7 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
               <CreditCard />
               Billing
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(user.id)}
-            >
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.id)}>
               <Copy />
               Copy User Id
             </DropdownMenuItem>
