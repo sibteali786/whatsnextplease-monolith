@@ -4,7 +4,12 @@ import { verifyToken } from '../middleware/auth';
 import multer from 'multer';
 const router = Router();
 const controller = new UserController();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
 
 router.patch(
   '/profilePicture',

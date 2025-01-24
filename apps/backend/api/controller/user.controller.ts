@@ -6,28 +6,35 @@ import { UserService } from '../services/user.service';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { S3BucketService } from '../services/s3Service';
+import { logger } from '../utils/logger';
 
 export class UserController {
   constructor(
     private readonly userService: UserService = new UserService(),
     private readonly s3Service: S3BucketService = new S3BucketService()
   ) {}
-  private async handleUpdateProfilePicture(
+  private handleUpdateProfilePicture = async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ): Promise<void> {
+  ): Promise<void> => {
     const userId = req.user?.id;
     const file = req.file;
 
+    logger.debug(
+      {
+        userId,
+        filename: file?.originalname,
+      },
+      'User ID: '
+    );
     if (!file || !userId) {
-      throw new BadRequestError('File and userI are required');
+      throw new BadRequestError('File and userId are required');
     }
 
     try {
       // Generate file key for S3
       const fileKey = this.s3Service.generateFileKey(userId, file.originalname, 'user');
-
       // Get presigned URL and upload
       const presignedUrl = await this.s3Service.generatePresignedUrl(fileKey, file.mimetype);
 
@@ -64,7 +71,7 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
 }
