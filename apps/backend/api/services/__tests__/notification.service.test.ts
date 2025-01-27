@@ -184,7 +184,7 @@ describe('NotificationService', () => {
       const updatedNotificationsCount = { count: 3 };
 
       // Mock the user check to return true
-      mockedCheckIfUserExists.mockResolvedValue(true);
+      mockedCheckIfUserExists.mockResolvedValue();
 
       // Mock the transaction to resolve with the updated count
       mockTransaction.mockImplementation(async callback => {
@@ -217,7 +217,7 @@ describe('NotificationService', () => {
           },
         });
       });
-      mockedCheckIfClientExists.mockResolvedValue(true);
+      mockedCheckIfClientExists.mockResolvedValue();
       mockUpdateManyNotification.mockResolvedValue(updatedNotificationsCount);
 
       const result = await service.markAllAsRead(userId, role);

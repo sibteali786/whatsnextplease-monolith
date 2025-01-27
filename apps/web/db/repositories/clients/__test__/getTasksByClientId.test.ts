@@ -1,7 +1,7 @@
 /*
  * @jest-environment node
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 // getTasksByClientId.test.ts
 import { prismaMock } from "@/singleton";
 import { getTasksByClientId } from "../getTasksByClientId";

@@ -1,7 +1,7 @@
 /*
  * @jest-environment node
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { getTasksCountByStatus } from "../getTasksCountByStatus";
 import { prismaMock } from "@/singleton";
 import { Roles, TaskStatusEnum } from "@prisma/client";

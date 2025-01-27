@@ -59,7 +59,8 @@ export const errorMiddleware = (
     logger.error('Error in error handling middleware:', error);
     if (!res.headersSent) {
       res.status(500).json({
-        error: 'INTERNAL_SERVER_ERROR',
+        code: 'INTERNAL_SERVER_ERROR',
+        status: 500,
         message: 'An unexpected error occurred while processing the error',
       });
     }

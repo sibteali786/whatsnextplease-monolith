@@ -7,6 +7,7 @@ import {
   createMockNotification,
   createMockNotifications,
 } from '../../test/factories/notificaton.factory';
+import { BadRequestError } from '@wnp/types';
 
 // Mock the entire NotificationService
 jest.mock('../../services/notification.service', () => ({
@@ -24,7 +25,7 @@ describe('NotificationController', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNotificationService: jest.Mocked<NotificationService>;
-
+  let mockNext: jest.Mock;
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
@@ -40,7 +41,7 @@ describe('NotificationController', () => {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
     };
-
+    mockNext = jest.fn();
     // Initialize service mock
     mockNotificationService = new NotificationService() as jest.Mocked<NotificationService>;
 
@@ -52,7 +53,7 @@ describe('NotificationController', () => {
     it('should add client to SSE manager', async () => {
       mockRequest.params = { userId: 'user123' };
 
-      await controller.subscribe(mockRequest as Request, mockResponse as Response);
+      await controller.subscribe(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(sseManager.addClient).toHaveBeenCalledWith('user123', mockResponse);
     });
@@ -72,7 +73,7 @@ describe('NotificationController', () => {
       // Setup mock return value
       mockNotificationService.create.mockResolvedValueOnce(mockNotification);
 
-      await controller.create(mockRequest as Request, mockResponse as Response);
+      await controller.create(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNotificationService.create).toHaveBeenCalledWith(notificationData);
       expect(mockResponse.status).toHaveBeenCalledWith(201);
@@ -89,7 +90,11 @@ describe('NotificationController', () => {
       mockRequest.query = { role: Roles.TASK_AGENT };
       mockNotificationService.getUserNotifications.mockResolvedValue(mockNotifications);
 
-      await controller.getUserNotifications(mockRequest as Request, mockResponse as Response);
+      await controller.getUserNotifications(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
 
       const validatedResponse = {
         notifications: mockNotifications,
@@ -102,15 +107,19 @@ describe('NotificationController', () => {
     it('should handle fetch errors', async () => {
       mockRequest.params = { userId: 'user123' };
       mockRequest.query = { role: Roles.TASK_AGENT };
-      mockNotificationService.getUserNotifications.mockRejectedValue(new Error('Fetch failed'));
+      const error = new Error('Fetch failed');
+      mockNotificationService.getUserNotifications.mockRejectedValue(error);
 
-      await controller.getUserNotifications(mockRequest as Request, mockResponse as Response);
+      await controller.getUserNotifications(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Failed to fetch notifications',
-        message: 'Fetch failed',
-      });
+      // Instead of checking response.json, verify that next was called with the error
+      expect(mockNext).toHaveBeenCalledWith(error);
+      // Verify that response.json was not called
+      expect(mockResponse.json).not.toHaveBeenCalled();
     });
   });
 
@@ -119,25 +128,30 @@ describe('NotificationController', () => {
       mockRequest.params = {}; // Missing userId
       mockRequest.query = { role: Roles.TASK_AGENT };
 
-      await controller.getUserNotifications(mockRequest as Request, mockResponse as Response);
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Validation error',
-        message: expect.stringContaining('Required'),
-      });
+      await controller.getUserNotifications(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+      // Verify that next was called with a ZodError
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
 
     it('should handle invalid role', async () => {
       mockRequest.params = { userId: 'user123' };
       mockRequest.query = { role: 'INVALID_ROLE' };
 
-      await controller.getUserNotifications(mockRequest as Request, mockResponse as Response);
+      await controller.getUserNotifications(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Validation error',
-        message: expect.stringContaining('Invalid enum value.'),
-      });
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
   });
 
@@ -148,13 +162,11 @@ describe('NotificationController', () => {
         // Missing type field
       };
 
-      await controller.create(mockRequest as Request, mockResponse as Response);
+      await controller.create(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Validation error',
-        message: expect.stringContaining('Required'),
-      });
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
 
     it('should validate missing userId and clientId', async () => {
@@ -164,13 +176,12 @@ describe('NotificationController', () => {
         // Missing both userId and clientId
       };
 
-      await controller.create(mockRequest as Request, mockResponse as Response);
+      await controller.create(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Validation error',
-        message: 'Either userId or clientId must be provided',
-      });
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error).toBeInstanceOf(BadRequestError);
+      expect(error.message).toBe('Either userId or clientId must be provided');
     });
 
     it('should validate invalid notification type', async () => {
@@ -180,13 +191,11 @@ describe('NotificationController', () => {
         userId: 'user123',
       };
 
-      await controller.create(mockRequest as Request, mockResponse as Response);
+      await controller.create(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Validation error',
-        message: expect.stringContaining('Invalid enum value.'),
-      });
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
   });
 
@@ -202,7 +211,7 @@ describe('NotificationController', () => {
       mockRequest.params = { id: notificationId };
       mockNotificationService.markAsRead.mockResolvedValueOnce(mockUpdatedNotification);
 
-      await controller.markAsRead(mockRequest as Request, mockResponse as Response);
+      await controller.markAsRead(mockRequest as Request, mockResponse as Response, mockNext);
 
       expect(mockNotificationService.markAsRead).toHaveBeenCalledWith(notificationId);
       expect(mockResponse.status).toHaveBeenCalledWith(200);
@@ -212,28 +221,23 @@ describe('NotificationController', () => {
     it('should handle missing notification id', async () => {
       mockRequest.params = {};
 
-      await controller.markAsRead(mockRequest as Request, mockResponse as Response);
+      await controller.markAsRead(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(400);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Validation error',
-        message: 'Required',
-      });
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error.name).toBe('ZodError');
     });
 
     it('should handle service errors', async () => {
       mockRequest.params = { id: notificationId };
-      mockNotificationService.markAsRead.mockRejectedValueOnce(
-        new Error('Failed to update notification')
-      );
+      const error = new Error('Failed to update notification');
+      mockNotificationService.markAsRead.mockRejectedValueOnce(error);
 
-      await controller.markAsRead(mockRequest as Request, mockResponse as Response);
+      await controller.markAsRead(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(500);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        error: 'Failed to mark notification as read',
-        message: 'Failed to update notification',
-      });
+      expect(mockNext).toHaveBeenCalledWith(error);
+      expect(mockResponse.status).not.toHaveBeenCalled();
+      expect(mockResponse.json).not.toHaveBeenCalled();
     });
   });
 });

@@ -8,13 +8,24 @@ import {
   createMockNotifications,
 } from '../../test/factories/notificaton.factory';
 import { testRequest } from '../../test/testUtils';
+import jwt from 'jsonwebtoken';
+import { checkIfUserExists } from '../../utils/helperHandlers';
+import { NotFoundError } from '@wnp/types';
+jest.mock('./../../utils/helperHandlers');
 
+// Type the mocked functions
+const mockedCheckIfUserExists = jest.mocked(checkIfUserExists);
 describe('Notification Routes', () => {
   let app: Express;
+  let mockToken: string;
   const mockNotificationUpdate = prismaMock.notification.update as jest.Mock;
-
+  const mockUserId = 'user123';
   beforeAll(async () => {
     app = await createServer();
+    mockToken = jwt.sign(
+      { id: mockUserId, role: Roles.TASK_AGENT },
+      process.env.SECRET || 'test-secret'
+    );
   });
 
   beforeEach(() => {
@@ -35,6 +46,7 @@ describe('Notification Routes', () => {
 
       const response = await testRequest(app)
         .post('/notifications')
+        .set('Authorization', `Bearer ${mockToken}`)
         .send(notificationData)
         .expect(201);
 
@@ -50,9 +62,17 @@ describe('Notification Routes', () => {
         message: '',
       };
 
-      const response = await testRequest(app).post('/notifications').send(invalidData).expect(400);
+      const response = await testRequest(app)
+        .post('/notifications')
+        .set('Authorization', `Bearer ${mockToken}`)
+        .send(invalidData)
+        .expect(422);
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          code: 'VALIDATION_ERROR',
+        })
+      );
     });
   });
 
@@ -65,9 +85,10 @@ describe('Notification Routes', () => {
       });
 
       prismaMock.notification.findMany.mockResolvedValueOnce(mockNotifications);
-
+      mockedCheckIfUserExists.mockResolvedValue();
       const response = await testRequest(app)
         .get(`/notifications/${userId}`)
+        .set('Authorization', `Bearer ${mockToken}`)
         .query({ role: Roles.TASK_AGENT })
         .expect(200);
 
@@ -81,10 +102,15 @@ describe('Notification Routes', () => {
     it('should handle invalid role parameter', async () => {
       const response = await testRequest(app)
         .get('/notifications/user123')
+        .set('Authorization', `Bearer ${mockToken}`)
         .query({ role: 'INVALID_ROLE' })
-        .expect(400);
+        .expect(422);
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          code: 'VALIDATION_ERROR',
+        })
+      );
     });
   });
 
@@ -113,6 +139,7 @@ describe('Notification Routes', () => {
       });
       const response = await testRequest(app)
         .patch(`/notifications/${notificationId}/read`)
+        .set('Authorization', `Bearer ${mockToken}`)
         .expect(200);
       expect(response.body).toEqual(
         expect.objectContaining({
@@ -128,25 +155,28 @@ describe('Notification Routes', () => {
     });
     it('should handle non-existent notification', async () => {
       const nonExistentId = '529ac636-2812-412d-a540-c3cb79c693f5';
-      prismaMock.notification.update.mockRejectedValueOnce(new Error('Notification not found'));
+      const error = new NotFoundError('Notification not found');
+      prismaMock.notification.update.mockRejectedValueOnce(error);
 
       const response = await testRequest(app)
         .patch(`/notifications/${nonExistentId}/read`)
-        .expect(500);
+        .set('Authorization', `Bearer ${mockToken}`)
+        .expect(404);
 
-      expect(response.body).toEqual({
-        error: 'Failed to mark notification as read',
-        message: 'Notification not found',
-      });
+      expect(response.body).toEqual(expect.objectContaining({ code: 'NOT_FOUND' }));
     });
 
     it('should handle invalid notification ID', async () => {
-      const response = await testRequest(app).patch(`/notifications/""/read`).expect(400);
+      const response = await testRequest(app)
+        .patch(`/notifications/""/read`)
+        .set('Authorization', `Bearer ${mockToken}`)
+        .expect(422);
 
-      expect(response.body).toEqual({
-        error: 'Validation error',
-        message: 'Invalid notification ID format - must be a valid UUID',
-      });
+      expect(response.body).toEqual(
+        expect.objectContaining({
+          code: 'VALIDATION_ERROR',
+        })
+      );
     });
   });
 });
