@@ -1,0 +1,6 @@
+{
+	"*.tsx": [
+		"eslint --fix",
+		"prettier --write"
+	]
+}
