@@ -43,7 +43,7 @@ export default [
       '@typescript-eslint/explicit-module-boundary-types': 'off',
 
       // Core ESLint rules
-      'no-unused-vars': 'off', // Turned off in favor of @typescript-eslint/no-unused-vars
+      'no-unused-vars': 'on', // Turned off in favor of @typescript-eslint/no-unused-vars
       'prefer-const': 'warn',
       'no-undef': 'error',
     },
