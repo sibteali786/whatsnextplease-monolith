@@ -28,7 +28,10 @@ export function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/") {
     return NextResponse.redirect(new URL("/home", request.url));
   }
-
+  if (request.nextUrl.pathname === "/settings") {
+    return NextResponse.redirect(new URL("/settings/myprofile", request.url));
+  }
+  
   // Decode the JWT to get the user role
   const payload = decodeJWT(token.value);
 

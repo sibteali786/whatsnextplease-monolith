@@ -26,12 +26,6 @@
         "commands": ["cd apps/backend && npx prisma studio"]
       },
       {
-        "name": "db-studio-web",
-        "icon": "database",
-        "autoExecuteCommands": true,
-        "commands": ["cd apps/web && pnpm run db:studio"]
-      },
-      {
         "name": "git",
         "icon": "git-commit",
         "commands": ["git add ."]
@@ -48,7 +42,7 @@
       {
         "name": "runDBInstance",
         "commands": ["docker start wnpdb_dev"],
-		"autoExecuteCommands": true
+        "autoExecuteCommands": true
       }
     ],
     "saved-session": [
@@ -59,4 +53,3 @@
     ]
   }
 }
-
