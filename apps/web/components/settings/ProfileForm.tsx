@@ -105,7 +105,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         });
         const user: Omit<User, 'passwordHash'> | ErrorResponse = await response.json();
 
-        if (!response.ok && user instanceof Error) {
+        if (!response.ok) {
           throw new Error(user.message || 'Failed to fetch profile');
         }
 
