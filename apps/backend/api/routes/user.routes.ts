@@ -17,5 +17,6 @@ router.patch(
   upload.single('file'),
   controller.updateProfilePicture
 );
+router.get('/profile', verifyToken, controller.getUserProfile);
 
 export const userRoutes = router;

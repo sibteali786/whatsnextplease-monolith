@@ -1,12 +1,11 @@
-import { FileUploadError } from '@wnp/types';
+import { FileUploadError, NotFoundError } from '@wnp/types';
 import { BadRequestError, UpdateProfilePictureSchema } from '@wnp/types';
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { S3BucketService } from '../services/s3Service';
-import { logger } from '../utils/logger';
+import { checkIfUserExists } from '../utils/helperHandlers';
 
 export class UserController {
   constructor(
@@ -20,14 +19,6 @@ export class UserController {
   ): Promise<void> => {
     const userId = req.user?.id;
     const file = req.file;
-
-    logger.debug(
-      {
-        userId,
-        filename: file?.originalname,
-      },
-      'User ID: '
-    );
     if (!file || !userId) {
       throw new BadRequestError('File and userId are required');
     }
@@ -73,5 +64,31 @@ export class UserController {
     }
   };
 
+  private handleGetUserProfile = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      // Get user ID from request
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new BadRequestError('User ID is required');
+      }
+      await checkIfUserExists(userId);
+      // Get user profile
+      const user = await this.userService.getUserProfile(userId);
+
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      res.status(200).json(user);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
+  getUserProfile = asyncHandler(this.handleGetUserProfile);
 }
