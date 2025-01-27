@@ -43,6 +43,7 @@ model User {
     username            String               @unique
     email               String               @unique
     passwordHash        String
+    country             String?
     phone               String?
     address             String?
     city                String?
@@ -85,6 +86,7 @@ model Client {
     email         String         @unique
     username      String         @unique
     passwordHash  String
+    country       String?        @default("US")
     companyName   String
     contactName   String?
     phone         String?
