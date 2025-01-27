@@ -1,8 +1,28 @@
-export default function MyProfilePage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">My Profile</h1>
-      {/* Profile settings content */}
-    </div>
-  );
+// app/settings/myprofile/page.tsx
+import ProfileForm from '@/components/settings/ProfileForm';
+import { COOKIE_NAME } from '@/utils/constant';
+import { cookies } from 'next/headers';
+
+async function getProfile() {
+  const token = cookies().get(COOKIE_NAME)?.value;
+
+  const response = await fetch(`${process.env.API_URL}/user/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store', // or use revalidate if you want to cache for some time
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch profile');
+  }
+
+  return response.json();
+}
+
+export default async function ProfilePage() {
+  const profile = await getProfile();
+
+  return <ProfileForm initialData={profile} />;
 }

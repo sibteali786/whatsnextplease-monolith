@@ -31,10 +31,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       <div className="p-4">
         <div className="relative min-h-[600px] overflow-hidden rounded-xl border bg-card">
           <SidebarProvider defaultOpen={true}>
-            <div className="flex">
+            <div className="flex w-full">
               <div className="relative">
                 <Sidebar
-                  className="!absolute !h-full !w-64 border-r bg-sidebar bg-white"
+                  className="!absolute !h-full !w-64 border-r bg-sidebar"
                   variant="inset"
                   collapsible="none"
                 >
@@ -64,8 +64,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 </Sidebar>
               </div>
 
-              <div className="min-h-[600px] flex-1 pl-64">
-                <div className="p-6">{children}</div>
+              <div className="flex-1 pl-64 w-full">
+                <div className="p-6 w-full">{children}</div>
               </div>
             </div>
           </SidebarProvider>

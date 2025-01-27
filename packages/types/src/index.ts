@@ -36,17 +36,11 @@ export const NotificationResponseSchema = z.object({
 export const NotificationResponseArraySchema = z.array(NotificationResponseSchema);
 export type NotificationResponse = z.infer<typeof NotificationResponseSchema>;
 
-export const ErrorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string(),
-});
-
 export const NotificationListResponseSchema = z.object({
   notifications: z.array(NotificationResponseSchema),
   total: z.number(),
 });
 
-export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type NotificationListResponse = z.infer<typeof NotificationListResponseSchema>;
 
 enum Roles {
