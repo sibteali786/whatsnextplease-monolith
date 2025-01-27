@@ -3,7 +3,6 @@ const TaskSupervisorLayout = ({
   recentUnassignedTasks,
 }: {
   taskSummary: React.ReactNode;
-  messages?: React.ReactNode;
   recentUnassignedTasks: React.ReactNode;
 }) => {
   return (

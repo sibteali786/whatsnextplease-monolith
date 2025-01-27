@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { UseFormReturn } from "react-hook-form";
-import { format } from "date-fns";
-import { TaskPriorityEnum, TaskStatusEnum } from "@prisma/client";
-import { transformEnumValue } from "@/utils/utils";
-import { MultiSelect } from "@/components/ui/multi-select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { UseFormReturn } from 'react-hook-form';
+import { format } from 'date-fns';
+import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { transformEnumValue } from '@/utils/utils';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -22,25 +22,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import FileUploadArea from "@/components/common/FileUploadArea";
-import {
-  FileWithMetadataFE,
-  UserAssigneeSchema,
-} from "@/utils/validationSchemas";
-import { z } from "zod";
-import { useState } from "react";
-import { createTaskSchema } from "./CreateTaskContainer";
-import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+} from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import FileUploadArea from '@/components/common/FileUploadArea';
+import { FileWithMetadataFE, UserAssigneeSchema } from '@/utils/validationSchemas';
+import { z } from 'zod';
+import { useState } from 'react';
+import { createTaskSchema } from './CreateTaskContainer';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 
 interface CreateTaskFormProps {
   form: UseFormReturn<z.infer<typeof createTaskSchema>>;
@@ -55,8 +48,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   skills,
   users,
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [files, setFiles] = useState<FileWithMetadataFE[]>([]);
+  const [, setFiles] = useState<FileWithMetadataFE[]>([]);
 
   return (
     <Form {...form}>
@@ -101,7 +93,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               <FormLabel>Skills</FormLabel>
               <FormControl>
                 <MultiSelect
-                  options={skills.map((skill) => ({
+                  options={skills.map(skill => ({
                     value: skill.name,
                     label: skill.name,
                   }))}
@@ -191,22 +183,17 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                     <SelectValue placeholder="Select Assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.map((user) => (
+                    {users.map(user => (
                       <SelectItem key={user.id} value={user.id}>
                         <div className="flex items-center">
                           <Avatar className="h-8 w-8 rounded-lg">
                             <AvatarImage
-                              src={
-                                user.avatarUrl ||
-                                "https://github.com/shadcn.png"
-                              }
-                              alt={user.firstName ?? "avatar"}
+                              src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                              alt={user.firstName ?? 'avatar'}
                               className="rounded-full"
                             />
                             <AvatarFallback className="rounded-full">
-                              {user.firstName
-                                ? user.firstName.substring(2).toUpperCase()
-                                : "CN"}
+                              {user.firstName ? user.firstName.substring(2).toUpperCase() : 'CN'}
                             </AvatarFallback>
                           </Avatar>
                           <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
@@ -232,13 +219,11 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </FormControl>
               <FormDescription>
                 <span className="block w-[50%]">
-                  An estimate of how much work remains until this issue will be
-                  resolved.
+                  An estimate of how much work remains until this issue will be resolved.
                 </span>
                 <span className="block w-[50%]">
-                  The format of this is &apos; *w *d *h *m &apos; (representing
-                  weeks, days, hours and minutes). Examples: 4d, 5h 30m, 60m,
-                  3w.
+                  The format of this is &apos; *w *d *h *m &apos; (representing weeks, days, hours
+                  and minutes). Examples: 4d, 5h 30m, 60m, 3w.
                 </span>
               </FormDescription>
               <FormMessage />
@@ -256,17 +241,13 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
-                      variant={"outline"}
+                      variant={'outline'}
                       className={cn(
-                        "w-[240px] pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground",
+                        'w-[240px] pl-3 text-left font-normal',
+                        !field.value && 'text-muted-foreground'
                       )}
                     >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
+                      {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
                   </FormControl>
@@ -276,9 +257,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("1900-01-01")
-                    }
+                    disabled={date => date > new Date() || date < new Date('1900-01-01')}
                     autoFocus={true}
                   />
                 </PopoverContent>
