@@ -21,6 +21,7 @@ export class UserController {
     const userId = req.user?.id;
     const file = req.file;
     let fileKey: string | null = null; // Track fileKey for cleanup
+    let oldFileKey: string | null = null;
 
     if (!file || !userId) {
       throw new BadRequestError('File and userId are required');
@@ -29,7 +30,11 @@ export class UserController {
     try {
       // Generate file key for S3
       fileKey = this.s3Service.generateFileKey(userId, file.originalname, 'user');
-
+      const currentUser = await this.userService.getUserProfile(userId);
+      if (currentUser?.avatarUrl) {
+        // Extract the file key from the CloudFront URL
+        oldFileKey = currentUser.avatarUrl.split('/').slice(3).join('/');
+      }
       // Get presigned URL and upload
       const presignedUrl = await this.s3Service.generatePresignedUrl(fileKey, file.mimetype);
 
@@ -62,6 +67,18 @@ export class UserController {
           parsedInput.id,
           parsedInput.profileUrl
         );
+        if (oldFileKey) {
+          try {
+            await this.s3Service.deleteFile(oldFileKey);
+            logger.info(`Successfully deleted old profile picture: ${oldFileKey}`);
+          } catch (cleanupError) {
+            // Log but don't fail the request if old file cleanup fails
+            logger.warn('Failed to delete old profile picture:', {
+              fileKey: oldFileKey,
+              error: cleanupError,
+            });
+          }
+        }
         res.status(201).json(updatedUser);
       } catch (dbError) {
         // If database update fails, cleanup the uploaded file
