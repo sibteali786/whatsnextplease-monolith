@@ -95,5 +95,28 @@ export const UpdateProfilePictureSchema = z.object({
   profileUrl: z.string().url(),
 });
 export type UpdateProfilePictureDto = z.infer<typeof UpdateProfilePictureSchema>;
+
+export const UpdateProfileSchema = z.object({
+  id: z.string(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional().nullable(),
+  avatarUrl: z.string().url().optional(),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  address: z.string().optional(),
+  zipCode: z.string().optional(),
+  designation: z.string().optional(),
+  role: z.object({
+    name: z.nativeEnum(Roles),
+  }),
+});
+
+export const UpdateProfileWithoutIdSchema = UpdateProfileSchema.omit({ id: true });
+export const profileData = UpdateProfileSchema.omit({ id: true });
+export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;
+
 export * from './errors';
 export * from './logger';

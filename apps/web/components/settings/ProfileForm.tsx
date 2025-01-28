@@ -19,12 +19,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { transformEnumValue, trimWhitespace } from '@/utils/utils';
 import { Roles, User } from '@prisma/client';
-import { ErrorResponse } from '@wnp/types';
+import { ErrorResponse, profileData, UpdateProfileSchema } from '@wnp/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 interface UserWithRole extends Omit<User, 'passwordHash'> {
   role: {
-    id: string;
     name: Roles;
   };
 }
@@ -74,6 +73,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
   const [isPasswordEditing, setIsPasswordEditing] = useState(false);
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [originalData, setOriginalData] = useState<UserWithRole | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { imageUrl, isLoading: isAvatarLoading } = useSecureAvatar(
     // Only use S3 URL when no file is selected
@@ -130,6 +130,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
 
         // Set form default values with fetched data
         if (user instanceof Object && 'firstName' in user) {
+          setOriginalData(user);
           form.reset({
             personalInfo: {
               firstName: user.firstName,
@@ -165,8 +166,45 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
+      if (!originalData) return;
       const trimmedData = trimWhitespace(data);
-      console.log(trimmedData);
+      // Track what's actually changed
+      const changes: Partial<z.infer<typeof profileData>> = {};
+
+      // Compare personal info
+      if (trimmedData.personalInfo.firstName !== originalData.firstName) {
+        changes.firstName = data.personalInfo.firstName;
+      }
+      if (trimmedData.personalInfo.lastName !== originalData.lastName) {
+        changes.lastName = data.personalInfo.lastName;
+      }
+      if (trimmedData.personalInfo.email !== originalData.email) {
+        changes.email = data.personalInfo.email;
+      }
+      if (trimmedData.personalInfo.phone !== originalData.phone) {
+        changes.phone = data.personalInfo.phone;
+      }
+
+      // Compare address info
+      if (trimmedData.address.country !== originalData.country) {
+        changes.country = data.address.country;
+      }
+      if (trimmedData.address.city !== originalData.city) {
+        changes.city = data.address.city;
+      }
+      if (trimmedData.address.postalCode !== originalData.zipCode) {
+        changes.zipCode = data.address.postalCode;
+      }
+
+      // Only proceed if there are actual changes or new avatar
+      if (Object.keys(changes).length === 0 && !avatarFile) {
+        toast({
+          title: 'No Changes',
+          description: 'No changes were made to update',
+          variant: 'default',
+        });
+        return;
+      }
       if (avatarFile) {
         // First upload the avatar if a new file is selected
         const formData = new FormData();
@@ -186,8 +224,26 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
         if (!uploadResponse.ok) {
           throw new Error('Failed to upload avatar');
         }
+      }
+      // Prepare profile update data
+      // Only send update request if there are changes
+      if (Object.keys(changes).length > 0) {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(changes),
+        });
 
-        // Include new avatar URL in profile update
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        // Update original data with new values
+        setOriginalData(prev => (prev ? { ...prev, ...changes } : prev));
       }
       toast({
         title: 'Profile Updated',

@@ -18,5 +18,5 @@ router.patch(
   controller.updateProfilePicture
 );
 router.get('/profile', verifyToken, controller.getUserProfile);
-
+router.patch('/profile', verifyToken, controller.updateProfile);
 export const userRoutes = router;

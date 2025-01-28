@@ -1,4 +1,4 @@
-import { FileUploadError, NotFoundError } from '@wnp/types';
+import { FileUploadError, NotFoundError, UpdateProfileSchema } from '@wnp/types';
 import { BadRequestError, UpdateProfilePictureSchema } from '@wnp/types';
 import { NextFunction, Response } from 'express';
 import { UserService } from '../services/user.service';
@@ -139,6 +139,38 @@ export class UserController {
     }
   };
 
+  private handleUpdateProfile = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new BadRequestError('User ID is required');
+      }
+      await checkIfUserExists(userId);
+      // Only validate the fields that are actually present in the request
+      const updatedData =
+        Object.keys(req.body).length > 0
+          ? UpdateProfileSchema.partial().parse({
+              // Use .partial() to make all fields optional
+              id: userId,
+              ...req.body,
+            })
+          : null;
+      // Update user profile
+      const updatedUser = await this.userService.updateProfile({
+        ...updatedData,
+        id: userId,
+      });
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
+  updateProfile = asyncHandler(this.handleUpdateProfile);
 }
