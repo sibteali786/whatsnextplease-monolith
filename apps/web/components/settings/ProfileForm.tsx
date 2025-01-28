@@ -1,4 +1,3 @@
-// app/settings/myprofile/page.tsx
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,13 +14,26 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2, Pencil } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Camera, Loader2, Pencil } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { trimWhitespace } from '@/utils/utils';
-import { User } from '@prisma/client';
+import { transformEnumValue, trimWhitespace } from '@/utils/utils';
+import { Roles, User } from '@prisma/client';
 import { ErrorResponse } from '@wnp/types';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
+interface UserWithRole extends Omit<User, 'passwordHash'> {
+  role: {
+    id: string;
+    name: Roles;
+  };
+}
 
+// Update the ProfileFormProps interface
+interface ProfileFormProps {
+  initialData: UserWithRole;
+  token: string;
+}
 // Profile update schema
 const profileSchema = z.object({
   personalInfo: z.object({
@@ -32,22 +44,17 @@ const profileSchema = z.object({
   }),
   password: z
     .object({
-      currentPassword: z.string().optional(),
-      newPassword: z.string().min(8, 'Password must be at least 8 characters').optional(),
+      newPassword: z.string().optional(),
       confirmPassword: z.string().optional(),
     })
     .refine(
       data => {
-        if (data.newPassword && !data.currentPassword) {
-          return false;
-        }
-        if (data.newPassword !== data.confirmPassword) {
-          return false;
-        }
-        return true;
+        if (!data.newPassword) return true;
+
+        return data.newPassword === data.confirmPassword;
       },
       {
-        message: "Passwords don't match or current password is required",
+        message: "Passwords don't match",
         path: ['confirmPassword'],
       }
     ),
@@ -55,21 +62,35 @@ const profileSchema = z.object({
     country: z.string().optional(),
     city: z.string().optional(),
     postalCode: z.string().optional(),
-    taxId: z.string().optional(),
   }),
+  avatarUrl: z.string().url().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
-interface ProfileFormProps {
-  initialData: Omit<User, 'passwordHash'>;
-}
-export default function ProfileForm({ initialData }: ProfileFormProps) {
+export default function ProfileForm({ initialData, token }: ProfileFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isPersonalEditing, setIsPersonalEditing] = useState(false);
   const [isPasswordEditing, setIsPasswordEditing] = useState(false);
   const [isAddressEditing, setIsAddressEditing] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { imageUrl, isLoading: isAvatarLoading } = useSecureAvatar(
+    // Only use S3 URL when no file is selected
+    avatarFile ? null : initialData.avatarUrl,
+    'https://github.com/shadcn.png'
+  );
+  // Add these handlers inside your component
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+    }
+  };
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -80,7 +101,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         phone: initialData.phone || '',
       },
       password: {
-        currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       },
@@ -100,11 +120,10 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
         });
-        const user: Omit<User, 'passwordHash'> | ErrorResponse = await response.json();
-
+        const user: UserWithRole | ErrorResponse = await response.json();
         if (!response.ok && user instanceof Error) {
           throw new Error(user.message || 'Failed to fetch profile');
         }
@@ -119,7 +138,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
               phone: user.phone || '',
             },
             password: {
-              currentPassword: '',
               newPassword: '',
               confirmPassword: '',
             },
@@ -149,6 +167,32 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
     try {
       const trimmedData = trimWhitespace(data);
       console.log(trimmedData);
+      if (avatarFile) {
+        // First upload the avatar if a new file is selected
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+
+        const uploadResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/profilePicture`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload avatar');
+        }
+
+        const { avatarUrl } = await uploadResponse.json();
+        // Include new avatar URL in profile update
+        trimmedData.avatarUrl = avatarUrl;
+      }
+      // Clear selected file after successful update
+      setAvatarFile(null);
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been updated successfully',
@@ -176,7 +220,6 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
       </div>
     );
   }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -185,6 +228,53 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card>
+            <CardContent className="p-6 flex flex-row gap-4">
+              <div className="relative inline-block">
+                <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+                  <AvatarImage
+                    src={avatarFile ? URL.createObjectURL(avatarFile) : imageUrl}
+                    alt={`${initialData.firstName}'s avatar`}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-2xl">
+                    {isAvatarLoading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      initialData.lastName.substring(0, 2).toUpperCase()
+                    )}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-0 right-0 p-1 bg-primary rounded-full cursor-pointer z-50 ">
+                  <Camera className="h-4 w-4 text-white" />
+                </div>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+                aria-label="Upload profile picture"
+              />
+              <div className="space-y-2 mt-3">
+                <p className="text-xl font-bold">
+                  {initialData.firstName} {initialData.lastName}
+                </p>
+                <p className="text-textPrimary ">{transformEnumValue(initialData.role.name)}</p>
+                <p>
+                  {initialData?.city && initialData?.country
+                    ? initialData.city + ',' + initialData?.country
+                    : ''}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          {isPersonalEditing && (
+            <p className="text-sm text-muted-foreground">
+              Click the avatar to upload a new profile picture
+            </p>
+          )}
           {/* Personal Information */}
           <Card>
             <CardHeader>

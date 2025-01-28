@@ -5,7 +5,6 @@ import { cookies } from 'next/headers';
 
 async function getProfile() {
   const token = cookies().get(COOKIE_NAME)?.value;
-
   const response = await fetch(`${process.env.API_URL}/user/profile`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -23,6 +22,7 @@ async function getProfile() {
 
 export default async function ProfilePage() {
   const profile = await getProfile();
-
-  return <ProfileForm initialData={profile} />;
+  const token = cookies().get(COOKIE_NAME)?.value;
+  if (!token) return;
+  return <ProfileForm initialData={profile} token={token} />;
 }
