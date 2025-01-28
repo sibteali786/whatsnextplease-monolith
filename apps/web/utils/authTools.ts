@@ -1,23 +1,20 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { config } from "dotenv";
-import "server-only";
-import jwt from "jsonwebtoken";
-import prisma from "@/db/db";
-import bcrypt from "bcrypt";
-import { EntityAlreadyExistsError } from "@/errors/entityAlreadyExists";
-import logger from "./logger";
-import { cookies } from "next/headers";
-import { COOKIE_NAME } from "./constant";
-import { redirect } from "next/navigation";
-import { transformEnumValue } from "./utils";
-import { Roles } from "@prisma/client";
+import { config } from 'dotenv';
+import 'server-only';
+import jwt from 'jsonwebtoken';
+import prisma from '@/db/db';
+import bcrypt from 'bcrypt';
+import { EntityAlreadyExistsError } from '@/errors/entityAlreadyExists';
+import logger from './logger';
+import { redirect } from 'next/navigation';
+import { Roles } from '@prisma/client';
 config();
 
 // Utility function to check for environment variable
 export const ensureEnvVar = (varName: string) => {
   const value = process.env[varName];
   if (!value) {
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV !== 'production') {
       console.error(`${varName} is not defined in the environment variables`);
     }
     throw new Error(`${varName} is not defined in the environment variables`);
@@ -26,22 +23,15 @@ export const ensureEnvVar = (varName: string) => {
 };
 
 // Ensure SECRET is defined
-const SECRET = ensureEnvVar("SECRET");
+const SECRET = ensureEnvVar('SECRET');
 
-export const createTokenForUser = (
-  id: string,
-  username: string,
-  role: Roles,
-) => {
+export const createTokenForUser = (id: string, username: string, role: Roles) => {
   return jwt.sign({ id, username, role }, process.env.SECRET!, {
-    expiresIn: "12h",
+    expiresIn: '12h',
   });
 };
 
-export const getUserFromToken = async (token: {
-  name: string;
-  value: string;
-}) => {
+export const getUserFromToken = async (token: { name: string; value: string }) => {
   //TODO: handle token expired error and maybe modify error handler to better handle errors
   try {
     const payload = jwt.verify(token.value, SECRET) as {
@@ -107,7 +97,7 @@ export const getUserFromToken = async (token: {
     }
     const modUser = {
       id: user.id,
-      name: user.firstName + " " + user.lastName,
+      name: user.firstName + ' ' + user.lastName,
       username: user.username,
       email: user.email,
       avatarUrl: user.avatarUrl,
@@ -118,17 +108,11 @@ export const getUserFromToken = async (token: {
     };
     return modUser;
   } catch (error) {
-    redirect("/signin");
+    redirect('/signin');
   }
 };
 
-export const signin = async ({
-  username,
-  password,
-}: {
-  username: string;
-  password: string;
-}) => {
+export const signin = async ({ username, password }: { username: string; password: string }) => {
   try {
     // Look for a match in the User table
     const matchUser = await prisma.user.findUnique({
@@ -149,8 +133,8 @@ export const signin = async ({
       if (!isValid) {
         return {
           error: {
-            type: "InvalidPassword",
-            message: "Incorrect password provided",
+            type: 'InvalidPassword',
+            message: 'Incorrect password provided',
           },
           token: null,
         };
@@ -159,10 +143,10 @@ export const signin = async ({
       const token = createTokenForUser(
         matchUser.id,
         matchUser.username,
-        matchUser?.role ? matchUser?.role?.name : Roles.TASK_AGENT, // Use user's role from DB
+        matchUser?.role ? matchUser?.role?.name : Roles.TASK_AGENT // Use user's role from DB
       );
       const { passwordHash, ...user } = matchUser;
-      return { token, user, message: "Signed in successfully" };
+      return { token, user, message: 'Signed in successfully' };
     }
 
     // If no user found, check Client table
@@ -174,8 +158,8 @@ export const signin = async ({
     if (!matchClient) {
       return {
         error: {
-          type: "UserNotFound",
-          message: "No user or client found with the provided username",
+          type: 'UserNotFound',
+          message: 'No user or client found with the provided username',
         },
         token: null,
       };
@@ -186,8 +170,8 @@ export const signin = async ({
     if (!isValid) {
       return {
         error: {
-          type: "InvalidPassword",
-          message: "Incorrect password provided",
+          type: 'InvalidPassword',
+          message: 'Incorrect password provided',
         },
         token: null,
       };
@@ -196,16 +180,16 @@ export const signin = async ({
     const token = createTokenForUser(
       matchClient.id,
       matchClient.username,
-      Roles.CLIENT, // Directly assign CLIENT role for client sign-in
+      Roles.CLIENT // Directly assign CLIENT role for client sign-in
     );
     const { passwordHash, ...client } = matchClient;
-    return { token, client, message: "Signed in successfully" };
+    return { token, client, message: 'Signed in successfully' };
   } catch (error) {
-    logger.error(error, "SignIn Error");
+    logger.error(error, 'SignIn Error');
     return {
       error: {
-        type: "ServerError",
-        message: "An error occurred while processing your request",
+        type: 'ServerError',
+        message: 'An error occurred while processing your request',
       },
       token: null,
     };
@@ -234,8 +218,8 @@ export const signup = async ({
     if (role === Roles.CLIENT && !companyName) {
       return {
         error: {
-          type: "InvalidInput",
-          message: "Invalid input provided",
+          type: 'InvalidInput',
+          message: 'Invalid input provided',
         },
         token: null,
       };
@@ -244,8 +228,8 @@ export const signup = async ({
     if (role !== Roles.CLIENT && (!firstName || !lastName)) {
       return {
         error: {
-          type: "InvalidInput",
-          message: "Invalid input provided",
+          type: 'InvalidInput',
+          message: 'Invalid input provided',
         },
         token: null,
       };
@@ -264,8 +248,8 @@ export const signup = async ({
     if (existingUserOrClient[0] || existingUserOrClient[1]) {
       return {
         error: {
-          type: "DuplicateCredentials",
-          message: "Username or email is already in use",
+          type: 'DuplicateCredentials',
+          message: 'Username or email is already in use',
         },
         token: null,
       };
@@ -281,17 +265,13 @@ export const signup = async ({
           username,
           email,
           passwordHash: hashedPassword,
-          companyName: companyName ?? "",
+          companyName: companyName ?? '',
           role: { connect: { name: Roles.CLIENT } },
         },
       });
 
-      const token = createTokenForUser(
-        client.id,
-        client.username,
-        Roles.CLIENT,
-      );
-      return { client, token, message: "Client signed up successfully" };
+      const token = createTokenForUser(client.id, client.username, Roles.CLIENT);
+      return { client, token, message: 'Client signed up successfully' };
     }
 
     // Create a new user
@@ -300,20 +280,20 @@ export const signup = async ({
         username,
         email,
         passwordHash: hashedPassword,
-        firstName: firstName ?? "",
-        lastName: lastName ?? "",
+        firstName: firstName ?? '',
+        lastName: lastName ?? '',
         role: { connect: { name: role } },
       },
     });
 
     const token = createTokenForUser(user.id, user.username, role);
-    return { user, token, message: "User signed up successfully" };
+    return { user, token, message: 'User signed up successfully' };
   } catch (error) {
-    console.error("Signup Error:", error);
+    console.error('Signup Error:', error);
     return {
       error: {
-        type: "ServerError",
-        message: "An error occurred while processing your request",
+        type: 'ServerError',
+        message: 'An error occurred while processing your request',
       },
       token: null,
     };
@@ -347,10 +327,10 @@ export const checkIfUserExists = async ({
   if (existingUser) {
     const errorMessage =
       existingUser.username === username
-        ? "Username is already taken"
-        : "Email is already registered";
+        ? 'Username is already taken'
+        : 'Email is already registered';
     return {
-      error: { type: "UserAlreadyExists", message: errorMessage },
+      error: { type: 'UserAlreadyExists', message: errorMessage },
       hashedPassword: null,
     };
   }
@@ -378,8 +358,8 @@ export const checkIfClientExists = async ({
   if (existingClient) {
     const errorMessage =
       existingClient.companyName === companyName
-        ? "Company name is already registered."
-        : "Email is already registered.";
+        ? 'Company name is already registered.'
+        : 'Email is already registered.';
     throw new EntityAlreadyExistsError(errorMessage);
   }
 

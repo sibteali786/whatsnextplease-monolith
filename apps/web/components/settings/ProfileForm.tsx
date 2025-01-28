@@ -187,12 +187,8 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
           throw new Error('Failed to upload avatar');
         }
 
-        const { avatarUrl } = await uploadResponse.json();
         // Include new avatar URL in profile update
-        trimmedData.avatarUrl = avatarUrl;
       }
-      // Clear selected file after successful update
-      setAvatarFile(null);
       toast({
         title: 'Profile Updated',
         description: 'Your profile has been updated successfully',
@@ -228,53 +224,6 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
-            <CardContent className="p-6 flex flex-row gap-4">
-              <div className="relative inline-block">
-                <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
-                  <AvatarImage
-                    src={avatarFile ? URL.createObjectURL(avatarFile) : imageUrl}
-                    alt={`${initialData.firstName}'s avatar`}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-2xl">
-                    {isAvatarLoading ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      initialData.lastName.substring(0, 2).toUpperCase()
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute bottom-0 right-0 p-1 bg-primary rounded-full cursor-pointer z-50 ">
-                  <Camera className="h-4 w-4 text-white" />
-                </div>
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChange}
-                aria-label="Upload profile picture"
-              />
-              <div className="space-y-2 mt-3">
-                <p className="text-xl font-bold">
-                  {initialData.firstName} {initialData.lastName}
-                </p>
-                <p className="text-textPrimary ">{transformEnumValue(initialData.role.name)}</p>
-                <p>
-                  {initialData?.city && initialData?.country
-                    ? initialData.city + ',' + initialData?.country
-                    : ''}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          {isPersonalEditing && (
-            <p className="text-sm text-muted-foreground">
-              Click the avatar to upload a new profile picture
-            </p>
-          )}
           {/* Personal Information */}
           <Card>
             <CardHeader>
@@ -291,6 +240,53 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
               </div>
             </CardHeader>
             <CardContent className="grid gap-6">
+              <div className="flex flex-row gap-4">
+                <div className="relative inline-block">
+                  <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+                    <AvatarImage
+                      src={avatarFile ? URL.createObjectURL(avatarFile) : imageUrl}
+                      alt={`${initialData.firstName}'s avatar`}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-2xl">
+                      {isAvatarLoading ? (
+                        <span className="animate-pulse">...</span>
+                      ) : (
+                        initialData.lastName.substring(0, 2).toUpperCase()
+                      )}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute bottom-0 right-0 p-1 bg-primary rounded-full cursor-pointer z-50 ">
+                    <Camera className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  aria-label="Upload profile picture"
+                />
+                <div className="space-y-1 mt-3">
+                  <p className="text-xl font-bold">
+                    {initialData.firstName} {initialData.lastName}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {transformEnumValue(initialData.role.name)}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {initialData?.city && initialData?.country
+                      ? initialData.city + ',' + initialData?.country
+                      : ''}
+                  </p>
+                </div>
+              </div>
+              {isPersonalEditing && (
+                <p className="text-sm text-muted-foreground">
+                  Click the avatar to upload a new profile picture
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
