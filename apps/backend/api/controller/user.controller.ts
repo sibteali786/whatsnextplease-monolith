@@ -6,6 +6,7 @@ import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { S3BucketService } from '../services/s3Service';
 import { checkIfUserExists } from '../utils/helperHandlers';
+import { logger } from '../utils/logger';
 
 export class UserController {
   constructor(
@@ -19,13 +20,16 @@ export class UserController {
   ): Promise<void> => {
     const userId = req.user?.id;
     const file = req.file;
+    let fileKey: string | null = null; // Track fileKey for cleanup
+
     if (!file || !userId) {
       throw new BadRequestError('File and userId are required');
     }
 
     try {
       // Generate file key for S3
-      const fileKey = this.s3Service.generateFileKey(userId, file.originalname, 'user');
+      fileKey = this.s3Service.generateFileKey(userId, file.originalname, 'user');
+
       // Get presigned URL and upload
       const presignedUrl = await this.s3Service.generatePresignedUrl(fileKey, file.mimetype);
 
@@ -52,14 +56,43 @@ export class UserController {
         profileUrl,
       });
 
-      // Update database
-      const updatedUser = await this.userService.updateProfilePicture(
-        parsedInput.id,
-        parsedInput.profileUrl
-      );
-
-      res.status(201).json(updatedUser);
+      try {
+        // Update database
+        const updatedUser = await this.userService.updateProfilePicture(
+          parsedInput.id,
+          parsedInput.profileUrl
+        );
+        res.status(201).json(updatedUser);
+      } catch (dbError) {
+        // If database update fails, cleanup the uploaded file
+        if (fileKey) {
+          try {
+            await this.s3Service.deleteFile(fileKey);
+            logger.info(`Cleaned up S3 file ${fileKey} after database update failure`);
+          } catch (cleanupError) {
+            logger.error('Failed to cleanup S3 file after database error:', {
+              fileKey,
+              error: cleanupError,
+            });
+          }
+        }
+        // Re-throw the original error
+        throw dbError;
+      }
     } catch (error) {
+      // For any other errors in the outer try block
+      // (like upload failures, validation errors, etc.)
+      if (fileKey) {
+        try {
+          await this.s3Service.deleteFile(fileKey);
+          logger.info(`Cleaned up S3 file ${fileKey} after error`);
+        } catch (cleanupError) {
+          logger.error('Failed to cleanup S3 file:', {
+            fileKey,
+            error: cleanupError,
+          });
+        }
+      }
       next(error);
     }
   };

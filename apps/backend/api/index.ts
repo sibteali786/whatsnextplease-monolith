@@ -1,7 +1,8 @@
 import { createServer } from './server';
 import prisma from './config/db';
 import { Express } from 'express';
-
+import { config } from 'dotenv';
+config();
 let app: Express | null = null;
 
 // Create and configure the server

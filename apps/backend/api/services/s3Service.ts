@@ -1,7 +1,8 @@
 import { DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import { InternalServerError } from '@wnp/types';
-import { logger } from '../utils/logger';
+import { config } from 'dotenv';
+import path from 'path';
 
 export class S3BucketService {
   private s3Client: S3Client;
@@ -9,6 +10,11 @@ export class S3BucketService {
   private bucket: string;
   private cloudFrontDomain: string;
   constructor() {
+    // Ensure environment variables are loaded
+    config({ path: path.resolve(process.cwd(), '.env') });
+
+    // Validate required environment variables
+    this.validateEnvironmentVariables();
     this.s3Client = new S3Client({
       region: process.env.AWS_REGION || 'use-east-1',
     });
@@ -69,11 +75,19 @@ export class S3BucketService {
     type: 'user' | 'task',
     taskId?: string
   ): string {
-    logger.debug({ fileName, type }, 'Debug Service');
     const sanitizedFileName = this.sanitizeFileName(fileName);
     return type === 'user'
       ? `users/${userId}/profile/${sanitizedFileName}`
       : `tasks/${taskId}/users/${userId}/${sanitizedFileName}`;
+  }
+  private validateEnvironmentVariables() {
+    const requiredEnvVars = ['AWS_REGION', 'S3_BUCKET_NAME', 'CLOUDFRONT_DOMAIN'];
+
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+    if (missingEnvVars.length > 0) {
+      throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+    }
   }
   generateCloudFrontUrl(fileKey: string): string {
     if (!this.cloudFrontDomain) {
