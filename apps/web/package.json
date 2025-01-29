@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx prisma generate && pnpm run build:cdk && next build",
+    "build": "npx prisma generate && pnpm run build:cdk && npx prisma migrate deploy && next build",
     "build:cdk": "npm --prefix cdk run build",
     "start": "next start",
     "lint": "next lint",
