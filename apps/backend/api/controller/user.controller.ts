@@ -152,7 +152,6 @@ export class UserController {
       }
       await checkIfUserExists(userId);
       let updateData = req.body;
-      logger.info({ updateData }, 'updateData');
       if (updateData.passwordHash) {
         const hashedPassword = await hashPW(updateData.passwordHash);
         updateData = {
@@ -160,7 +159,6 @@ export class UserController {
           passwordHash: hashedPassword,
         };
       }
-      logger.info({ updateData }, 'after hash updateData');
       // Only validate the fields that are actually present in the request
       const updatedData =
         Object.keys(updateData).length > 0

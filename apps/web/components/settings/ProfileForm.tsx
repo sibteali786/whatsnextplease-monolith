@@ -52,6 +52,7 @@ const profileSchema = z.object({
         .optional()
         .refine(
           data => {
+            if (!data) return true;
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_]).{6,20}$/;
             if (data) {
               return passwordRegex.test(data) && data.length >= 6 && data.length <= 20;
@@ -226,8 +227,6 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
         changes.passwordHash = trimmedData.password.newPassword;
       }
 
-      console.log(changes, 'changes');
-
       // Only proceed if there are actual changes or new avatar
       if (Object.keys(changes).length === 0 && !avatarFile) {
         toast({
@@ -287,6 +286,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
       setIsPersonalEditing(false);
       setIsPasswordEditing(false);
       setIsAddressEditing(false);
+      form.reset();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
