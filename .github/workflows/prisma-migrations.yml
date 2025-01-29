@@ -1,0 +1,49 @@
+name: Prisma Migrations
+on:
+  push:
+    paths:
+      - 'apps/web/prisma/migrations/**'
+      - 'apps/backend/prisma/migrations/**'
+    branches:
+      - main
+
+# Ensure this action runs before Vercel deployment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run backend migrations
+        working-directory: ./apps/backend
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run frontend migrations
+        working-directory: ./apps/web
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # Optional: Notify Vercel deployment can proceed
+      - name: Notify migrations complete
+        run: echo "Migrations completed successfully"
