@@ -52,14 +52,14 @@ const profileSchema = z.object({
         .optional()
         .refine(
           data => {
-            const regex = /[a-z].*[A-Z].*[0-9].*[\W_]/;
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_]).{6,20}$/;
             if (data) {
-              return regex.test(data) && data.length >= 6 && data.length <= 20;
+              return passwordRegex.test(data) && data.length >= 6 && data.length <= 20;
             }
           },
           {
             message:
-              'Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+              'Password must be 6-20 characters and contain at least one uppercase letter, one lowercase letter, one number, and one special character',
           }
         ),
       confirmPassword: z.string().optional(),
@@ -194,34 +194,39 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
 
       // Compare personal info
       if (trimmedData.personalInfo.firstName !== originalData.firstName) {
-        changes.firstName = data.personalInfo.firstName;
+        changes.firstName = trimmedData.personalInfo.firstName;
       }
       if (trimmedData.personalInfo.lastName !== originalData.lastName) {
-        changes.lastName = data.personalInfo.lastName;
+        changes.lastName = trimmedData.personalInfo.lastName;
       }
       if (trimmedData.personalInfo.email !== originalData.email) {
-        changes.email = data.personalInfo.email;
+        changes.email = trimmedData.personalInfo.email;
       }
       if (trimmedData.personalInfo.username !== originalData.username) {
-        changes.username = data.personalInfo.username;
+        changes.username = trimmedData.personalInfo.username;
       }
       if (trimmedData.personalInfo.designation !== originalData.designation) {
-        changes.designation = data.personalInfo.designation;
+        changes.designation = trimmedData.personalInfo.designation;
       }
       if (trimmedData.personalInfo.phone !== originalData.phone) {
-        changes.phone = data.personalInfo.phone;
+        changes.phone = trimmedData.personalInfo.phone;
       }
 
-      // Compare address info
       if (trimmedData.address.country !== originalData.country) {
-        changes.country = data.address.country;
+        changes.country = trimmedData.address.country;
       }
       if (trimmedData.address.city !== originalData.city) {
-        changes.city = data.address.city;
+        changes.city = trimmedData.address.city;
       }
       if (trimmedData.address.postalCode !== originalData.zipCode) {
-        changes.zipCode = data.address.postalCode;
+        changes.zipCode = trimmedData.address.postalCode;
       }
+
+      if (trimmedData.password.newPassword) {
+        changes.passwordHash = trimmedData.password.newPassword;
+      }
+
+      console.log(changes, 'changes');
 
       // Only proceed if there are actual changes or new avatar
       if (Object.keys(changes).length === 0 && !avatarFile) {

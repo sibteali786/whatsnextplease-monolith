@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { S3BucketService } from '../services/s3Service';
 import { checkIfUserExists } from '../utils/helperHandlers';
 import { logger } from '../utils/logger';
+import { hashPW } from '../utils/auth/hashPW';
 
 export class UserController {
   constructor(
@@ -150,16 +151,27 @@ export class UserController {
         throw new BadRequestError('User ID is required');
       }
       await checkIfUserExists(userId);
+      let updateData = req.body;
+      logger.info({ updateData }, 'updateData');
+      if (updateData.passwordHash) {
+        const hashedPassword = await hashPW(updateData.passwordHash);
+        updateData = {
+          ...updateData,
+          passwordHash: hashedPassword,
+        };
+      }
+      logger.info({ updateData }, 'after hash updateData');
       // Only validate the fields that are actually present in the request
       const updatedData =
-        Object.keys(req.body).length > 0
+        Object.keys(updateData).length > 0
           ? UpdateProfileSchema.partial().parse({
               // Use .partial() to make all fields optional
               id: userId,
-              ...req.body,
+              ...updateData,
             })
           : null;
       // Update user profile
+      logger.info({ updatedData }, 'after hash and changes updateData');
       const updatedUser = await this.userService.updateProfile({
         ...updatedData,
         id: userId,

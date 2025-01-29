@@ -102,7 +102,15 @@ export const UpdateProfileSchema = z.object({
   lastName: z.string().optional(),
   email: z.string().email().optional(),
   username: z.string().optional(),
-  password: z.string().optional(),
+  passwordHash: z
+    .string()
+    .min(6)
+    .max(20)
+    .regex(/[a-z]/)
+    .regex(/[A-Z]/)
+    .regex(/[0-9]/)
+    .regex(/[\W_]/)
+    .optional(),
   phone: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional(),
   country: z.string().optional(),
