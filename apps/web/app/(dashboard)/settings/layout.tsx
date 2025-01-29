@@ -40,7 +40,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 >
                   <SidebarContent>
                     <SidebarGroup>
-                      <SidebarGroupLabel className="px-2 pt-4">Settings</SidebarGroupLabel>
+                      <SidebarGroupLabel className="px-2 pt-4 mb-6 text-2xl font-semibold">
+                        Settings
+                      </SidebarGroupLabel>
                       <SidebarGroupContent>
                         <SidebarMenu>
                           {menuItems.map(item => (

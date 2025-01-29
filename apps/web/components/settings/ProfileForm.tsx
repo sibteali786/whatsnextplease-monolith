@@ -14,14 +14,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Camera, Loader2, Pencil } from 'lucide-react';
+import { Camera, Eye, EyeOff, Loader2, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { transformEnumValue, trimWhitespace } from '@/utils/utils';
+import { getPasswordStrength, transformEnumValue, trimWhitespace } from '@/utils/utils';
 import { Roles, User } from '@prisma/client';
-import { ErrorResponse, profileData, UpdateProfileSchema } from '@wnp/types';
+import { ErrorResponse, profileData } from '@wnp/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
+import PasswordStrengthMeter from '../PasswordStrengthMeter';
 interface UserWithRole extends Omit<User, 'passwordHash'> {
   role: {
     name: Roles;
@@ -33,27 +34,43 @@ interface ProfileFormProps {
   initialData: UserWithRole;
   token: string;
 }
+
 // Profile update schema
 const profileSchema = z.object({
   personalInfo: z.object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
+    username: z.string().optional(),
     phone: z.string().optional(),
+    designation: z.string().optional(),
   }),
   password: z
     .object({
-      newPassword: z.string().optional(),
+      newPassword: z
+        .string()
+        .optional()
+        .refine(
+          data => {
+            const regex = /[a-z].*[A-Z].*[0-9].*[\W_]/;
+            if (data) {
+              return regex.test(data) && data.length >= 6 && data.length <= 20;
+            }
+          },
+          {
+            message:
+              'Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+          }
+        ),
       confirmPassword: z.string().optional(),
     })
     .refine(
       data => {
         if (!data.newPassword) return true;
-
         return data.newPassword === data.confirmPassword;
       },
       {
-        message: "Passwords don't match",
+        message: "Passwords don't match or password is not strong enough",
         path: ['confirmPassword'],
       }
     ),
@@ -76,11 +93,11 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
   const [originalData, setOriginalData] = useState<UserWithRole | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { imageUrl, isLoading: isAvatarLoading } = useSecureAvatar(
-    // Only use S3 URL when no file is selected
     avatarFile ? null : initialData.avatarUrl,
     'https://github.com/shadcn.png'
   );
-  // Add these handlers inside your component
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
@@ -98,7 +115,9 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
         firstName: initialData.firstName,
         lastName: initialData.lastName,
         email: initialData.email,
+        username: initialData.username,
         phone: initialData.phone || '',
+        designation: initialData.designation || '',
       },
       password: {
         newPassword: '',
@@ -137,6 +156,8 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
               lastName: user.lastName,
               email: user.email,
               phone: user.phone || '',
+              username: user.username,
+              designation: user.designation || '',
             },
             password: {
               newPassword: '',
@@ -180,6 +201,12 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
       }
       if (trimmedData.personalInfo.email !== originalData.email) {
         changes.email = data.personalInfo.email;
+      }
+      if (trimmedData.personalInfo.username !== originalData.username) {
+        changes.username = data.personalInfo.username;
+      }
+      if (trimmedData.personalInfo.designation !== originalData.designation) {
+        changes.designation = data.personalInfo.designation;
       }
       if (trimmedData.personalInfo.phone !== originalData.phone) {
         changes.phone = data.personalInfo.phone;
@@ -387,6 +414,32 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 />
                 <FormField
                   control={form.control}
+                  name="personalInfo.username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>USERNAME</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="text" readOnly={!isPersonalEditing} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="personalInfo.designation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DESIGNATION</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="text" readOnly={!isPersonalEditing} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="personalInfo.phone"
                   render={({ field }) => (
                     <FormItem>
@@ -426,9 +479,39 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                     <FormItem>
                       <FormLabel>NEW PASSWORD</FormLabel>
                       <FormControl>
-                        <Input {...field} type="password" disabled={!isPasswordEditing} />
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            type={showPassword ? 'text' : 'password'}
+                            disabled={!isPasswordEditing}
+                            onChange={e => {
+                              field.onChange(e);
+                              if (e.target.value) {
+                                setPasswordStrength(getPasswordStrength(e.target.value));
+                              } else {
+                                setPasswordStrength(0);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="w-5 h-5" />
+                            ) : (
+                              <Eye className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage />
+                      {field.value && (
+                        <div className="mt-2">
+                          <PasswordStrengthMeter strength={passwordStrength} />
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />

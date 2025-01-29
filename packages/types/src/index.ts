@@ -101,6 +101,8 @@ export const UpdateProfileSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().email().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
   phone: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional(),
   country: z.string().optional(),
