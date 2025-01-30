@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Camera, Eye, EyeOff, Loader2, Pencil } from 'lucide-react';
+import { Camera, Eye, EyeOff, Info, Loader2, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getPasswordStrength, transformEnumValue, trimWhitespace } from '@/utils/utils';
@@ -26,6 +26,7 @@ import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 import PasswordStrengthMeter from '../PasswordStrengthMeter';
 import { PhoneInput } from '../ui/phone-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 interface UserWithRole extends Omit<User, 'passwordHash'> {
   role: {
     name: Roles;
@@ -106,7 +107,9 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const handleAvatarClick = () => {
-    fileInputRef.current?.click();
+    if (isPersonalEditing) {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,8 +313,19 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
   }
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-start gap-3">
         <h1 className="text-2xl font-semibold">My Profile</h1>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 cursor-pointer" />
+            </TooltipTrigger>
+            <TooltipContent>
+              Click on the Edit <Pencil className="w-4 h-4 inline" /> Icon to start editing that
+              particular section{' '}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <Form {...form}>
@@ -334,7 +348,10 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
             <CardContent className="grid gap-6">
               <div className="flex flex-row gap-4">
                 <div className="relative inline-block">
-                  <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+                  <Avatar
+                    className={`h-24 w-24 ${isPersonalEditing ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                    onClick={handleAvatarClick}
+                  >
                     <AvatarImage
                       src={avatarFile ? URL.createObjectURL(avatarFile) : imageUrl}
                       alt={`${initialData.firstName}'s avatar`}
@@ -348,9 +365,11 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                       )}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute bottom-0 right-0 p-1 bg-primary rounded-full cursor-pointer z-50 ">
-                    <Camera className="h-4 w-4 text-white" />
-                  </div>
+                  {isPersonalEditing && (
+                    <div className="absolute bottom-0 right-0 p-1 bg-primary rounded-full cursor-pointer z-50">
+                      <Camera className="h-4 w-4 text-white" />
+                    </div>
+                  )}
                 </div>
                 <input
                   type="file"
@@ -376,13 +395,15 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
               </div>
               {isPersonalEditing && (
                 <p className="text-sm text-muted-foreground">
-                  Click the avatar to upload a new profile picture
+                  Click the avatar to upload a new profile picture, make sure to click on Update
+                  Profile to save changes
                 </p>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="personalInfo.firstName"
+                  disabled={!isPersonalEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>FIRST NAME</FormLabel>
@@ -396,6 +417,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="personalInfo.lastName"
+                  disabled={!isPersonalEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>LAST NAME</FormLabel>
@@ -411,6 +433,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="personalInfo.email"
+                  disabled={!isPersonalEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>EMAIL ADDRESS</FormLabel>
@@ -423,6 +446,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 />
                 <FormField
                   control={form.control}
+                  disabled={!isPersonalEditing}
                   name="personalInfo.username"
                   render={({ field }) => (
                     <FormItem>
@@ -437,6 +461,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="personalInfo.designation"
+                  disabled={!isPersonalEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>DESIGNATION</FormLabel>
@@ -450,6 +475,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="personalInfo.phone"
+                  disabled={!isPersonalEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
@@ -491,6 +517,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="password.newPassword"
+                  disabled={!isPasswordEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>NEW PASSWORD</FormLabel>
@@ -534,6 +561,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="password.confirmPassword"
+                  disabled={!isPasswordEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>CONFIRM PASSWORD</FormLabel>
@@ -568,6 +596,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="address.country"
+                  disabled={!isAddressEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>COUNTRY</FormLabel>
@@ -581,6 +610,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="address.city"
+                  disabled={!isAddressEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>CITY/STATE</FormLabel>
@@ -594,6 +624,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                 <FormField
                   control={form.control}
                   name="address.postalCode"
+                  disabled={!isAddressEditing}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>POSTAL CODE</FormLabel>
