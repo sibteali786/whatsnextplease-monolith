@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,6 +24,8 @@ import { ErrorResponse, profileData } from '@wnp/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 import PasswordStrengthMeter from '../PasswordStrengthMeter';
+import { PhoneInput } from '../ui/phone-input';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 interface UserWithRole extends Omit<User, 'passwordHash'> {
   role: {
     name: Roles;
@@ -42,7 +45,10 @@ const profileSchema = z.object({
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
     username: z.string().optional(),
-    phone: z.string().optional(),
+    phone: z
+      .string()
+      .refine(isValidPhoneNumber, { message: 'Invalid phone number' })
+      .or(z.literal('')),
     designation: z.string().optional(),
   }),
   password: z
@@ -446,10 +452,17 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
                   name="personalInfo.phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>PHONE</FormLabel>
+                      <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input {...field} type="tel" readOnly={!isPersonalEditing} />
+                        <PhoneInput
+                          placeholder="Enter a phone number"
+                          defaultCountry="US"
+                          {...field}
+                        />
                       </FormControl>
+                      <FormDescription className="text-left">
+                        Update your phone number
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

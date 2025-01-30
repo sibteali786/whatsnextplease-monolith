@@ -1,6 +1,6 @@
-"use client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+'use client';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -9,25 +9,25 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PhoneInput } from "../ui/phone-input";
-import { AddUserInput, addUserSchema } from "@/utils/validationSchemas";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import addUser from "@/db/repositories/users/addUser";
-import { getPasswordStrength } from "@/utils/utils";
-import { useRouter } from "next/navigation";
+} from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PhoneInput } from '../ui/phone-input';
+import { AddUserInput, addUserSchema } from '@/utils/validationSchemas';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import addUser from '@/db/repositories/users/addUser';
+import { getPasswordStrength } from '@/utils/utils';
+import { useRouter } from 'next/navigation';
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from "@/components/ui/select";
-import PasswordStrengthMeter from "../PasswordStrengthMeter";
-import { useToast } from "@/hooks/use-toast";
+} from '@/components/ui/select';
+import PasswordStrengthMeter from '../PasswordStrengthMeter';
+import { useToast } from '@/hooks/use-toast';
 
 const AddUserForm = () => {
   const { toast } = useToast();
@@ -35,35 +35,35 @@ const AddUserForm = () => {
   const router = useRouter();
   const form = useForm<AddUserInput>({
     resolver: zodResolver(addUserSchema),
-    mode: "onSubmit",
+    mode: 'onSubmit',
   });
 
   const onSubmit = async (data: AddUserInput) => {
     try {
       const formData = new FormData();
-      formData.append("role", data.role || "");
-      formData.append("firstName", data.firstName);
-      formData.append("lastName", data.lastName);
-      formData.append("username", data.username);
-      formData.append("email", data.email);
-      formData.append("phone", data.phone || "");
-      formData.append("address", data.address || "");
-      formData.append("city", data.city || "");
-      formData.append("state", data.state || "");
-      formData.append("zipCode", data.zipCode || "");
-      formData.append("password", data.password);
+      formData.append('role', data.role || '');
+      formData.append('firstName', data.firstName);
+      formData.append('lastName', data.lastName);
+      formData.append('username', data.username);
+      formData.append('email', data.email);
+      formData.append('phone', data.phone || '');
+      formData.append('address', data.address || '');
+      formData.append('city', data.city || '');
+      formData.append('state', data.state || '');
+      formData.append('zipCode', data.zipCode || '');
+      formData.append('password', data.password);
 
       const response = await addUser(formData);
       if (response.success) {
-        toast({ description: response.message, variant: "success" });
-        router.push("/users");
+        toast({ description: response.message, variant: 'success' });
+        router.push('/users');
         form.reset();
       } else {
-        toast({ description: response.message, variant: "destructive" });
+        toast({ description: response.message, variant: 'destructive' });
       }
     } catch (e) {
-      console.error("Failed to create a user", e);
-      form.setError("root", { message: "Failed to create a new user" });
+      console.error('Failed to create a user', e);
+      form.setError('root', { message: 'Failed to create a new user' });
     } finally {
     }
   };
@@ -73,21 +73,18 @@ const AddUserForm = () => {
   };
 
   const roles = [
-    "Developer",
-    "Manager",
-    "Administrator",
-    "Designer",
-    "Software Engineer",
-    "Product Manager",
-    "Salesman",
+    'Developer',
+    'Manager',
+    'Administrator',
+    'Designer',
+    'Software Engineer',
+    'Product Manager',
+    'Salesman',
   ]; // Hardcoded list of roles
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="bg-content1 flex flex-col gap-4 pb-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="bg-content1 flex flex-col gap-4 pb-6">
         <FormField
           control={form.control}
           name="role"
@@ -95,15 +92,12 @@ const AddUserForm = () => {
             <FormItem>
               <FormLabel>Pick User Role</FormLabel>
               <FormControl>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((role) => (
+                    {roles.map(role => (
                       <SelectItem key={role} value={role}>
                         {role}
                       </SelectItem>
@@ -111,9 +105,7 @@ const AddUserForm = () => {
                   </SelectContent>
                 </Select>
               </FormControl>
-              <FormDescription className="text-left">
-                Select the user role
-              </FormDescription>
+              <FormDescription className="text-left">Select the user role</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -175,9 +167,7 @@ const AddUserForm = () => {
               <FormControl>
                 <PhoneInput placeholder="Enter a phone number" {...field} />
               </FormControl>
-              <FormDescription className="text-left">
-                Enter a phone number
-              </FormDescription>
+              <FormDescription className="text-left">Enter a phone number</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -263,7 +253,7 @@ const AddUserForm = () => {
                   type="password"
                   placeholder="Password"
                   {...field}
-                  onChange={(e) => {
+                  onChange={e => {
                     field.onChange(e);
                     handlePasswordChange(e.target.value);
                   }}
@@ -278,21 +268,19 @@ const AddUserForm = () => {
         />
 
         <div className="flex justify-end gap-4 mt-4">
-          <Button variant="outline" type="button">
+          <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>
           <Button type="submit" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? (
               <Loader2 className="animate-spin h-4 w-4 mr-2" />
             ) : (
-              "Save"
+              'Save'
             )}
           </Button>
         </div>
         {form.formState.errors.root && (
-          <p className="text-red-500 text-center">
-            {form.formState.errors.root.message}
-          </p>
+          <p className="text-red-500 text-center">{form.formState.errors.root.message}</p>
         )}
       </form>
     </Form>
