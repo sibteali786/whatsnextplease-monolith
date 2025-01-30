@@ -91,7 +91,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
   const [isPasswordEditing, setIsPasswordEditing] = useState(false);
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [originalData, setOriginalData] = useState<UserWithRole | null>(null);
+  const [originalUser, setOriginalUser] = useState<UserWithRole | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { imageUrl, isLoading: isAvatarLoading } = useSecureAvatar(
     avatarFile ? null : initialData.avatarUrl,
@@ -150,7 +150,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
 
         // Set form default values with fetched data
         if (user instanceof Object && 'firstName' in user) {
-          setOriginalData(user);
+          setOriginalUser(user);
           form.reset({
             personalInfo: {
               firstName: user.firstName,
@@ -184,54 +184,53 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
     };
 
     fetchUserProfile();
-  }, [form, toast]);
+  }, [form]);
 
   const onSubmit = async (data: ProfileFormValues) => {
     try {
-      if (!originalData) return;
+      if (!originalUser) return;
       const trimmedData = trimWhitespace(data);
       // Track what's actually changed
-      const changes: Partial<z.infer<typeof profileData>> = {};
+      const changesInOriginalUser: Partial<z.infer<typeof profileData>> = {};
 
       // Compare personal info
-      if (trimmedData.personalInfo.firstName !== originalData.firstName) {
-        changes.firstName = trimmedData.personalInfo.firstName;
+      if (trimmedData.personalInfo.firstName !== originalUser.firstName) {
+        changesInOriginalUser.firstName = trimmedData.personalInfo.firstName;
       }
-      if (trimmedData.personalInfo.lastName !== originalData.lastName) {
-        changes.lastName = trimmedData.personalInfo.lastName;
+      if (trimmedData.personalInfo.lastName !== originalUser.lastName) {
+        changesInOriginalUser.lastName = trimmedData.personalInfo.lastName;
       }
-      if (trimmedData.personalInfo.email !== originalData.email) {
-        changes.email = trimmedData.personalInfo.email;
+      if (trimmedData.personalInfo.email !== originalUser.email) {
+        changesInOriginalUser.email = trimmedData.personalInfo.email;
       }
-      if (trimmedData.personalInfo.username !== originalData.username) {
-        changes.username = trimmedData.personalInfo.username;
+      if (trimmedData.personalInfo.username !== originalUser.username) {
+        changesInOriginalUser.username = trimmedData.personalInfo.username;
       }
-      if (trimmedData.personalInfo.designation !== originalData.designation) {
-        changes.designation = trimmedData.personalInfo.designation;
+      if (trimmedData.personalInfo.designation !== originalUser.designation) {
+        changesInOriginalUser.designation = trimmedData.personalInfo.designation;
       }
-      if (trimmedData.personalInfo.phone !== originalData.phone) {
-        changes.phone = trimmedData.personalInfo.phone;
+      if (trimmedData.personalInfo.phone !== originalUser.phone) {
+        changesInOriginalUser.phone = trimmedData.personalInfo.phone;
       }
 
-      if (trimmedData.address.country !== originalData.country) {
-        changes.country = trimmedData.address.country;
+      if (trimmedData.address.country !== originalUser.country) {
+        changesInOriginalUser.country = trimmedData.address.country;
       }
-      if (trimmedData.address.city !== originalData.city) {
-        changes.city = trimmedData.address.city;
+      if (trimmedData.address.city !== originalUser.city) {
+        changesInOriginalUser.city = trimmedData.address.city;
       }
-      if (trimmedData.address.postalCode !== originalData.zipCode) {
-        changes.zipCode = trimmedData.address.postalCode;
+      if (trimmedData.address.postalCode !== originalUser.zipCode) {
+        changesInOriginalUser.zipCode = trimmedData.address.postalCode;
       }
 
       if (trimmedData.password.newPassword) {
-        changes.passwordHash = trimmedData.password.newPassword;
+        changesInOriginalUser.passwordHash = trimmedData.password.newPassword;
       }
 
-      // Only proceed if there are actual changes or new avatar
-      if (Object.keys(changes).length === 0 && !avatarFile) {
+      if (Object.keys(changesInOriginalUser).length === 0 && !avatarFile) {
         toast({
           title: 'No Changes',
-          description: 'No changes were made to update',
+          description: 'No changesInOriginalUser were made to update',
           variant: 'default',
         });
         return;
@@ -257,15 +256,15 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
         }
       }
       // Prepare profile update data
-      // Only send update request if there are changes
-      if (Object.keys(changes).length > 0) {
+      // Only send update request if there are changesInOriginalUser
+      if (Object.keys(changesInOriginalUser).length > 0) {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(changes),
+          body: JSON.stringify(changesInOriginalUser),
         });
 
         if (!response.ok) {
@@ -274,7 +273,7 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
         }
 
         // Update original data with new values
-        setOriginalData(prev => (prev ? { ...prev, ...changes } : prev));
+        setOriginalUser(prev => (prev ? { ...prev, ...changesInOriginalUser } : prev));
       }
       toast({
         title: 'Profile Updated',
@@ -286,7 +285,6 @@ export default function ProfileForm({ initialData, token }: ProfileFormProps) {
       setIsPersonalEditing(false);
       setIsPasswordEditing(false);
       setIsAddressEditing(false);
-      form.reset();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
