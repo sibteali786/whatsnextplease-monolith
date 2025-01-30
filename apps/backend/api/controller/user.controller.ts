@@ -151,27 +151,26 @@ export class UserController {
         throw new BadRequestError('User ID is required');
       }
       await checkIfUserExists(userId);
-      let updateData = req.body;
-      if (updateData.passwordHash) {
-        const hashedPassword = await hashPW(updateData.passwordHash);
+      const parsedUser =
+        Object.keys(req.body).length > 0
+          ? UpdateProfileSchema.partial().parse({
+              // Use .partial() to make all fields optional
+              id: userId,
+              ...req.body,
+            })
+          : null;
+      let updateData = parsedUser;
+      if (parsedUser && parsedUser.passwordHash) {
+        const hashedPassword = await hashPW(parsedUser.passwordHash);
         updateData = {
           ...updateData,
           passwordHash: hashedPassword,
         };
       }
       // Only validate the fields that are actually present in the request
-      const updatedData =
-        Object.keys(updateData).length > 0
-          ? UpdateProfileSchema.partial().parse({
-              // Use .partial() to make all fields optional
-              id: userId,
-              ...updateData,
-            })
-          : null;
       // Update user profile
-      logger.info({ updatedData }, 'after hash and changes updateData');
       const updatedUser = await this.userService.updateProfile({
-        ...updatedData,
+        ...updateData,
         id: userId,
       });
       res.status(200).json(updatedUser);
