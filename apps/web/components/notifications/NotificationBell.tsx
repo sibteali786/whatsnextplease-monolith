@@ -10,8 +10,6 @@ interface NotificationBellProps {
 }
 
 export const NotificationBell = ({ userId, unreadCount }: NotificationBellProps) => {
-  console.log('NotificationBell: Rendering with unreadCount:', unreadCount);
-
   return (
     <div className="flex flex-col items-center">
       <ActiveVerticalMenu activePath="/notifications" />

@@ -149,7 +149,7 @@ export const UpdateClientProfileSchema = z.object({
   companyName: z.string().optional(),
   contactName: z.string().optional(),
   email: z.string().email().optional(),
-  website: z.string().url().optional(),
+  website: z.union([z.string().url(), z.literal('')]),
   address1: z.string().optional(),
   address2: z.string().optional(),
   role: z.object({

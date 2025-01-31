@@ -13,8 +13,8 @@ import { useEffect, useState } from 'react';
 
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
-  const { unreadCount, notifications } = useNotifications();
-  
+  const { unreadCount } = useNotifications();
+
   useEffect(() => {
     const fetchDependencies = async () => {
       const loggedInUser = await getCurrentUser();
@@ -22,8 +22,6 @@ const TopBar = () => {
     };
     fetchDependencies();
   }, []);
-
-  console.log('TopBar rendering with unreadCount:', unreadCount, 'notifications:', notifications);
 
   if (!user) return null;
 
