@@ -69,16 +69,8 @@ export class UserController {
           parsedInput.profileUrl
         );
         if (oldFileKey) {
-          try {
-            await this.s3Service.deleteFile(oldFileKey);
-            logger.info(`Successfully deleted old profile picture: ${oldFileKey}`);
-          } catch (cleanupError) {
-            // Log but don't fail the request if old file cleanup fails
-            logger.warn('Failed to delete old profile picture:', {
-              fileKey: oldFileKey,
-              error: cleanupError,
-            });
-          }
+          await this.s3Service.deleteFile(oldFileKey);
+          logger.info(`Successfully deleted old profile picture: ${oldFileKey}`);
         }
         res.status(201).json(updatedUser);
       } catch (dbError) {
@@ -167,7 +159,6 @@ export class UserController {
           passwordHash: hashedPassword,
         };
       }
-      // Only validate the fields that are actually present in the request
       // Update user profile
       const updatedUser = await this.userService.updateProfile({
         ...updateData,

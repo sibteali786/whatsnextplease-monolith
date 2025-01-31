@@ -111,7 +111,7 @@ export const UpdateProfileSchema = z.object({
     .regex(/[0-9]/)
     .regex(/[\W_]/)
     .optional(),
-  phone: z.string().optional().nullable(),
+  phone: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   country: z.string().optional(),
   state: z.string().optional(),
@@ -127,6 +127,38 @@ export const UpdateProfileSchema = z.object({
 export const UpdateProfileWithoutIdSchema = UpdateProfileSchema.omit({ id: true });
 export const profileData = UpdateProfileSchema.omit({ id: true });
 export type UpdateProfileDto = z.infer<typeof UpdateProfileSchema>;
+
+export const UpdateClientProfileSchema = z.object({
+  id: z.string(),
+  username: z.string().optional(),
+  phone: z.string().optional(),
+  avatarUrl: z.string().url().optional(),
+  passwordHash: z
+    .string()
+    .min(6)
+    .max(20)
+    .regex(/[a-z]/)
+    .regex(/[A-Z]/)
+    .regex(/[0-9]/)
+    .regex(/[\W_]/)
+    .optional(),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  zipCode: z.string().optional(),
+  companyName: z.string().optional(),
+  contactName: z.string().optional(),
+  email: z.string().email().optional(),
+  website: z.string().url().optional(),
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  role: z.object({
+    name: z.nativeEnum(Roles),
+  }),
+});
+
+export type UpdateClientProfileDto = z.infer<typeof UpdateClientProfileSchema>;
+export const clientProfileData = UpdateClientProfileSchema.omit({ id: true });
 
 export * from './errors';
 export * from './logger';
