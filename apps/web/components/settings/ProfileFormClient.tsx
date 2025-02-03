@@ -326,8 +326,8 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
                   aria-label="Upload profile picture"
                 />
                 <div className="space-y-1 mt-3">
-                  <p className="text-xl font-bold">{initialData.companyName}</p>
-                  <p className="text-muted-foreground">Contact: {initialData.contactName}</p>
+                  <p className=" text-xl font-bold">{initialData.contactName}</p>
+                  <p className="text-muted-foreground">{initialData.companyName}</p>
                   <p className="text-muted-foreground text-sm">
                     {initialData?.city && initialData?.country
                       ? `${initialData.city}, ${initialData.country}`

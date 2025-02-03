@@ -380,7 +380,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                   </p>
                   <p className="text-muted-foreground text-sm">
                     {initialData?.city && initialData?.country
-                      ? initialData.city + ',' + initialData?.country
+                      ? `${initialData.city}, ${initialData?.country}`
                       : ''}
                   </p>
                 </div>
