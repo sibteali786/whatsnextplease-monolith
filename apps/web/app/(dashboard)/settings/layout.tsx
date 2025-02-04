@@ -20,7 +20,7 @@ const menuItems = [
   { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
   { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
   { icon: CreditCard, label: 'Billing', href: '/settings/billing' },
-  { icon: List, label: 'Picklist', href: '/settings/picklist' },
+  { icon: List, label: 'Picklist', href: '/settings/picklists' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
