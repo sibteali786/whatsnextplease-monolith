@@ -14,6 +14,7 @@ export class SkillCategoryService {
           },
         },
       },
+      take: 10,
     });
   }
   async createSkillCategory() {
