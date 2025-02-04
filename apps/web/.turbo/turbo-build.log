@@ -1,12 +1,12 @@
 
 
 > web@0.1.0 build /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web
-> npx prisma generate && pnpm run build:cdk && next build
+> npx prisma generate && pnpm run build:cdk && npx prisma migrate deploy && next build
 
 [2mEnvironment variables loaded from .env[22m
 [2mPrisma schema loaded from prisma/schema.prisma[22m
 
-✔ Generated [1mPrisma Client[22m (v5.22.0)[2m to ./../../node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/@prisma/client[22m in 348ms
+✔ Generated [1mPrisma Client[22m (v5.22.0)[2m to ./../../node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/@prisma/client[22m in 290ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
@@ -20,6 +20,14 @@ Tip: Want real-time updates to your database without manual polling? Discover ho
 > cdk@0.1.0 build
 > tsc
 
+[2mEnvironment variables loaded from .env[22m
+[2mPrisma schema loaded from prisma/schema.prisma[22m
+[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:5432"[22m
+
+24 migrations found in prisma/migrations
+
+
+[32mNo pending migrations to apply.[39m
   [1m[38;2;173;127;168m▲ Next.js 14.2.15[39m[22m
   - Environments: .env.local, .env
 
@@ -47,8 +55,11 @@ Tip: Want real-time updates to your database without manual polling? Discover ho
 [36m./components/common/EditTaskDialog.tsx[39m
 [33m195[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
-[36m./components/settings/ProfileForm.tsx[39m
-[33m186[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'token'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+[36m./components/settings/ProfileFormClient.tsx[39m
+[33m136[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/settings/ProfileFormUser.tsx[39m
+[33m188[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'toast' and 'token'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
 [36m./components/tasks/CreateTaskContainer.tsx[39m
 [33m134[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
@@ -64,9 +75,9 @@ Tip: Want real-time updates to your database without manual polling? Discover ho
 [33m106[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
 [36minfo[39m  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
-[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
-[?25l [37m[1m [22m[39m Generating static pages (0/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (3/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (19/28)  [36m[ ===][39mnode:events:495
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
+[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
+[?25l [37m[1m [22m[39m Generating static pages (0/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/29)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/29)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/29)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (15/29)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (16/29)  [36m[  ==][39mnode:events:495
       throw er; // Unhandled 'error' event
       ^
 
@@ -82,7 +93,7 @@ Emitted 'error' event on ThreadStream instance at:
 
 Node.js v18.18.1
 [2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (26/28)  [36m[    ][39mnode:events:495
+[?25l [37m[1m [22m[39m Generating static pages (22/29)  [36m[    ][39mnode:events:495
       throw er; // Unhandled 'error' event
       ^
 
@@ -98,7 +109,7 @@ Emitted 'error' event on ThreadStream instance at:
 
 Node.js v18.18.1
 [2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (26/28)  [36m[    ][39mnode:events:495
+[?25l [37m[1m [22m[39m Generating static pages (25/29)  [36m[    ][39mnode:events:495
       throw er; // Unhandled 'error' event
       ^
 
@@ -114,24 +125,8 @@ Emitted 'error' event on ThreadStream instance at:
 
 Node.js v18.18.1
 [2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (26/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39mnode:events:495
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/worker.js:130:27)
-    at Timeout._onTimeout (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/wait.js:51:11)
-    at listOnTimeout (node:internal/timers:569:17)
-    at process.processTimers (node:internal/timers:512:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/index.js:369:12)
-    at process.processImmediate (node:internal/timers:476:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v18.18.1
-[2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/28)  [36m[====][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (28/28)
-[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
+[?25l [37m[1m [22m[39m Generating static pages (27/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (27/29)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[====][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (29/29)
+[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
 [2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
 
 [4mRoute (app)[24m                              [4mSize[24m     [4mFirst Load JS[24m
@@ -148,21 +143,22 @@ Node.js v18.18.1
 ├ ƒ /api/uploadAndSaveFile               0 B                [37m[1m0 B[22m[39m
 ├ ƒ /api/user/doesUserExists             0 B                [37m[1m0 B[22m[39m
 ├ ƒ /api/users/taskAgentList             0 B                [37m[1m0 B[22m[39m
-├ ƒ /clients                             2.6 kB          [37m[1m170 kB[22m[39m
-├ ƒ /clients/[clientId]                  3.71 kB         [37m[1m242 kB[22m[39m
-├ ƒ /clients/addclient                   1.92 kB         [37m[1m273 kB[22m[39m
-├ ƒ /home                                1.82 kB         [37m[1m260 kB[22m[39m
-├ ƒ /notifications/[userId]              6.03 kB         [37m[1m159 kB[22m[39m
-├ ƒ /settings/billing                    194 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /settings/myprofile                  8.9 kB          [37m[1m127 kB[22m[39m
+├ ƒ /clients                             4.76 kB         [37m[1m170 kB[22m[39m
+├ ƒ /clients/[clientId]                  3.73 kB         [37m[1m242 kB[22m[39m
+├ ƒ /clients/addclient                   3.7 kB          [37m[1m273 kB[22m[39m
+├ ƒ /home                                1.9 kB          [37m[1m260 kB[22m[39m
+├ ƒ /notifications/[userId]              6.05 kB         [37m[1m159 kB[22m[39m
+├ ƒ /settings/billing                    193 B          [37m[1m87.6 kB[22m[39m
+├ ƒ /settings/myprofile                  8.42 kB         [37m[1m278 kB[22m[39m
 ├ ƒ /settings/notifications              193 B          [37m[1m87.6 kB[22m[39m
-├ ○ /signin                              9.14 kB         [37m[1m153 kB[22m[39m
-├ ○ /signup                              6.11 kB         [37m[1m171 kB[22m[39m
+├ ƒ /settings/picklists                  6.22 kB         [37m[1m146 kB[22m[39m
+├ ○ /signin                              9.23 kB         [37m[1m153 kB[22m[39m
+├ ○ /signup                              6.2 kB          [37m[1m171 kB[22m[39m
 ├ ƒ /skills                              196 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /taskOfferings                       1.33 kB         [37m[1m258 kB[22m[39m
-├ ƒ /users                               3.52 kB         [37m[1m171 kB[22m[39m
-├ ƒ /users/[userId]                      268 B           [37m[1m260 kB[22m[39m
-└ ƒ /users/adduser                       2.57 kB         [37m[1m281 kB[22m[39m
+├ ƒ /taskOfferings                       1.34 kB         [37m[1m258 kB[22m[39m
+├ ƒ /users                               5.92 kB         [37m[1m171 kB[22m[39m
+├ ƒ /users/[userId]                      271 B           [37m[1m260 kB[22m[39m
+└ ƒ /users/adduser                       4.13 kB         [37m[1m281 kB[22m[39m
 + First Load JS shared by all            [37m[1m87.4 kB[22m[39m
   ├ chunks/2840-9f394d092f75f8c9.js      31.7 kB
   ├ chunks/a71daf0b-e8833364bbd3a374.js  53.7 kB

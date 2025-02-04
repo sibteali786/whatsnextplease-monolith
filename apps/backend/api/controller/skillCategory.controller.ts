@@ -14,7 +14,7 @@ export class SkillCategoryController {
   ) => {
     try {
       const skillCategories = await this.skillCategoryService.getAllSkillCategories();
-      res.json(skillCategories);
+      res.status(200).json(skillCategories);
     } catch (error) {
       next(error);
     }
