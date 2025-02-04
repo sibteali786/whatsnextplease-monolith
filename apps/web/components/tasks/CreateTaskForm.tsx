@@ -49,7 +49,6 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   users,
 }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
-
   return (
     <Form {...form}>
       <form
@@ -85,6 +84,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
           )}
         />
         {/* Skills */}
+        {/* FIXME: Clicking on Skills dropdown triggers form submission for unknown reason */}
         <FormField
           control={form.control}
           name="skills"
