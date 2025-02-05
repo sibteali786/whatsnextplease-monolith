@@ -10,6 +10,7 @@ describe('Skill Category routes', () => {
   let mockToken: string;
   const mockUserId = 'user123';
   const mockFindMany = prismaMock.skillCategory.findMany as jest.Mock;
+  const mockCreate = prismaMock.skillCategory.create as jest.Mock;
   beforeAll(async () => {
     app = await createServer();
     mockToken = jwt.sign(
@@ -66,6 +67,36 @@ describe('Skill Category routes', () => {
         .get('/skillCategory/all')
         .set('Authorization', `Bearer ${mockToken}`)
         .expect(500);
+      expect(response.body).toEqual(expect.objectContaining({ code: 'INTERNAL_SERVER_ERROR' }));
+    });
+  });
+  describe('POST /create', () => {
+    const mockSkillCategory = {
+      id: '1d98dfd3-7848-44ad-a5bc-08076ee6f7ad',
+      categoryName: 'Development',
+      updatedAt: new Date().toString(),
+      createdAt: new Date().toString(),
+    };
+    const mockRequest = {
+      categoryName: 'Development',
+    };
+    it('should create new skill category', async () => {
+      mockCreate.mockResolvedValue(mockSkillCategory);
+      const response = await testRequest(app)
+        .post('/skillCategory/create')
+        .set('Authorization', `Bearer ${mockToken}`)
+        .send(mockRequest)
+        .expect(201);
+      expect(response.body).toEqual(mockSkillCategory);
+    });
+
+    it('should return error object with ErrorResponse type', async () => {
+      const error = new InternalServerError('Something is wrong on server');
+      mockCreate.mockRejectedValue(error);
+      const response = await testRequest(app)
+        .post('/skillCategory/create')
+        .set('Authorization', `Bearer ${mockToken}`)
+        .send(mockRequest);
       expect(response.body).toEqual(expect.objectContaining({ code: 'INTERNAL_SERVER_ERROR' }));
     });
   });

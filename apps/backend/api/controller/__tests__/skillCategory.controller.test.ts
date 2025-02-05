@@ -6,6 +6,7 @@ import { InternalServerError } from '@wnp/types';
 jest.mock('../../services/skillcategory.service', () => ({
   SkillCategoryService: jest.fn().mockImplementation(() => ({
     getAllSkillCategories: jest.fn(),
+    createSkillCategory: jest.fn(),
   })),
 }));
 
@@ -94,6 +95,45 @@ describe('getAllSkillCategories', () => {
         new InternalServerError('Something is wrong on server side')
       );
       await controller.getAllSkillCategories(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error).toBeInstanceOf(InternalServerError);
+    });
+  });
+  describe('createSkillCategory', () => {
+    it('should create a skill category successful', async () => {
+      const mockedCreateSkillCategory = {
+        id: '1d98dfd3-7848-44ad-a5bc-08076ee6f7ad',
+        categoryName: 'Test Category Name',
+        updatedAt: new Date(),
+        createdAt: new Date(),
+      };
+      mockRequest.body = mockedCreateSkillCategory;
+      mockSkillCategoryService.createSkillCategory.mockResolvedValue(mockedCreateSkillCategory);
+
+      await controller.createSkillCategory(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
+      expect(mockResponse.json).toHaveBeenCalledWith(mockedCreateSkillCategory);
+    });
+
+    it('should throw error there is some problem on server', async () => {
+      const mockedCreateSkillCategory = {
+        categoryName: 'Test Category Name',
+      };
+      mockRequest.body = mockedCreateSkillCategory;
+      mockSkillCategoryService.createSkillCategory.mockRejectedValue(
+        new InternalServerError('Something is wrong on server side')
+      );
+
+      await controller.createSkillCategory(
         mockRequest as Request,
         mockResponse as Response,
         mockNext
