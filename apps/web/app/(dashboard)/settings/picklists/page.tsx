@@ -9,11 +9,13 @@ import { columns, SkillCategories } from './columns';
 import { ErrorResponse } from '@wnp/types';
 import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
+import { AddSkillCategoryDialog } from './AddSkillCategoryDialog';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
   const [skillCategories, setSkillCategories] = useState<SkillCategories[] | ErrorResponse>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const fetchDetails = async () => {
       setIsLoading(true);
@@ -64,7 +66,7 @@ export default function Picklists() {
             <div className="mt-4 space-y-4 flex flex-col">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-medium">Skill Categories</h2>
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={() => setOpen(true)}>
                   <Plus className="w-4 h-4" />
                   Add Skill Category
                 </Button>
@@ -76,6 +78,7 @@ export default function Picklists() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               )}
+              <AddSkillCategoryDialog open={open} setOpen={setOpen} />
             </div>
           </TabsContent>
           <TabsContent value="tasks">

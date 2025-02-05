@@ -161,7 +161,7 @@ export type UpdateClientProfileDto = z.infer<typeof UpdateClientProfileSchema>;
 export const clientProfileData = UpdateClientProfileSchema.omit({ id: true });
 
 export const SkillCategoryCreateSchema = z.object({
-  categoryName: z.string(),
+  categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
 });
 
 export type SkillCategoryCreateDto = z.infer<typeof SkillCategoryCreateSchema>;
