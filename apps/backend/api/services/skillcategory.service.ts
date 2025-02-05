@@ -1,3 +1,4 @@
+import { SkillCategoryCreateDto } from '@wnp/types';
 import prisma from '../config/db';
 
 export class SkillCategoryService {
@@ -17,8 +18,12 @@ export class SkillCategoryService {
       take: 10,
     });
   }
-  async createSkillCategory() {
-    return {};
+  async createSkillCategory(skillCategory: SkillCategoryCreateDto) {
+    return await prisma.skillCategory.create({
+      data: {
+        categoryName: skillCategory.categoryName,
+      },
+    });
   }
   async updateSkillCategory() {
     return {};

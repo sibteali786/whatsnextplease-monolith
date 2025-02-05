@@ -160,5 +160,11 @@ export const UpdateClientProfileSchema = z.object({
 export type UpdateClientProfileDto = z.infer<typeof UpdateClientProfileSchema>;
 export const clientProfileData = UpdateClientProfileSchema.omit({ id: true });
 
+export const SkillCategoryCreateSchema = z.object({
+  categoryName: z.string(),
+});
+
+export type SkillCategoryCreateDto = z.infer<typeof SkillCategoryCreateSchema>;
+
 export * from './errors';
 export * from './logger';

@@ -6,4 +6,5 @@ const router = Router();
 const controller = new SkillCategoryController();
 
 router.get('/all', verifyToken, controller.getAllSkillCategories);
+router.post('/create', verifyToken, controller.createSkillCategory);
 export const skillCategoryRoutes = router;

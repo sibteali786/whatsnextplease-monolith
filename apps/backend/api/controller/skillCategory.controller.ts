@@ -2,6 +2,7 @@ import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { AuthenticatedRequest } from './../middleware/auth/types';
 import { SkillCategoryService } from '../services/skillcategory.service';
 import { NextFunction, Response } from 'express';
+import { SkillCategoryCreateSchema } from '@wnp/types';
 
 export class SkillCategoryController {
   constructor(
@@ -19,6 +20,22 @@ export class SkillCategoryController {
       next(error);
     }
   };
-
+  private handleCreateSkillCategory = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const { categoryName } = req.body;
+    try {
+      const parsedInput = SkillCategoryCreateSchema.parse({ categoryName });
+      const newSkillCategory = await this.skillCategoryService.createSkillCategory({
+        categoryName: parsedInput.categoryName,
+      });
+      res.status(201).json(newSkillCategory);
+    } catch (error) {
+      next(error);
+    }
+  };
   getAllSkillCategories = asyncHandler(this.handleGetAllSkillCategories);
+  createSkillCategory = asyncHandler(this.handleCreateSkillCategory);
 }
