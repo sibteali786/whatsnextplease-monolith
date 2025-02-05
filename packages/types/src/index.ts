@@ -163,6 +163,9 @@ export const clientProfileData = UpdateClientProfileSchema.omit({ id: true });
 export const SkillCategoryCreateSchema = z.object({
   categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
 });
+export const TaskCategoryCreateSchema = z.object({
+  categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
+});
 export const SkillCategoriesSchema = z.object({
   categoryName: z.string(),
   skills: z.array(
@@ -179,13 +182,14 @@ export const TaskCategoriesSchema = z.object({
   tasks: z.array(
     z.object({
       id: z.string(),
-      description: z.string(),
+      title: z.string(),
     })
   ),
   id: z.string(),
 });
 export type TaskCategories = z.infer<typeof TaskCategoriesSchema>;
 export type SkillCategoryCreateDto = z.infer<typeof SkillCategoryCreateSchema>;
+export type TaskCategoryCreateDto = z.infer<typeof TaskCategoryCreateSchema>;
 
 export * from './errors';
 export * from './logger';

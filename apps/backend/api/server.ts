@@ -5,6 +5,7 @@ import { errorMiddleware } from './middleware/error/error.middleware';
 import { userRoutes } from './routes/user.routes';
 import { clientRoutes } from './routes/client.routes';
 import { skillCategoryRoutes } from './routes/skillCategory.routes';
+import { taskCategoryRoutes } from './routes/taskCategory.routes';
 
 export async function createServer() {
   const app = express();
@@ -18,6 +19,7 @@ export async function createServer() {
   app.use('/user', userRoutes);
   app.use('/client', clientRoutes);
   app.use('/skillCategory', skillCategoryRoutes);
+  app.use('/taskCategory', taskCategoryRoutes);
   // Health check route
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });

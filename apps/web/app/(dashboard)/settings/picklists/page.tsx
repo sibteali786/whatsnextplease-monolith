@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
 import { AddSkillCategoryDialog } from './AddSkillCategoryDialog';
 import { getCookie } from '@/utils/utils';
-import { error } from 'console';
 import { columnsTaskCategories } from './columns-task-category';
 
 export default function Picklists() {
