@@ -6,15 +6,18 @@ import { TabsContent, TabsList } from '@radix-ui/react-tabs';
 import { CircleX, Loader2, Plus } from 'lucide-react';
 import { DataTable } from './data-table';
 import { columns } from './columns-skill-category';
-import { ErrorResponse, SkillCategories } from '@wnp/types';
+import { ErrorResponse, SkillCategories, TaskCategories } from '@wnp/types';
 import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
 import { AddSkillCategoryDialog } from './AddSkillCategoryDialog';
 import { getCookie } from '@/utils/utils';
+import { error } from 'console';
+import { columnsTaskCategories } from './columns-task-category';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
   const [skillCategories, setSkillCategories] = useState<SkillCategories[] | ErrorResponse>([]);
+  const [taskCategories, setTaskCategories] = useState<TaskCategories[] | ErrorResponse>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -35,7 +38,25 @@ export default function Picklists() {
       setSkillCategories(skillCategories);
       setIsLoading(false);
     };
+    const fetchTaskDetails = async () => {
+      setIsLoading(true);
+      const token = getCookie(COOKIE_NAME);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const taskCategories = await response.json();
+      if ('code' in taskCategories) {
+        setIsError(true);
+      }
+      setTaskCategories(taskCategories);
+      setIsLoading(false);
+    };
     fetchDetails();
+    fetchTaskDetails();
   }, []);
   if (isError) {
     return (
@@ -86,6 +107,16 @@ export default function Picklists() {
                   Add Task Category
                 </Button>
               </div>
+              {!isLoading ? (
+                <DataTable
+                  data={taskCategories as TaskCategories[]}
+                  columns={columnsTaskCategories}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-[50vh]">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

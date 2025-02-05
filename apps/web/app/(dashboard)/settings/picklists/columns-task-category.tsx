@@ -14,7 +14,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { TaskCategories } from '@wnp/types';
 import { ClipboardCopy, MoreHorizontal, Plus } from 'lucide-react';
 
-export const columns: ColumnDef<TaskCategories>[] = [
+export const columnsTaskCategories: ColumnDef<TaskCategories>[] = [
   {
     accessorKey: 'categoryName',
     header: 'Category Name',
@@ -28,7 +28,7 @@ export const columns: ColumnDef<TaskCategories>[] = [
         <div className={`flex ${tasks.length > 2 ? 'flex-wrap' : ''} gap-2 items-center`}>
           {tasks.map((task, index) => (
             <Badge key={index} className="py-1 px-4 text-[10px] text-nowrap">
-              {task.description}
+              {task.title}
             </Badge>
           ))}
         </div>
