@@ -9,6 +9,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { COOKIE_NAME } from '@/utils/constant';
+import { getCookie } from '@/utils/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog } from '@radix-ui/react-dialog';
 import { SkillCategoryCreateSchema } from '@wnp/types';
@@ -26,9 +29,39 @@ export const AddSkillCategoryDialog = ({ open, setOpen }: AddSkillCategoryDialog
     resolver: zodResolver(SkillCategoryCreateSchema),
     mode: 'onSubmit',
   });
+  const { toast } = useToast();
+  const onSubmit = async (data: z.infer<typeof SkillCategoryCreateSchema>) => {
+    const parsedData = SkillCategoryCreateSchema.parse(data);
+    const token = getCookie(COOKIE_NAME);
+    try {
+      // Add the skill category
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(parsedData),
+      });
 
-  const onSubmit = (data: z.infer<typeof SkillCategoryCreateSchema>) => {
-    console.log('Data', data);
+      const createdSkill = await response.json();
+      if (createdSkill) {
+        toast({
+          title: 'Skill Category Added',
+          description: `Skill category ${createdSkill.categoryName} has been added successfully`,
+          variant: 'success',
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    }
+    setOpen(false);
   };
 
   return (

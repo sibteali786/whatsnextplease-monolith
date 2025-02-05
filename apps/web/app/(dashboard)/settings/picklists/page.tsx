@@ -10,6 +10,7 @@ import { ErrorResponse } from '@wnp/types';
 import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
 import { AddSkillCategoryDialog } from './AddSkillCategoryDialog';
+import { getCookie } from '@/utils/utils';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
@@ -19,11 +20,6 @@ export default function Picklists() {
   useEffect(() => {
     const fetchDetails = async () => {
       setIsLoading(true);
-      const getCookie = (name: string) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop()?.split(';').shift();
-      };
       const token = getCookie(COOKIE_NAME);
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
         method: 'GET',

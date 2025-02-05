@@ -11,26 +11,26 @@ export const getPasswordStrength = (password: string) => {
 
 export function getRandomLightColorClass() {
   const colors = [
-    "bg-red-200",
-    "bg-green-200",
-    "bg-blue-200",
-    "bg-yellow-200",
-    "bg-purple-200",
-    "bg-pink-200",
-    "bg-indigo-200",
-    "bg-teal-200",
-    "bg-orange-200",
-    "bg-gray-200",
-    "bg-red-300",
-    "bg-green-300",
-    "bg-blue-300",
-    "bg-yellow-300",
-    "bg-purple-300",
-    "bg-pink-300",
-    "bg-indigo-300",
-    "bg-teal-300",
-    "bg-orange-300",
-    "bg-gray-300",
+    'bg-red-200',
+    'bg-green-200',
+    'bg-blue-200',
+    'bg-yellow-200',
+    'bg-purple-200',
+    'bg-pink-200',
+    'bg-indigo-200',
+    'bg-teal-200',
+    'bg-orange-200',
+    'bg-gray-200',
+    'bg-red-300',
+    'bg-green-300',
+    'bg-blue-300',
+    'bg-yellow-300',
+    'bg-purple-300',
+    'bg-pink-300',
+    'bg-indigo-300',
+    'bg-teal-300',
+    'bg-orange-300',
+    'bg-gray-300',
   ];
 
   const randomIndex = Math.floor(Math.random() * colors.length);
@@ -38,23 +38,23 @@ export function getRandomLightColorClass() {
 }
 
 export const capitalizeFirstChar = (word: string) => {
-  if (!word) return ""; // Handle empty strings
+  if (!word) return ''; // Handle empty strings
   return word.charAt(0).toUpperCase() + word.slice(1);
 };
 export const transformEnumValue = (value: string): string => {
-  if (!value) return "";
+  if (!value) return '';
   return value
     .toLowerCase()
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 };
 
 export const formatNumbers = (number: string): string => {
   const castedNumber = Number(number);
 
   if (isNaN(castedNumber)) {
-    return "Invalid number";
+    return 'Invalid number';
   }
 
   // Ensure the number is formatted with two decimal places
@@ -73,8 +73,8 @@ export const trimWhitespace = <T extends Record<string, any>>(obj: T): T => {
   return Object.fromEntries(
     Object.entries(obj).map(([key, value]) => [
       key,
-      typeof value === "string" ? value.trim() : value,
-    ]),
+      typeof value === 'string' ? value.trim() : value,
+    ])
   ) as T;
 };
 
@@ -82,8 +82,7 @@ function parseOriginalEstimate(value: string): number | null {
   // Pattern matches optional groups of w, d, h, m
   // Examples:
   // "2w 1d 5h 4m", "4d", "5h 30m", "60m", "3w"
-  const regex =
-    /^\s*(?:(\d+)w)?\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/i;
+  const regex = /^\s*(?:(\d+)w)?\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/i;
   const match = value.trim().match(regex);
   if (!match) return null;
 
@@ -119,9 +118,14 @@ function formatOriginalEstimate(hours: number): string {
   if (days > 0) parts.push(`${days}d`);
   if (wholeHours > 0) parts.push(`${wholeHours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
-  console.log("Decimal Value", hours, "Converted Value", parts.join(" "));
+  console.log('Decimal Value', hours, 'Converted Value', parts.join(' '));
 
-  return parts.join(" ") || "0h";
+  return parts.join(' ') || '0h';
 }
+export const getCookie = (name: string) => {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift();
+};
 
 export { parseOriginalEstimate, formatOriginalEstimate };
