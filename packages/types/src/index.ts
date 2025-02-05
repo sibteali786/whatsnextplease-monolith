@@ -163,7 +163,28 @@ export const clientProfileData = UpdateClientProfileSchema.omit({ id: true });
 export const SkillCategoryCreateSchema = z.object({
   categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
 });
-
+export const SkillCategoriesSchema = z.object({
+  categoryName: z.string(),
+  skills: z.array(
+    z.object({
+      name: z.string(),
+      description: z.string(),
+    })
+  ),
+  id: z.string(),
+});
+export type SkillCategories = z.infer<typeof SkillCategoriesSchema>;
+export const TaskCategoriesSchema = z.object({
+  categoryName: z.string(),
+  tasks: z.array(
+    z.object({
+      id: z.string(),
+      description: z.string(),
+    })
+  ),
+  id: z.string(),
+});
+export type TaskCategories = z.infer<typeof TaskCategoriesSchema>;
 export type SkillCategoryCreateDto = z.infer<typeof SkillCategoryCreateSchema>;
 
 export * from './errors';

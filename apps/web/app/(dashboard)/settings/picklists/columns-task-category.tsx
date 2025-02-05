@@ -11,24 +11,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ColumnDef } from '@tanstack/react-table';
-import { SkillCategories } from '@wnp/types';
+import { TaskCategories } from '@wnp/types';
 import { ClipboardCopy, MoreHorizontal, Plus } from 'lucide-react';
 
-export const columns: ColumnDef<SkillCategories>[] = [
+export const columns: ColumnDef<TaskCategories>[] = [
   {
     accessorKey: 'categoryName',
     header: 'Category Name',
   },
   {
-    accessorKey: 'skills',
-    header: 'Skills',
+    accessorKey: 'tasks',
+    header: 'Tasks',
     cell: ({ row }) => {
-      const skills = row.original.skills;
+      const tasks = row.original.tasks;
       return (
-        <div className={`flex ${skills.length > 2 ? 'flex-wrap' : ''} gap-2 items-center`}>
-          {skills.map((skill, index) => (
+        <div className={`flex ${tasks.length > 2 ? 'flex-wrap' : ''} gap-2 items-center`}>
+          {tasks.map((task, index) => (
             <Badge key={index} className="py-1 px-4 text-[10px] text-nowrap">
-              {skill.name}
+              {task.description}
             </Badge>
           ))}
         </div>
@@ -56,7 +56,7 @@ export const columns: ColumnDef<SkillCategories>[] = [
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Plus className="w-3 h-3" /> Add New Skill
+              <Plus className="w-3 h-3" /> Add New Task
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
