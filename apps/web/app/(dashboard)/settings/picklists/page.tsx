@@ -5,13 +5,15 @@ import { Tabs, TabsTrigger } from '@/components/ui/tabs';
 import { TabsContent, TabsList } from '@radix-ui/react-tabs';
 import { CircleX, Loader2, Plus } from 'lucide-react';
 import { DataTable } from './data-table';
-import { columns } from './columns-skill-category';
+import { columnsSkillCategory } from './columns-skill-category';
 import { ErrorResponse, SkillCategories, TaskCategories } from '@wnp/types';
 import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
 import { getCookie } from '@/utils/utils';
-import { columnsTaskCategories } from './columns-task-category';
 import { PicklistContainer } from '@/components/picklists/PicklistContainer';
+import { generateTaskCategoryColumns } from './columns-task-category';
+import TaskDetailsDialog from '@/components/tasks/TaskDetailsDialog';
+import { useSelectedTaskId } from '@/store/useTaskStore';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
@@ -20,7 +22,9 @@ export default function Picklists() {
   const [isLoading, setIsLoading] = useState(false);
   const [openSkillDialog, setOpenSkillDialog] = useState(false);
   const [openTaskDialog, setOpenTaskDialog] = useState(false);
-
+  const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
+  const { selectedTaskId, setSelectedTaskId } = useSelectedTaskId();
+  const columnTaskCategories = generateTaskCategoryColumns(setOpenDetailsDialog, setSelectedTaskId);
   const fetchDetails = async () => {
     setIsLoading(true);
     const token = getCookie(COOKIE_NAME);
@@ -52,6 +56,7 @@ export default function Picklists() {
       setSkillCategories(skillData);
       setTaskCategories(taskData);
     } catch (error) {
+      console.log(error);
       setIsError(true);
     } finally {
       setIsLoading(false);
@@ -94,7 +99,10 @@ export default function Picklists() {
                 </Button>
               </div>
               {!isLoading ? (
-                <DataTable data={skillCategories as SkillCategories[]} columns={columns} />
+                <DataTable
+                  data={skillCategories as SkillCategories[]}
+                  columns={columnsSkillCategory}
+                />
               ) : (
                 <div className="flex items-center justify-center h-[50vh]">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -114,7 +122,7 @@ export default function Picklists() {
               {!isLoading ? (
                 <DataTable
                   data={taskCategories as TaskCategories[]}
-                  columns={columnsTaskCategories}
+                  columns={columnTaskCategories}
                 />
               ) : (
                 <div className="flex items-center justify-center h-[50vh]">
@@ -132,6 +140,11 @@ export default function Picklists() {
           openTaskDialog={openTaskDialog}
           setOpenTaskDialog={setOpenTaskDialog}
           onSuccess={fetchDetails}
+        />
+        <TaskDetailsDialog
+          taskId={selectedTaskId ?? ''}
+          open={openDetailsDialog}
+          setOpen={setOpenDetailsDialog}
         />
       </div>
     </div>

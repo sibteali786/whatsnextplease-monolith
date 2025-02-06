@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   flexRender,
@@ -6,8 +6,8 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { useState } from "react";
+} from '@tanstack/react-table';
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -15,15 +15,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/components/Pagination";
-import { generateUserTaskColumns } from "./user-task-columns";
-import { useSelectedTask } from "@/store/useTaskStore";
-import EditTaskDialog from "../common/EditTaskDialog";
-import TaskDetailsModal from "../tasks/TaskDetailsDialog";
-import { Roles } from "@prisma/client";
-import { TaskTable } from "@/utils/validationSchemas";
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/Pagination';
+import { generateUserTaskColumns } from './user-task-columns';
+import { useSelectedTask } from '@/store/useTaskStore';
+import EditTaskDialog from '../common/EditTaskDialog';
+import TaskDetailsModal from '../tasks/TaskDetailsDialog';
+import { Roles } from '@prisma/client';
+import { TaskTable } from '@/utils/validationSchemas';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -56,13 +56,13 @@ export function UserTasksTable({
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
-  const { setSelectedTask } = useSelectedTask();
+  const { setSelectedTask, selectedTask } = useSelectedTask();
 
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<TaskTable | null>(null);
 
-  const userTaskColumns = generateUserTaskColumns(showDescription, (task) => {
+  const userTaskColumns = generateUserTaskColumns(showDescription, task => {
     setTaskToEdit(task);
     setIsEditDialogOpen(true);
   });
@@ -87,16 +87,13 @@ export function UserTasksTable({
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map(header => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -105,15 +102,12 @@ export function UserTasksTable({
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell
-                  colSpan={userTaskColumns.length}
-                  className="text-center"
-                >
+                <TableCell colSpan={userTaskColumns.length} className="text-center">
                   <Skeleton className="h-64 w-full" />
                 </TableCell>
               </TableRow>
             ) : data && data.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map(row => (
                 <TableRow
                   key={row.id}
                   onClick={() => {
@@ -122,22 +116,16 @@ export function UserTasksTable({
                   }}
                   className="cursor-pointer"
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map(cell => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={userTaskColumns.length}
-                  className="text-center"
-                >
+                <TableCell colSpan={userTaskColumns.length} className="text-center">
                   No tasks found.
                 </TableCell>
               </TableRow>
@@ -147,7 +135,7 @@ export function UserTasksTable({
       </div>
       <div className="flex flex-row justify-between items-center my-2">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         {/* Pagination */}
@@ -165,6 +153,7 @@ export function UserTasksTable({
       </div>
       {/* Task Details and Edit Dialog */}
       <TaskDetailsModal
+        taskId={selectedTask?.id ?? ''}
         open={openDetailsDialog}
         setOpen={setOpenDetailsDialog}
       />

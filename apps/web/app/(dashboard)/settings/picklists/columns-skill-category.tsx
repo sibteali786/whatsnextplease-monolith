@@ -14,7 +14,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { SkillCategories } from '@wnp/types';
 import { ClipboardCopy, MoreHorizontal, Plus } from 'lucide-react';
 
-export const columns: ColumnDef<SkillCategories>[] = [
+export const columnsSkillCategory: ColumnDef<SkillCategories>[] = [
   {
     accessorKey: 'categoryName',
     header: 'Category Name',

@@ -1,43 +1,39 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useTransition } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CircleX, Info, Loader2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-import { taskPriorityColors, taskStatusColors } from "@/utils/commonClasses";
-import { FileSchemaType, Task, TaskFile } from "@/utils/validationSchemas";
-import { Prisma } from "@prisma/client";
-import { formatNumbers } from "@/utils/utils";
-import {
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Tooltip } from "@radix-ui/react-tooltip";
-import { getTaskById } from "@/db/repositories/tasks/getTaskById";
-import { useSelectedTask } from "@/store/useTaskStore";
-import { FileAttachmentsList } from "../files/FileAttachmentList";
-import { useToast } from "@/hooks/use-toast";
-import { getMimeType, sanitizeFileName } from "@/utils/fileUtils";
-import { getCurrentUser, UserState } from "@/utils/user";
+} from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, CircleX, Info, Loader2 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { FileSchemaType, Task, TaskFile } from '@/utils/validationSchemas';
+import { Prisma } from '@prisma/client';
+import { formatNumbers } from '@/utils/utils';
+import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip } from '@radix-ui/react-tooltip';
+import { getTaskById } from '@/db/repositories/tasks/getTaskById';
+import { FileAttachmentsList } from '../files/FileAttachmentList';
+import { useToast } from '@/hooks/use-toast';
+import { getMimeType, sanitizeFileName } from '@/utils/fileUtils';
+import { getCurrentUser, UserState } from '@/utils/user';
 
 export default function TaskDetailsDialog({
   open,
+  taskId,
   setOpen,
 }: {
   open: boolean;
+  taskId: string;
   setOpen: (open: boolean) => void;
 }) {
-  const { selectedTask } = useSelectedTask();
   const [user, setUser] = useState<UserState>();
   const [taskDetails, setTaskDetails] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,14 +43,14 @@ export default function TaskDetailsDialog({
 
   useEffect(() => {
     async function fetchTaskDetails() {
-      if (!selectedTask?.id || !open) return;
+      if (!taskId || !open) return;
       const user = await getCurrentUser();
       if (user) {
         setUser(user);
       }
       try {
         setLoading(true);
-        const { success, task } = await getTaskById(selectedTask.id);
+        const { success, task } = await getTaskById(taskId);
 
         if (success && task) {
           setTaskDetails(task);
@@ -64,11 +60,11 @@ export default function TaskDetailsDialog({
           }
         }
       } catch (error) {
-        console.error("Failed to fetch task details:", error);
+        console.error('Failed to fetch task details:', error);
         toast({
-          variant: "destructive",
-          title: "Error fetching task details",
-          description: "Failed to load task information",
+          variant: 'destructive',
+          title: 'Error fetching task details',
+          description: 'Failed to load task information',
         });
       } finally {
         setLoading(false);
@@ -76,24 +72,22 @@ export default function TaskDetailsDialog({
     }
 
     fetchTaskDetails();
-  }, [selectedTask?.id, open, toast]);
+  }, [taskId, open, toast]);
 
   const timeForTask = taskDetails?.timeForTask
     ? new Prisma.Decimal(taskDetails?.timeForTask).toString()
-    : "";
-  const overTime = taskDetails?.overTime
-    ? new Prisma.Decimal(taskDetails.overTime).toString()
-    : "";
+    : '';
+  const overTime = taskDetails?.overTime ? new Prisma.Decimal(taskDetails.overTime).toString() : '';
   // file download
   const [, startTransition] = useTransition();
   const handleDownload = async (file: FileSchemaType) => {
-    setLoadingFileIds((prev) => [...prev, file.id]);
+    setLoadingFileIds(prev => [...prev, file.id]);
     const fileKey = `tasks/${taskDetails?.id}/users/${user?.id}/${sanitizeFileName(file.fileName)}`;
     const fileType = getMimeType(file.fileName);
     startTransition(async () => {
       try {
-        const response = await fetch("/api/file/downloadFileByName", {
-          method: "POST",
+        const response = await fetch('/api/file/downloadFileByName', {
+          method: 'POST',
           body: JSON.stringify({ fileKey, fileType }),
         });
 
@@ -101,32 +95,31 @@ export default function TaskDetailsDialog({
 
         if (json.success) {
           // Create temporary anchor element to trigger download
-          const downloadLink = document.createElement("a");
+          const downloadLink = document.createElement('a');
           downloadLink.href = json.downloadUrl;
-          downloadLink.setAttribute("download", file.fileName);
+          downloadLink.setAttribute('download', file.fileName);
           document.body.appendChild(downloadLink);
           downloadLink.click();
           document.body.removeChild(downloadLink);
         } else {
           toast({
-            title: "Download Failed",
+            title: 'Download Failed',
             description: json.message,
-            variant: "destructive",
+            variant: 'destructive',
             icon: <CircleX size={40} />,
           });
         }
       } catch (error) {
         if (error instanceof Error) {
           toast({
-            title: "Error",
-            description:
-              error.message || "An error occurred while downloading the file.",
-            variant: "destructive",
+            title: 'Error',
+            description: error.message || 'An error occurred while downloading the file.',
+            variant: 'destructive',
             icon: <CircleX size={40} />,
           });
         }
       } finally {
-        setLoadingFileIds((prev) => prev.filter((id) => id !== file.id));
+        setLoadingFileIds(prev => prev.filter(id => id !== file.id));
       }
     });
   };
@@ -138,11 +131,7 @@ export default function TaskDetailsDialog({
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <DialogTitle className="text-2xl">
-            {loading ? (
-              <Loader2 className="animate-spin h-6 w-6" />
-            ) : (
-              "Task Details"
-            )}
+            {loading ? <Loader2 className="animate-spin h-6 w-6" /> : 'Task Details'}
           </DialogTitle>
         </DialogHeader>
 
@@ -163,7 +152,7 @@ export default function TaskDetailsDialog({
             <div className="flex">
               <h3 className="font-semibold w-1/4">Priority</h3>
               <Badge
-                className={`${taskPriorityColors[taskDetails?.priority?.priorityName ?? "NORMAL"]} py-2 px-4`}
+                className={`${taskPriorityColors[taskDetails?.priority?.priorityName ?? 'NORMAL']} py-2 px-4`}
               >
                 {taskDetails?.priority.priorityName}
               </Badge>
@@ -174,7 +163,7 @@ export default function TaskDetailsDialog({
               <p className="w-1/2">
                 {taskDetails?.dueDate
                   ? new Date(taskDetails?.dueDate).toLocaleDateString()
-                  : "No due date"}
+                  : 'No due date'}
               </p>
             </div>
             <Separator />
@@ -187,24 +176,18 @@ export default function TaskDetailsDialog({
                       <TooltipTrigger asChild>
                         <Info className="h-4 w-4 cursor-pointer" />
                       </TooltipTrigger>
-                      <TooltipContent>
-                        Time required for a task is in hours.
-                      </TooltipContent>
+                      <TooltipContent>Time required for a task is in hours.</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
                 <div className="flex items-start gap-2">
                   {formatNumbers(timeForTask)
-                    .split("")
+                    .split('')
                     .map((digit, index) => (
-                      <Button
-                        key={index}
-                        variant={"outline"}
-                        className="text-xl font-bold"
-                      >
-                        {digit !== "." ? digit : ":"}
+                      <Button key={index} variant={'outline'} className="text-xl font-bold">
+                        {digit !== '.' ? digit : ':'}
                       </Button>
-                    ))}{" "}
+                    ))}{' '}
                 </div>
               </div>
               {taskDetails?.overTime ? (
@@ -212,14 +195,10 @@ export default function TaskDetailsDialog({
                   <h3 className="font-semibold w-1/2">OverTime</h3>
                   <div className="flex gap-2">
                     {formatNumbers(overTime)
-                      .split("")
+                      .split('')
                       .map((digit, index) => (
-                        <Button
-                          key={index}
-                          variant={"outline"}
-                          className="text-xl font-bold"
-                        >
-                          {digit !== "." ? digit : ":"}
+                        <Button key={index} variant={'outline'} className="text-xl font-bold">
+                          {digit !== '.' ? digit : ':'}
                         </Button>
                       ))}
                   </div>
@@ -230,7 +209,7 @@ export default function TaskDetailsDialog({
             <div className="flex">
               <h3 className="font-semibold w-1/4">Status</h3>
               <Badge
-                className={`${taskStatusColors[taskDetails?.status?.statusName ?? "NEW"]} py-2 px-4`}
+                className={`${taskStatusColors[taskDetails?.status?.statusName ?? 'NEW']} py-2 px-4`}
               >
                 {taskDetails?.status.statusName}
               </Badge>
