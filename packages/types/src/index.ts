@@ -208,6 +208,11 @@ export const SkillCreateSchema = z.object({
 });
 
 export type SkillCreateDto = z.infer<typeof SkillCreateSchema>;
+export const SkillCategoryStateSchema = z.object({
+  id: z.string(),
+  categoryName: z.string(),
+});
 
+export type SkillCategoryState = z.infer<typeof SkillCategoryStateSchema>;
 export * from './errors';
 export * from './logger';

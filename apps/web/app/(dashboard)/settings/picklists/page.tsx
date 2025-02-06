@@ -5,7 +5,6 @@ import { Tabs, TabsTrigger } from '@/components/ui/tabs';
 import { TabsContent, TabsList } from '@radix-ui/react-tabs';
 import { CircleX, Info, Loader2, Plus } from 'lucide-react';
 import { DataTable } from './data-table';
-import { columnsSkillCategory } from './columns-skill-category';
 import { ErrorResponse, SkillCategories, TaskCategories } from '@wnp/types';
 import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
@@ -15,6 +14,8 @@ import { generateTaskCategoryColumns } from './columns-task-category';
 import TaskDetailsDialog from '@/components/tasks/TaskDetailsDialog';
 import { useSelectedTaskId } from '@/store/useTaskStore';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { generateSkillCategoryColumns } from './columns-skill-category';
+import { useSelectedSkillCategory } from '@/store/useSkillCategoryStore';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
@@ -23,9 +24,15 @@ export default function Picklists() {
   const [isLoading, setIsLoading] = useState(false);
   const [openSkillDialog, setOpenSkillDialog] = useState(false);
   const [openTaskDialog, setOpenTaskDialog] = useState(false);
+  const [openAddSkillDialog, setOpenAddSkillDialog] = useState(false);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const { selectedTaskId, setSelectedTaskId } = useSelectedTaskId();
+  const { setSelectedSkillCategory } = useSelectedSkillCategory();
   const columnTaskCategories = generateTaskCategoryColumns(setOpenDetailsDialog, setSelectedTaskId);
+  const columnsSkillCategory = generateSkillCategoryColumns(
+    setOpenAddSkillDialog,
+    setSelectedSkillCategory
+  );
   const fetchDetails = async () => {
     setIsLoading(true);
     const token = getCookie(COOKIE_NAME);
@@ -150,6 +157,8 @@ export default function Picklists() {
           setOpenSkillDialog={setOpenSkillDialog}
           openTaskDialog={openTaskDialog}
           setOpenTaskDialog={setOpenTaskDialog}
+          openAddSkillDialog={openAddSkillDialog}
+          setOpenAddSkillDialog={setOpenAddSkillDialog}
           onSuccess={fetchDetails}
         />
         <TaskDetailsDialog
