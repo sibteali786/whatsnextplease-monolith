@@ -9,66 +9,72 @@ import { columns } from './columns-skill-category';
 import { ErrorResponse, SkillCategories, TaskCategories } from '@wnp/types';
 import { useEffect, useState } from 'react';
 import { COOKIE_NAME } from '@/utils/constant';
-import { AddSkillCategoryDialog } from './AddSkillCategoryDialog';
 import { getCookie } from '@/utils/utils';
 import { columnsTaskCategories } from './columns-task-category';
+import { PicklistContainer } from '@/components/picklists/PicklistContainer';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
   const [skillCategories, setSkillCategories] = useState<SkillCategories[] | ErrorResponse>([]);
   const [taskCategories, setTaskCategories] = useState<TaskCategories[] | ErrorResponse>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [openSkillDialog, setOpenSkillDialog] = useState(false);
+  const [openTaskDialog, setOpenTaskDialog] = useState(false);
+
+  const fetchDetails = async () => {
+    setIsLoading(true);
+    const token = getCookie(COOKIE_NAME);
+    try {
+      const [skillResponse, taskResponse] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
+
+      const [skillData, taskData] = await Promise.all([skillResponse.json(), taskResponse.json()]);
+
+      if ('code' in skillData || 'code' in taskData) {
+        setIsError(true);
+        return;
+      }
+
+      setSkillCategories(skillData);
+      setTaskCategories(taskData);
+    } catch (error) {
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      const token = getCookie(COOKIE_NAME);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const skillCategories = await response.json();
-      if ('code' in skillCategories) {
-        setIsError(true);
-      }
-      setSkillCategories(skillCategories);
-      setIsLoading(false);
-    };
-    const fetchTaskDetails = async () => {
-      setIsLoading(true);
-      const token = getCookie(COOKIE_NAME);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const taskCategories = await response.json();
-      if ('code' in taskCategories) {
-        setIsError(true);
-      }
-      setTaskCategories(taskCategories);
-      setIsLoading(false);
-    };
     fetchDetails();
-    fetchTaskDetails();
   }, []);
+
   if (isError) {
     return (
       <div className="flex flex-col">
         <State
           icon={CircleX}
           variant={'destructive'}
-          title="Skill Categories"
-          description={'Failed to fetch skill categories, Try refreshing the page'}
+          title="Categories"
+          description={'Failed to fetch categories, Try refreshing the page'}
         />
       </div>
     );
   }
+
   return (
     <div className="space-y-3">
       <h1 className="text-2xl font-semibold">PICKLISTS</h1>
@@ -82,7 +88,7 @@ export default function Picklists() {
             <div className="mt-4 space-y-4 flex flex-col">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-medium">Skill Categories</h2>
-                <Button className="gap-2" onClick={() => setOpen(true)}>
+                <Button className="gap-2" onClick={() => setOpenSkillDialog(true)}>
                   <Plus className="w-4 h-4" />
                   Add Skill Category
                 </Button>
@@ -94,14 +100,13 @@ export default function Picklists() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               )}
-              <AddSkillCategoryDialog open={open} setOpen={setOpen} />
             </div>
           </TabsContent>
           <TabsContent value="tasks">
             <div className="mt-4 space-y-4 flex flex-col">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-medium">Task Categories</h2>
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={() => setOpenTaskDialog(true)}>
                   <Plus className="w-4 h-4" />
                   Add Task Category
                 </Button>
@@ -119,6 +124,15 @@ export default function Picklists() {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Picklist Container with Dialog Forms */}
+        <PicklistContainer
+          openSkillDialog={openSkillDialog}
+          setOpenSkillDialog={setOpenSkillDialog}
+          openTaskDialog={openTaskDialog}
+          setOpenTaskDialog={setOpenTaskDialog}
+          onSuccess={fetchDetails}
+        />
       </div>
     </div>
   );
