@@ -15,7 +15,7 @@ import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ClientWithRole, commonProfileSchemaFields, addressSchema, passwordSchema } from './types';
 import { PasswordSection, AddressSection, SectionHeader } from './SharedComponents';
 import {
@@ -267,16 +267,14 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-start gap-3">
         <h1 className="text-2xl font-semibold">My Profile</h1>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 cursor-pointer" />
-            </TooltipTrigger>
-            <TooltipContent>
-              Click on the Edit Icon to start editing that particular section
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-4 w-4 cursor-pointer" />
+          </TooltipTrigger>
+          <TooltipContent>
+            Click on the Edit Icon to start editing that particular section
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <Form {...form}>

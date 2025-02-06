@@ -25,7 +25,7 @@ import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 import PasswordStrengthMeter from '../PasswordStrengthMeter';
 import { PhoneInput } from '../ui/phone-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { UserWithRole } from './types';
 
 // Profile update schema
@@ -307,17 +307,15 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
     <div className="space-y-6">
       <div className="flex items-center justify-start gap-3">
         <h1 className="text-2xl font-semibold">My Profile</h1>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 cursor-pointer" />
-            </TooltipTrigger>
-            <TooltipContent>
-              Click on the Edit <Pencil className="w-4 h-4 inline" /> Icon to start editing that
-              particular section{' '}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Info className="h-4 w-4 cursor-pointer" />
+          </TooltipTrigger>
+          <TooltipContent>
+            Click on the Edit <Pencil className="w-4 h-4 inline" /> Icon to start editing that
+            particular section{' '}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <Form {...form}>

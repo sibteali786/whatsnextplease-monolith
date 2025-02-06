@@ -17,7 +17,7 @@ import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
 import { FileSchemaType, Task, TaskFile } from '@/utils/validationSchemas';
 import { Prisma } from '@prisma/client';
 import { formatNumbers } from '@/utils/utils';
-import { TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tooltip } from '@radix-ui/react-tooltip';
 import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 import { FileAttachmentsList } from '../files/FileAttachmentList';
@@ -171,14 +171,12 @@ export default function TaskDetailsDialog({
               <div className="flex w-1/2">
                 <div className="w-1/2 flex items-start gap-1">
                   <h3 className="font-semibold">Time For Task</h3>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent>Time required for a task is in hours.</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>Time required for a task is in hours.</TooltipContent>
+                  </Tooltip>
                 </div>
                 <div className="flex items-start gap-2">
                   {formatNumbers(timeForTask)

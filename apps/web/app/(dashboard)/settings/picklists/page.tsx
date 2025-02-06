@@ -3,7 +3,7 @@ import { State } from '@/components/DataState';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsTrigger } from '@/components/ui/tabs';
 import { TabsContent, TabsList } from '@radix-ui/react-tabs';
-import { CircleX, Loader2, Plus } from 'lucide-react';
+import { CircleX, Info, Loader2, Plus } from 'lucide-react';
 import { DataTable } from './data-table';
 import { columnsSkillCategory } from './columns-skill-category';
 import { ErrorResponse, SkillCategories, TaskCategories } from '@wnp/types';
@@ -14,6 +14,7 @@ import { PicklistContainer } from '@/components/picklists/PicklistContainer';
 import { generateTaskCategoryColumns } from './columns-task-category';
 import TaskDetailsDialog from '@/components/tasks/TaskDetailsDialog';
 import { useSelectedTaskId } from '@/store/useTaskStore';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
@@ -113,7 +114,17 @@ export default function Picklists() {
           <TabsContent value="tasks">
             <div className="mt-4 space-y-4 flex flex-col">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-medium">Task Categories</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-medium">Task Categories</h2>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Click on the Tasks badge to see details for that task
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Button className="gap-2" onClick={() => setOpenTaskDialog(true)}>
                   <Plus className="w-4 h-4" />
                   Add Task Category

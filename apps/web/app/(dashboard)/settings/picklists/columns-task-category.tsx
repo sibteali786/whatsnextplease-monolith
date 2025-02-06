@@ -33,7 +33,7 @@ export const generateTaskCategoryColumns = (
             {tasks.map((task, index) => (
               <Badge
                 key={index}
-                className="py-1 px-4 text-[10px] text-nowrap"
+                className="py-1 px-4 text-[10px] text-nowrap cursor-pointer hover:underline underline-offset-2"
                 onClick={() => {
                   setSelectedTaskId(task.id);
                   setOpenDetailsDialog(true);
