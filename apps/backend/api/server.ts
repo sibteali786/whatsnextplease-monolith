@@ -6,6 +6,7 @@ import { userRoutes } from './routes/user.routes';
 import { clientRoutes } from './routes/client.routes';
 import { skillCategoryRoutes } from './routes/skillCategory.routes';
 import { taskCategoryRoutes } from './routes/taskCategory.routes';
+import { skillRoutes } from './routes/skill.routes';
 
 export async function createServer() {
   const app = express();
@@ -18,6 +19,7 @@ export async function createServer() {
   app.use('/notifications', notificationRoutes);
   app.use('/user', userRoutes);
   app.use('/client', clientRoutes);
+  app.use('/skill', skillRoutes);
   app.use('/skillCategory', skillCategoryRoutes);
   app.use('/taskCategory', taskCategoryRoutes);
   // Health check route

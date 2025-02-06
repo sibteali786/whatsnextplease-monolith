@@ -190,6 +190,24 @@ export const TaskCategoriesSchema = z.object({
 export type TaskCategories = z.infer<typeof TaskCategoriesSchema>;
 export type SkillCategoryCreateDto = z.infer<typeof SkillCategoryCreateSchema>;
 export type TaskCategoryCreateDto = z.infer<typeof TaskCategoryCreateSchema>;
+export const SkillCreateSchema = z.object({
+  name: z.string().min(3, 'Skill name must be at least 3 characters long').max(50),
+  description: z
+    .string()
+    .optional()
+    .refine(
+      value => {
+        if (!value) return true;
+        if (value) {
+          return value.length > 3 && value.length < 255;
+        }
+      },
+      { message: 'description is required' }
+    ),
+  skillCategoryId: z.string(),
+});
+
+export type SkillCreateDto = z.infer<typeof SkillCreateSchema>;
 
 export * from './errors';
 export * from './logger';
