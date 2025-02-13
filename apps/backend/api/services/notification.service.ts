@@ -3,6 +3,7 @@ import { CreateNotificationDto } from '@wnp/types';
 import { sseManager } from '../utils/SSEManager';
 import prisma from '../config/db';
 import { checkIfClientExists, checkIfUserExists } from '../utils/helperHandlers';
+import { pushNotificationService } from './pushNotification.service';
 
 export class NotificationService {
   async create(data: CreateNotificationDto) {
@@ -18,9 +19,23 @@ export class NotificationService {
 
     if (data.userId) {
       sseManager.sendNotification(data.userId, notification);
+      // Send push notification
+      await pushNotificationService.sendPushNotification(
+        data.userId,
+        null,
+        notification.message,
+        notification.data
+      );
     }
     if (data.clientId) {
       sseManager.sendNotification(data.clientId, notification);
+      // Send push notification
+      await pushNotificationService.sendPushNotification(
+        null,
+        data.clientId,
+        notification.message,
+        notification.data
+      );
     }
 
     return notification;
