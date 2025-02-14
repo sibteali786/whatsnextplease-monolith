@@ -1,13 +1,18 @@
 import webpush from 'web-push';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
+import { environmentService } from '../config/environment';
 export class PushNotificationService {
   constructor() {
-    webpush.setVapidDetails(
-      `mailto:${process.env.WEB_PUSH_EMAIL!}`,
-      process.env.VAPID_PUBLIC_KEY!,
-      process.env.VAPID_PRIVATE_KEY!
-    );
+    const { publicKey, privateKey, email } = environmentService.getVapidConfig();
+
+    try {
+      webpush.setVapidDetails(`mailto:${email}`, publicKey, privateKey);
+      logger.info('VAPID details set successfully');
+    } catch (error) {
+      logger.error('Failed to set VAPID details:', error);
+      throw error;
+    }
   }
 
   async saveSubscription(
@@ -47,10 +52,11 @@ export class PushNotificationService {
             auth: subscription.auth,
           },
         };
+        console.log('pushSubscription', message);
         return webpush.sendNotification(
           pushSubscription,
           JSON.stringify({
-            title: 'WNP Notification',
+            title: 'Whats Next Please',
             body: message,
             data,
           })
