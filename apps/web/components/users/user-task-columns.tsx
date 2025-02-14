@@ -144,8 +144,8 @@ export const generateUserTaskColumns = (
       accessorKey: 'taskSkills',
       header: 'Skills',
       cell: ({ row }) => {
+        /* eslint-disable @typescript-eslint/no-unused-vars */
         const skillsSchema = z.array(z.string());
-        console.log(skillsSchema);
         type Skills = z.infer<typeof skillsSchema>;
         const skills: Skills = row.getValue('taskSkills');
         return (

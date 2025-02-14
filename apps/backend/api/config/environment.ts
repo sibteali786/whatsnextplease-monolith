@@ -10,6 +10,7 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string(),
   VAPID_PRIVATE_KEY: z.string(),
   WEB_PUSH_EMAIL: z.string().email(),
+  NEXT_PUBLIC_APP_URL: z.string().url(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;
