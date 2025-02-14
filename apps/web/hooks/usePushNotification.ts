@@ -24,6 +24,9 @@ export const usePushNotification = () => {
       navigator.serviceWorker
         .register('/sw.js')
         .then(registration => {
+          if (registration.waiting) {
+            registration.waiting.postMessage('skipWaiting');
+          }
           setRegistration(registration);
           return registration.pushManager.getSubscription();
         })

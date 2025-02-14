@@ -3,6 +3,20 @@ self.addEventListener('push', onPushContent);
 
 self.addEventListener('notificationclick', onNotificationClick);
 
+self.addEventListener('install', function onInstall(event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function onActivate(event) {
+  event.waitUntil(clients.claim());
+});
+
+self.addEventListener('message', event => {
+  if (event.data === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
+
 function onPushContent(event) {
   if (!event.data) {
     return;
@@ -32,9 +46,15 @@ function onPushContent(event) {
 }
 
 function onNotificationClick(event) {
-  event.notification.close();
   const urlWebApp = event.notification.data.url;
-  event.waitUntil(handleNotificationClick(event, urlWebApp));
+  if (!urlWebApp) {
+    throw new Error('Invalid Url');
+  }
+  if (event.action === 'dismiss') {
+    event.waitUntil(event.notification.close());
+  } else {
+    event.waitUntil(clients.openWindow(urlWebApp));
+  }
 }
 
 function handleShowNotification(title, options) {
@@ -43,17 +63,5 @@ function handleShowNotification(title, options) {
   }
   if ('body' in options && 'data' in options) {
     self.registration.showNotification(title, options);
-  }
-}
-
-function handleNotificationClick(event, url) {
-  if (!url) {
-    throw new Error('Invalid Url');
-  }
-  if (event.notification.action === 'view') {
-    clients.openWindow(url);
-  }
-  if (event.notification.action === 'dismiss') {
-	event.notification.close();
   }
 }
