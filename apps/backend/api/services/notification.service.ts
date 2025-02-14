@@ -20,6 +20,7 @@ export class NotificationService {
     if (data.userId) {
       sseManager.sendNotification(data.userId, notification);
       // Send push notification
+      console.log('Sending push notification:', notification);
       await pushNotificationService.sendPushNotification(
         data.userId,
         null,

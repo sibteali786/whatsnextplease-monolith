@@ -17,8 +17,6 @@ import { SkillsSchema, UserAssigneeSchema } from '@/utils/validationSchemas';
 import { usersList } from '@/db/repositories/users/usersList';
 import { getCurrentUser, UserState } from '@/utils/user';
 import { createNotification } from '@/db/repositories/notifications/notifications';
-import { usePushNotification } from '@/hooks/usePushNotification';
-import { NotificationPermissionDialog } from '../notifications/PushNotificationPermissionDialog';
 
 export const createTaskSchema = z.object({
   title: z
@@ -65,8 +63,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
-  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
-  const { subscription } = usePushNotification();
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema),
     mode: 'onSubmit',
@@ -176,9 +172,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
           icon: <CheckCircle size={40} />,
         });
         setOpen(false);
-        if (data.assignedToId && !subscription) {
-          setShowNotificationDialog(true);
-        }
         // notify relevant user
         if (data.assignedToId) {
           try {
@@ -235,10 +228,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
       >
         <CreateTaskForm form={form} onSubmit={onSubmit} skills={skills} users={users} />
       </ModalWithConfirmation>
-      <NotificationPermissionDialog
-        open={showNotificationDialog}
-        onOpenChange={setShowNotificationDialog}
-      />
     </>
   );
 };

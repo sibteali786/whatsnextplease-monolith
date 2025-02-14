@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import webpush from 'web-push';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
-import { environmentService } from '../config/environment';
+import { env, environmentService } from '../config/environment';
 export class PushNotificationService {
   constructor() {
     const { publicKey, privateKey, email } = environmentService.getVapidConfig();
@@ -35,7 +36,6 @@ export class PushNotificationService {
     userId: string | null,
     clientId: string | null,
     message: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data?: any
   ) {
     try {
@@ -44,6 +44,7 @@ export class PushNotificationService {
           OR: [{ userId: userId || undefined }, { clientId: clientId || undefined }],
         },
       });
+
       const pushPromises = subscriptions.map(subscription => {
         const pushSubscription = {
           endpoint: subscription.endpoint,
@@ -52,16 +53,24 @@ export class PushNotificationService {
             auth: subscription.auth,
           },
         };
-        console.log('pushSubscription', message);
-        return webpush.sendNotification(
-          pushSubscription,
-          JSON.stringify({
-            title: 'Whats Next Please',
-            body: message,
-            data,
-          })
-        );
+
+        // Format notification payload
+        const payload = {
+          title: "What's Next Please",
+          body: message,
+          data: {
+            ...data,
+            timestamp: new Date().toISOString(),
+            taskId: data?.taskId,
+            url: env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          },
+        };
+        console.log('Sending push notification:', payload);
+        logger.info('Sending push notification:', payload);
+
+        return webpush.sendNotification(pushSubscription, JSON.stringify(payload));
       });
+
       await Promise.allSettled(pushPromises);
     } catch (error) {
       logger.error('Failed to send push notification:', error);
