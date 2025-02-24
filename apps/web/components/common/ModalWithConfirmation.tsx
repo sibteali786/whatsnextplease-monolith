@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import Alert from "@/components/ui/alert-custom";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "../ui/button";
+} from '@/components/ui/dialog';
+import Alert from '@/components/ui/alert-custom';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '../ui/button';
 
 interface ModalWithConfirmationProps {
   open: boolean;
@@ -28,7 +28,7 @@ const ModalWithConfirmation: React.FC<ModalWithConfirmationProps> = ({
   onCloseRequest,
   onConfirmClose,
   onSubmit,
-  submitButtonLabel = "Submit",
+  submitButtonLabel = 'Submit',
   children,
 }) => {
   const [alertOpen, setAlertOpen] = useState(false);
@@ -50,10 +50,7 @@ const ModalWithConfirmation: React.FC<ModalWithConfirmationProps> = ({
       <Dialog open={open} onOpenChange={handleModalClose}>
         <DialogContent className="max-w-[700px] max-h-[98%] overflow-hidden px-0">
           <DialogHeader className="px-6 flex flex-row gap-2 items-center">
-            <ArrowLeft
-              onClick={handleModalClose}
-              className="w-4 h-4 cursor-pointer mt-2"
-            />
+            <ArrowLeft onClick={handleModalClose} className="w-4 h-4 cursor-pointer mt-2" />
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
           {children}
@@ -63,7 +60,7 @@ const ModalWithConfirmation: React.FC<ModalWithConfirmationProps> = ({
                 <Button variant="outline" onClick={handleModalClose}>
                   Cancel
                 </Button>
-                <Button type="submit" onClick={onSubmit}>
+                <Button type="button" onClick={onSubmit}>
                   {submitButtonLabel}
                 </Button>
               </div>

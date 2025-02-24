@@ -42,19 +42,11 @@ interface CreateTaskFormProps {
   users: UserAssigneeSchema[];
 }
 
-export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
-  form,
-  onSubmit,
-  skills,
-  users,
-}) => {
+export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ form, skills, users }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 flex-1 overflow-y-auto px-6 py-6"
-      >
+      <div className="space-y-6 flex-1 overflow-y-auto px-6 py-6">
         {/* Title */}
         <FormField
           control={form.control}
@@ -268,7 +260,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         />
         {/* File Upload */}
         <FileUploadArea onFilesChange={setFiles} />
-      </form>
+      </div>
     </Form>
   );
 };
