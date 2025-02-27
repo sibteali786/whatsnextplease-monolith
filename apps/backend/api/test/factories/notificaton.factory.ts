@@ -1,4 +1,4 @@
-import { NotificationStatus, NotificationType } from '@prisma/client';
+import { NotificationDeliveryStatus, NotificationStatus, NotificationType } from '@prisma/client';
 import { z } from 'zod';
 
 // Input schema for factory function
@@ -23,6 +23,9 @@ const NotificationSchema = z.object({
   clientId: z.string().nullable(),
   data: z.record(z.any()),
   status: z.nativeEnum(NotificationStatus),
+  deliveryStatus: z.nativeEnum(NotificationDeliveryStatus),
+  lastDeliveryAttempt: z.date(),
+  deliveryError: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -40,6 +43,9 @@ export const createMockNotification = (input: NotificationInput = {}): Notificat
     clientId: null,
     data: {},
     status: NotificationStatus.UNREAD,
+    deliveryStatus: NotificationDeliveryStatus.PENDING,
+    deliveryError: null,
+    lastDeliveryAttempt: now,
     createdAt: now,
     updatedAt: now,
   };

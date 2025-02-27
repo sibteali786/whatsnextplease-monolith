@@ -1,6 +1,12 @@
-import { NotificationStatus, NotificationType, Roles } from '@prisma/client';
+import {
+  NotificationDeliveryStatus,
+  NotificationStatus,
+  NotificationType,
+  Roles,
+} from '@prisma/client';
 import { NotificationService } from '../notification.service';
 import { prismaMock } from '../../test/mockPrisma';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { sseManager } from '../../utils/SSEManager';
 import {
   createMockNotification,
@@ -31,56 +37,28 @@ describe('NotificationService', () => {
   });
 
   describe('create()', () => {
-    describe('when creating user notifications', () => {
+    describe('when creating notifications', () => {
       const userNotificationData = {
         type: NotificationType.TASK_ASSIGNED,
         message: 'User notification',
         userId: 'user-123',
         data: { priority: 'high' },
+        deliveryStatus: NotificationDeliveryStatus.PENDING,
       };
 
-      it('should create and send SSE notification to user', async () => {
+      it('should create notification', async () => {
         const mockNotification = createMockNotification({
           ...userNotificationData,
         });
 
         mockCreateNotification.mockResolvedValue(mockNotification);
 
-        const result = await service.create(userNotificationData);
+        const result = await service.createNotification(userNotificationData);
 
         expect(result).toEqual(mockNotification);
         expect(mockCreateNotification).toHaveBeenCalledWith({
           data: userNotificationData,
         });
-        expect(sseManager.sendNotification).toHaveBeenCalledWith(
-          userNotificationData.userId,
-          mockNotification
-        );
-      });
-    });
-
-    describe('when creating client notifications', () => {
-      const clientNotificationData = {
-        type: NotificationType.PAYMENT_RECEIVED,
-        message: 'Client notification',
-        clientId: 'client-123',
-        data: { amount: 1000 },
-      };
-
-      it('should create and send SSE notification to client', async () => {
-        const mockNotification = createMockNotification({
-          ...clientNotificationData,
-        });
-
-        mockCreateNotification.mockResolvedValue(mockNotification);
-
-        const result = await service.create(clientNotificationData);
-
-        expect(result).toEqual(mockNotification);
-        expect(sseManager.sendNotification).toHaveBeenCalledWith(
-          clientNotificationData.clientId,
-          mockNotification
-        );
       });
     });
   });
