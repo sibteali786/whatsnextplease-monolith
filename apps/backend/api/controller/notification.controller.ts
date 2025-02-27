@@ -17,6 +17,7 @@ import { Roles } from '@prisma/client';
 import { GetNotificationInputParams } from '@wnp/types';
 import { BadRequestError } from '@wnp/types';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
+import { NotificationPayload } from '../services/notificationDelivery.service';
 
 export class NotificationController {
   constructor(
@@ -42,9 +43,15 @@ export class NotificationController {
     if (!validatedData.userId && !validatedData.clientId) {
       throw new BadRequestError('Either userId or clientId must be provided');
     }
-
-    const notification = await this.notificationService.create(validatedData);
-    res.status(201).json(notification);
+    const notification = await this.notificationService.createNotification(validatedData);
+    const notificationPayload: NotificationPayload = {
+      type: validatedData.type,
+      message: validatedData.message,
+      data: validatedData.data || {},
+    };
+    await this.notificationService.deliverNotification(notificationPayload, validatedData);
+    await this.notificationService.updateDeliveryStatus(notification.id);
+    res.sendStatus(201);
   };
 
   private handleGetUserNotifications = async (

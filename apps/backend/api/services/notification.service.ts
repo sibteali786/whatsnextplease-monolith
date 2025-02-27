@@ -1,45 +1,95 @@
-import { NotificationStatus, Roles } from '@prisma/client';
+import { NotificationDeliveryStatus, NotificationStatus, Roles } from '@prisma/client';
 import { CreateNotificationDto } from '@wnp/types';
-import { sseManager } from '../utils/SSEManager';
 import prisma from '../config/db';
 import { checkIfClientExists, checkIfUserExists } from '../utils/helperHandlers';
-import { pushNotificationService } from './pushNotification.service';
+import {
+  DeliveryResults,
+  NotificationDeliveryService,
+  NotificationPayload,
+  NotificationRecipient,
+} from './notificationDelivery.service';
 
 export class NotificationService {
-  async create(data: CreateNotificationDto) {
-    const notification = await prisma.notification.create({
+  private deliveryResults: DeliveryResults;
+  constructor() {
+    this.deliveryResults = [];
+  }
+  async createNotification(data: CreateNotificationDto) {
+    return await prisma.notification.create({
+      data: { ...data, deliveryStatus: NotificationDeliveryStatus.PENDING },
+    });
+  }
+
+  async deliverNotification(notification: NotificationPayload, data: CreateNotificationDto) {
+    const deliveryService = new NotificationDeliveryService();
+    if (data.userId) {
+      const recipient: NotificationRecipient = { id: data.userId, type: 'USER' };
+      const deliveryResult = await deliveryService.deliverToAll(notification, recipient);
+      this.deliveryResults = deliveryResult;
+    }
+    if (data.clientId) {
+      const recipient: NotificationRecipient = { id: data.clientId, type: 'CLIENT' };
+      const deliveryResult = await deliveryService.deliverToAll(notification, recipient);
+      this.deliveryResults = deliveryResult;
+    }
+  }
+
+  getDeliveryResult(): DeliveryResults {
+    return [...this.deliveryResults];
+  }
+
+  async updateDeliveryStatus(notificationId: string) {
+    const status = this.determineDeliveryStatus();
+
+    await prisma.notification.update({
+      where: { id: notificationId },
       data: {
-        type: data.type,
-        message: data.message,
-        data: data.data,
-        userId: data.userId,
-        clientId: data.clientId,
+        deliveryStatus: status.deliveryStatus,
+        deliveryError: status.deliveryError,
+        lastDeliveryAttempt: new Date(),
       },
     });
 
-    if (data.userId) {
-      sseManager.sendNotification(data.userId, notification);
-      // Send push notification
-      console.log('Sending push notification:', notification);
-      await pushNotificationService.sendPushNotification(
-        data.userId,
-        null,
-        notification.message,
-        notification.data
-      );
-    }
-    if (data.clientId) {
-      sseManager.sendNotification(data.clientId, notification);
-      // Send push notification
-      await pushNotificationService.sendPushNotification(
-        null,
-        data.clientId,
-        notification.message,
-        notification.data
-      );
+    return status;
+  }
+
+  private determineDeliveryStatus() {
+    if (!this.deliveryResults.length) {
+      return {
+        deliveryStatus: NotificationDeliveryStatus.FAILED,
+        deliveryError: 'No Delivery attempts made',
+      };
     }
 
-    return notification;
+    const flatDeliveryResults = this.deliveryResults.flat();
+    const allSuccessfulDeliveries = flatDeliveryResults.every(delivery => delivery.success);
+    const allFailedDeliveries = flatDeliveryResults.every(delivery => !delivery.success);
+
+    if (allSuccessfulDeliveries) {
+      return {
+        deliveryStatus: NotificationDeliveryStatus.DELIVERED,
+        deliveryError: null,
+      };
+    } else if (allFailedDeliveries) {
+      const errors = flatDeliveryResults
+        .map(result => `${result.channel}: ${result.error}`)
+        .join(', ');
+
+      return {
+        deliveryStatus: NotificationDeliveryStatus.FAILED,
+        deliveryError: errors,
+      };
+    } else {
+      const failedChannels = flatDeliveryResults
+        .filter(delivery => !delivery.success)
+        .map(delivery => `${delivery.channel}: ${delivery.error}`)
+        .join(', ');
+
+      return {
+        deliveryStatus: NotificationDeliveryStatus.PARTIAL,
+        deliveryError: `Partial delivery. Failed: ${failedChannels}`,
+      };
+    }
   }
 
   async getUserNotifications(userId: string, role: Roles) {
