@@ -426,6 +426,12 @@ model AuditLog {
 //// =========================================
 // Notifications and Alerts
 //// =========================================
+enum NotificationDeliveryStatus {
+    PENDING
+    DELIVERED
+    FAILED
+    PARTIAL
+}
 
 enum NotificationType {
     TASK_ASSIGNED
@@ -443,17 +449,20 @@ enum NotificationStatus {
 }
 
 model Notification {
-    id        String             @id @default(uuid())
-    type      NotificationType
-    status    NotificationStatus @default(UNREAD)
-    message   String
-    data      Json? // Additional payload
-    userId    String?
-    user      User?              @relation(fields: [userId], references: [id])
-    clientId  String?
-    client    Client?            @relation(fields: [clientId], references: [id])
-    createdAt DateTime           @default(now())
-    updatedAt DateTime           @updatedAt
+    id                  String                     @id @default(uuid())
+    type                NotificationType
+    status              NotificationStatus         @default(UNREAD)
+    message             String
+    data                Json? // Additional payload
+    userId              String?
+    user                User?                      @relation(fields: [userId], references: [id])
+    clientId            String?
+    client              Client?                    @relation(fields: [clientId], references: [id])
+    deliveryStatus      NotificationDeliveryStatus @default(PENDING)
+    deliveryError       String? // Optional error message
+    lastDeliveryAttempt DateTime?
+    createdAt           DateTime                   @default(now())
+    updatedAt           DateTime                   @updatedAt
 
     @@index([userId, status])
     @@index([clientId, status])
