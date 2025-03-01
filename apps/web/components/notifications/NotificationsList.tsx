@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { NotificationStatus } from '@prisma/client';
+import { ConnectionStatusIndicator } from './NotificatonIndicator';
 
 interface NotificationsListProps {
   notifications: NotificationList[];
@@ -98,8 +99,7 @@ export default function NotificationsList({
                 <DropdownMenuItem
                   onClick={() => markAsRead(item.id)}
                   disabled={
-                    item.status === NotificationStatus.READ ||
-                    markingRead.includes(item.id)
+                    item.status === NotificationStatus.READ || markingRead.includes(item.id)
                   }
                 >
                   {markingRead.includes(item.id) ? (
@@ -108,16 +108,10 @@ export default function NotificationsList({
                       Marking as read...
                     </div>
                   ) : (
-                    <>
-                      {item.status === NotificationStatus.READ
-                        ? 'Already read'
-                        : 'Mark as Read'}
-                    </>
+                    <>{item.status === NotificationStatus.READ ? 'Already read' : 'Mark as Read'}</>
                   )}
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => console.log(`Delete Notification: ${item.id}`)}
-                >
+                <DropdownMenuItem onClick={() => console.log(`Delete Notification: ${item.id}`)}>
                   Delete Notification
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -131,11 +125,14 @@ export default function NotificationsList({
   return (
     <div className="p-4">
       <Card className="shadow">
-        <CardHeader>
-          <CardTitle className="text-2xl">Notifications</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Stay updated on the latest changes
-          </CardDescription>
+        <CardHeader className="flex flex-row justify-between">
+          <div className="flex flex-col justify-start">
+            <CardTitle className="text-2xl">Notifications</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Stay updated on the latest changes
+            </CardDescription>
+          </div>
+          <ConnectionStatusIndicator />
         </CardHeader>
 
         <CardContent>
@@ -143,14 +140,12 @@ export default function NotificationsList({
             <div className="flex items-center justify-between mb-4">
               <TabsList>
                 <TabsTrigger value="all">All ({notifications.length})</TabsTrigger>
-                <TabsTrigger value="unread">
-                  Unread ({unreadNotifications.length})
-                </TabsTrigger>
+                <TabsTrigger value="unread">Unread ({unreadNotifications.length})</TabsTrigger>
               </TabsList>
               <div className="space-x-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={markAllAsRead}
                   disabled={unreadNotifications.length === 0}
                 >
@@ -161,13 +156,9 @@ export default function NotificationsList({
 
             <Separator />
 
-            <TabsContent value="all">
-              {renderNotifications(notifications)}
-            </TabsContent>
-            
-            <TabsContent value="unread">
-              {renderNotifications(unreadNotifications)}
-            </TabsContent>
+            <TabsContent value="all">{renderNotifications(notifications)}</TabsContent>
+
+            <TabsContent value="unread">{renderNotifications(unreadNotifications)}</TabsContent>
           </Tabs>
         </CardContent>
       </Card>
