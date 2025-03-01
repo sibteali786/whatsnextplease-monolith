@@ -11,10 +11,13 @@ export class SSEManager {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     });
+    res.write('event: connected\n');
+    res.write(`data: {"status":"connected","userId":"${id}"}\n\n`);
     this.clients.set(id, res);
 
     // Remove client when connection closes
     res.on('close', () => {
+      console.log(`SSE client disconnected: ${id}`);
       this.clients.delete(id);
     });
   }
