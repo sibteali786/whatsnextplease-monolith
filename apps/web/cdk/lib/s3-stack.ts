@@ -18,7 +18,7 @@ export class S3Stack extends cdk.Stack {
 
     // Create S3 bucket
     this.bucket = new s3.Bucket(this, 'WnpS3Bucket', {
-      bucketName: 'wnp-s3-bucket',
+      bucketName: 'wnp-media',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       cors: [
