@@ -35,6 +35,30 @@ export class UserController {
       if (currentUser?.avatarUrl) {
         // Extract the file key from the CloudFront URL
         oldFileKey = currentUser.avatarUrl.split('/').slice(3).join('/');
+        const cloudFrontDomain = this.s3Service.getCloudFrontDomain();
+        if (cloudFrontDomain && currentUser.avatarUrl.includes(cloudFrontDomain)) {
+          try {
+            // Extract the file key from the CloudFront URL
+            oldFileKey = currentUser.avatarUrl.split('/').slice(3).join('/');
+            // Check if file exists before trying to delete it
+            const fileExists = await this.s3Service.doesFileExists(oldFileKey);
+            if (!fileExists) {
+              logger.warn(`Old profile picture not found in S3: ${oldFileKey}`);
+              oldFileKey = null; // Reset to avoid deletion attempt
+            }
+          } catch (error) {
+            // Log but continue - we don't want to fail the whole operation
+            // if we just can't check the old file
+            if (error instanceof Error) {
+              logger.warn(`Failed to check if old profile picture exists: ${error.message}`);
+            }
+            oldFileKey = null; // Reset to avoid deletion attempt
+          }
+        } else {
+          logger.info(
+            `Current avatar is from external source, not deleting: ${currentUser.avatarUrl}`
+          );
+        }
       }
       // Get presigned URL and upload
       const presignedUrl = await this.s3Service.generatePresignedUrl(fileKey, file.mimetype);

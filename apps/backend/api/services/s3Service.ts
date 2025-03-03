@@ -24,6 +24,9 @@ export class S3BucketService {
     this.bucket = process.env.S3_BUCKET_NAME!;
     this.cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN!;
   }
+  getCloudFrontDomain() {
+    return this.cloudFrontDomain;
+  }
   async getApiGatewayUrl(secretName = process.env.API_GATEWAY_SECRET_NAME!): Promise<void> {
     const secretResponse = await this.secretsClient.send(
       new GetSecretValueCommand({
@@ -51,12 +54,22 @@ export class S3BucketService {
     const { uploadUrl } = await uploadFileURLResponse.json();
     return uploadUrl;
   }
-  async doesFileExists(fileKey: string): Promise<void> {
-    const command = new HeadObjectCommand({
-      Bucket: this.bucket,
-      Key: fileKey,
-    });
-    await this.s3Client.send(command);
+  async doesFileExists(fileKey: string): Promise<boolean> {
+    try {
+      await this.s3Client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: fileKey,
+        })
+      );
+      return true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      if (error.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      throw error;
+    }
   }
   async deleteFile(fileKey: string): Promise<void> {
     await this.doesFileExists(fileKey);
@@ -89,6 +102,7 @@ export class S3BucketService {
       throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
     }
   }
+
   generateCloudFrontUrl(fileKey: string): string {
     if (!this.cloudFrontDomain) {
       throw new Error('CloudFront domain not configured');
