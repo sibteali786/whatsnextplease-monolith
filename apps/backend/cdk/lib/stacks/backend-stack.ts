@@ -2,45 +2,52 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
-import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Construct } from 'constructs';
 import { Stage } from '../stage';
-import { ApplicationProtocol } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 export interface WnpBackendStackProps extends cdk.StackProps {
   stage: Stage;
 }
 
 export class WnpBackendStack extends cdk.Stack {
-  public readonly ecsService: ecs_patterns.ApplicationLoadBalancedFargateService;
+  public readonly ecsService: ecs.FargateService;
   public readonly ecrRepository: ecr.Repository;
+  public readonly networkLoadBalancer: elbv2.NetworkLoadBalancer;
+
   constructor(scope: Construct, id: string, props: WnpBackendStackProps) {
     super(scope, id, props);
     const isProduction = props.stage === Stage.PRODUCTION;
-    // Create a VPC
+
+    // Create a VPC - COST REDUCTION: Single AZ, no NAT Gateways
     const vpc = new ec2.Vpc(this, 'WnpBackendVPC', {
-      maxAzs: 2,
-      natGateways: isProduction ? 2 : 1,
+      maxAzs: 1, // COST REDUCTION: Using only one AZ
+      natGateways: 0, // No NAT Gateways
+      subnetConfiguration: [
+        {
+          name: 'public',
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+      ],
       vpcName: `wnp-backend-vpc-${props.stage}`,
     });
 
-    // create an ecs cluster
+    // Create an ECS cluster
     const cluster = new ecs.Cluster(this, 'WnpBackendCluster', {
       vpc,
-      containerInsights: true,
+      containerInsights: false, // COST REDUCTION: Disable Container Insights
       clusterName: `wnp-backend-cluster-${props.stage}`,
     });
 
-    // create an ECR repository
+    // Create an ECR repository
     this.ecrRepository = new ecr.Repository(this, 'BackendRepo', {
       repositoryName: `wnp-backend-repo-${props.stage}`,
       removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       emptyOnDelete: !isProduction,
       lifecycleRules: [
         {
-          maxImageCount: isProduction ? 100 : 20,
+          maxImageCount: isProduction ? 30 : 5, // COST REDUCTION: Keep fewer images
           description: 'keep only recent images',
         },
       ],
@@ -52,115 +59,120 @@ export class WnpBackendStack extends cdk.Stack {
       'DatabaseSecret',
       `database-url-${props.stage}` // actual secret name
     );
-    // Configure service based on stage
-    const serviceConfig = this.getServiceConfiguration(isProduction);
+
     // Skip Fargate service creation in first deployment as it looks for empty ECR repository
     if (process.env.SKIP_FARGATE !== 'true') {
-      // Create Fargate service only in second deployment
-      this.ecsService = new ecs_patterns.ApplicationLoadBalancedFargateService(
-        this,
-        'WnpBackendService',
-        {
-          cluster,
-          ...serviceConfig,
-          taskImageOptions: {
-            image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, 'latest'),
-            environment: {
-              NODE_ENV: props.stage,
-              PORT: '3000',
-            },
-            secrets: {
-              DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
-            },
-            containerPort: 3000,
-          },
-          publicLoadBalancer: true,
-          loadBalancerName: `wnp-backend-lb-${props.stage}`,
-          serviceName: `wnp-backend-service-${props.stage}`,
-          healthCheckGracePeriod: cdk.Duration.seconds(180),
-          healthCheck: {
-            command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
-            interval: cdk.Duration.seconds(30),
-            timeout: cdk.Duration.seconds(5),
-          },
-        }
+      // Create a task definition
+      const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
+        memoryLimitMiB: 512, // Minimum viable memory
+        cpu: 256, // Minimum viable CPU
+      });
+
+      // Add container to task definition
+      const container = taskDefinition.addContainer('WnpBackendContainer', {
+        image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, 'latest'),
+        environment: {
+          NODE_ENV: props.stage,
+          PORT: '3000',
+        },
+        secrets: {
+          DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
+        },
+        logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'wnp-backend' }),
+      });
+
+      // Add port mapping
+      container.addPortMappings({
+        containerPort: 3000,
+        hostPort: 3000,
+        protocol: ecs.Protocol.TCP,
+      });
+
+      // Create a security group for the Fargate service
+      const serviceSG = new ec2.SecurityGroup(this, 'ServiceSecurityGroup', {
+        vpc,
+        description: 'Security group for the Fargate service',
+        allowAllOutbound: true,
+      });
+
+      // Allow inbound traffic on container port
+      serviceSG.addIngressRule(
+        ec2.Peer.anyIpv4(),
+        ec2.Port.tcp(3000),
+        'Allow incoming traffic to container port'
       );
-      this.ecsService.targetGroup.configureHealthCheck({
-        path: '/health',
+
+      // Create the Fargate service
+      this.ecsService = new ecs.FargateService(this, 'WnpBackendService', {
+        cluster,
+        taskDefinition,
+        assignPublicIp: true, // Required for public subnets without NAT
+        desiredCount: 1, // Single task
+        serviceName: `wnp-backend-service-${props.stage}`,
+        securityGroups: [serviceSG],
+        // COST REDUCTION: Using Fargate Spot for ~70% cost savings
+        capacityProviderStrategies: [
+          {
+            capacityProvider: 'FARGATE_SPOT',
+            weight: 1,
+          },
+        ],
       });
-    }
-    // Configure autoscaling for production
-    if (isProduction) {
-      this.configureAutoScaling(this.ecsService);
-    }
 
-    // Stack outputs
-    this.addStackOutputs(props.stage);
-  }
-  private getServiceConfiguration(isProduction: boolean) {
-    // Base configuration shared between environments
-    const baseConfig = {
-      memoryLimitMiB: isProduction ? 1024 : 512,
-      desiredCount: isProduction ? 2 : 1,
-      cpu: isProduction ? 512 : 256,
-    };
+      // Create a Network Load Balancer (cheaper than ALB)
+      this.networkLoadBalancer = new elbv2.NetworkLoadBalancer(this, 'WnpBackendNLB', {
+        vpc,
+        internetFacing: true,
+        loadBalancerName: `wnp-backend-nlb-${props.stage}`,
+        // COST REDUCTION: Deploy in same AZ as the service
+        vpcSubnets: { subnets: vpc.publicSubnets },
+      });
 
-    if (!isProduction) {
-      // Development configuration - simple HTTP setup
-      return {
-        ...baseConfig,
-        protocol: ApplicationProtocol.HTTP,
-        targetProtocol: ApplicationProtocol.HTTP,
-      };
-    }
+      // Create a target group for the service
+      const targetGroup = new elbv2.NetworkTargetGroup(this, 'TargetGroup', {
+        vpc,
+        port: 3000,
+        protocol: elbv2.Protocol.TCP,
+        targetType: elbv2.TargetType.IP,
+        healthCheck: {
+          enabled: true,
+          port: '3000',
+          protocol: elbv2.Protocol.HTTP,
+          path: '/health',
+          interval: cdk.Duration.seconds(60), // Reduced frequency
+          healthyThresholdCount: 2,
+          unhealthyThresholdCount: 2,
+        },
+      });
 
-    // Production configuration - HTTPS with certificate
-    const certificate = new certificatemanager.Certificate(this, 'ApiCertificate', {
-      domainName: 'your-domain.com', // Replace with your domain
-      validation: certificatemanager.CertificateValidation.fromDns(),
-    });
+      // Register targets
+      targetGroup.addTarget(this.ecsService);
 
-    return {
-      ...baseConfig,
-      certificate,
-      protocol: ApplicationProtocol.HTTPS,
-      targetProtocol: ApplicationProtocol.HTTP,
-      redirectHTTP: true,
-    };
-  }
+      // Create a listener
+      const listener = this.networkLoadBalancer.addListener('Listener', {
+        port: 80,
+        protocol: elbv2.Protocol.TCP,
+        defaultTargetGroups: [targetGroup],
+      });
 
-  private configureAutoScaling(service: ecs_patterns.ApplicationLoadBalancedFargateService) {
-    const scaling = service.service.autoScaleTaskCount({
-      maxCapacity: 4,
-      minCapacity: 2,
-    });
-
-    scaling.scaleOnCpuUtilization('CpuScaling', {
-      targetUtilizationPercent: 70,
-      scaleInCooldown: cdk.Duration.seconds(60),
-      scaleOutCooldown: cdk.Duration.seconds(60),
-    });
-
-    scaling.scaleOnMemoryUtilization('MemoryScaling', {
-      targetUtilizationPercent: 70,
-      scaleInCooldown: cdk.Duration.seconds(60),
-      scaleOutCooldown: cdk.Duration.seconds(60),
-    });
-  }
-
-  private addStackOutputs(stage: string) {
-    if (process.env.SKIP_FARGATE !== 'true') {
+      // Output the NLB DNS name
       new cdk.CfnOutput(this, 'LoadBalancerDNS', {
-        value: this.ecsService.loadBalancer.loadBalancerDnsName,
-        description: 'Load Balancer DNS Name',
-        exportName: `LoadBalancerDNS-${stage}`,
+        value: this.networkLoadBalancer.loadBalancerDnsName,
+        description: 'Network Load Balancer DNS Name',
+        exportName: `LoadBalancerDNS-${props.stage}`,
+      });
+      new cdk.CfnOutput(this, 'ListenerARN', {
+        value: listener.listenerArn,
+        description: 'Network Load Balancer Listener ARN',
+        exportName: `ListenerARN-${props.stage}`,
       });
     }
 
+    // Output the ECR repository URI
     new cdk.CfnOutput(this, 'ECRRepositoryURI', {
       value: this.ecrRepository.repositoryUri,
       description: 'ECR Repository URI',
-      exportName: `ECRRepositoryURI-${stage}`,
+      exportName: `ECRRepositoryURI-${props.stage}`,
     });
   }
 }
