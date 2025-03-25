@@ -1,19 +1,19 @@
-"use client";
-import { useEffect, useState } from "react";
-import { SearchNFilter } from "../common/SearchNFilter";
-import { UserTasksTable } from "./UserTaskTable";
-import { getTasksByUserId } from "@/db/repositories/users/getTasksByUserId";
-import { getTaskIdsByUserId } from "@/utils/userTools";
-import { DurationEnum, DurationEnumList } from "@/types";
-import { CreatorType, Roles } from "@prisma/client";
-import { Button } from "../ui/button";
-import { CircleX, Loader2, Plus } from "lucide-react";
-import { createDraftTask } from "@/db/repositories/tasks/createDraftTask";
-import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "../ui/toast";
-import { useCreatedTask } from "@/store/useTaskStore";
-import { CreateTaskContainer } from "../tasks/CreateTaskContainer";
-import { TaskTable } from "@/utils/validationSchemas";
+'use client';
+import { useEffect, useState } from 'react';
+import { SearchNFilter } from '../common/SearchNFilter';
+import { UserTasksTable } from './UserTaskTable';
+import { getTasksByUserId } from '@/db/repositories/users/getTasksByUserId';
+import { getTaskIdsByUserId } from '@/utils/userTools';
+import { DurationEnum, DurationEnumList } from '@/types';
+import { CreatorType, Roles } from '@prisma/client';
+import { Button } from '../ui/button';
+import { CircleX, Loader2, Plus } from 'lucide-react';
+import { createDraftTask } from '@/db/repositories/tasks/createDraftTask';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '../ui/toast';
+import { useCreatedTask } from '@/store/useTaskStore';
+import { CreateTaskContainer } from '../tasks/CreateTaskContainer';
+import { TaskTable } from '@/utils/validationSchemas';
 
 export const UserTasks = ({
   userId,
@@ -24,7 +24,7 @@ export const UserTasks = ({
   listOfFilter?: DurationEnumList;
   role: Roles;
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term); // Update the search term when user searches
@@ -35,8 +35,8 @@ export const UserTasks = ({
   const { setCreatedTask } = useCreatedTask();
   const createTaskHandler = async () => {
     toast({
-      title: "Creating a Draft Task",
-      description: "Please wait while we can create a draft task for you",
+      title: 'Creating a Draft Task',
+      description: 'Please wait while we can create a draft task for you',
       icon: <Loader2 className="animate-spin" size={40} />,
     });
     const response = await createDraftTask(CreatorType.CLIENT, userId, role);
@@ -47,18 +47,13 @@ export const UserTasks = ({
       setOpen(true);
     } else {
       toast({
-        title: "Failed to Create a Draft Task",
-        description:
-          "Please try again by clicking on the button to retry creating task",
-        variant: "destructive",
+        title: 'Failed to Create a Draft Task',
+        description: 'Please try again by clicking on the button to retry creating task',
+        variant: 'destructive',
         icon: <CircleX size={40} />,
         //TODO: ability for user to retry after a certain interval
         action: (
-          <ToastAction
-            altText="Try Again"
-            className="mt-2"
-            onClick={() => createTaskHandler()}
-          >
+          <ToastAction altText="Try Again" className="mt-2" onClick={() => createTaskHandler()}>
             Try again
           </ToastAction>
         ),
@@ -75,20 +70,8 @@ export const UserTasks = ({
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const response = await getTasksByUserId(
-        userId,
-        role,
-        cursor,
-        pageSize,
-        searchTerm,
-        duration,
-      ); // Pass searchTerm
-      const { taskIds, success } = await getTaskIdsByUserId(
-        userId,
-        searchTerm,
-        duration,
-        role,
-      );
+      const response = await getTasksByUserId(userId, role, cursor, pageSize, searchTerm, duration); // Pass searchTerm
+      const { taskIds, success } = await getTaskIdsByUserId(userId, searchTerm, duration, role);
       if (response.success && response.tasks && success) {
         setTaskIDs(taskIds);
         setData(response.tasks);
@@ -97,7 +80,7 @@ export const UserTasks = ({
         console.error(response.message);
       }
     } catch (error) {
-      console.error("Failed to fetch tasks:", error);
+      console.error('Failed to fetch tasks:', error);
     }
     setLoading(false);
   };
@@ -112,11 +95,8 @@ export const UserTasks = ({
       ) : (
         <div className="flex justify-between">
           <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} />
-          <Button
-            className="flex gap-2 font-bold text-base"
-            onClick={() => createTaskHandler()}
-          >
-            {" "}
+          <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
+            {' '}
             <Plus className="h-5 w-5" /> Create New Task
           </Button>
           <CreateTaskContainer open={open} setOpen={setOpen} />
