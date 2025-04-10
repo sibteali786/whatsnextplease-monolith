@@ -19,7 +19,7 @@ export default function NotificationLayout({ children }: { children: React.React
   if (!user) return null;
 
   return (
-    <NotificationProvider userId={user.id} role={user.role.name ?? Roles.TASK_AGENT}>
+    <NotificationProvider userId={user.id} role={user?.role?.name ?? Roles.TASK_AGENT}>
       {children}
     </NotificationProvider>
   );

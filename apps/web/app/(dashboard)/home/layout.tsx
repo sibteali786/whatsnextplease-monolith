@@ -1,5 +1,5 @@
-import { getCurrentUser } from "@/utils/user";
-import { Roles } from "@prisma/client";
+import { getCurrentUser } from '@/utils/user';
+import { Roles } from '@prisma/client';
 
 export default async function DashboardLayout({
   superUser,
@@ -15,12 +15,10 @@ export default async function DashboardLayout({
   const user = await getCurrentUser();
   return (
     <div>
-      <div>
-        {user.role.name === Roles.TASK_SUPERVISOR ? taskSupervisor : null}
-      </div>
-      <div>{user.role.name === Roles.SUPER_USER ? superUser : null}</div>
-      <div>{user.role.name === Roles.TASK_AGENT ? taskAgent : null}</div>
-      <div>{user.role.name === Roles.CLIENT ? client : null}</div>
+      <div>{user?.role?.name === Roles.TASK_SUPERVISOR ? taskSupervisor : null}</div>
+      <div>{user?.role?.name === Roles.SUPER_USER ? superUser : null}</div>
+      <div>{user?.role?.name === Roles.TASK_AGENT ? taskAgent : null}</div>
+      <div>{user?.role?.name === Roles.CLIENT ? client : null}</div>
     </div>
   );
 }

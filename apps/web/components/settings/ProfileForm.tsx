@@ -7,7 +7,7 @@ import ProfileFormUser from './ProfileFormUser';
 import { ProfileFormClient } from './ProfileFormClient';
 
 export default function ProfileForm({ initialData, token, user }: ProfileFormProps) {
-  if (user.role.name === Roles.CLIENT) {
+  if (user?.role?.name === Roles.CLIENT) {
     return <ProfileFormClient initialData={initialData as ClientWithRole} token={token} />;
   }
 

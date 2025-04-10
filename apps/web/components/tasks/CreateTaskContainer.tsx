@@ -95,7 +95,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
       const currentLoggedInUser = await getCurrentUser();
       setUser(currentLoggedInUser);
       try {
-        const response = await usersList(currentLoggedInUser.role.name ?? Roles.TASK_SUPERVISOR);
+        const response = await usersList(currentLoggedInUser?.role?.name ?? Roles.TASK_SUPERVISOR);
         if (response.success) {
           setUsers(response.users);
         }

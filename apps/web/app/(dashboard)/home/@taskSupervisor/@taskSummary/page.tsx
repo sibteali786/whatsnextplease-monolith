@@ -1,13 +1,13 @@
-"use client";
-import { CountLabel } from "@/components/common/CountLabel";
-import { TaskAgentChart } from "@/components/tasks/ChartTasks";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentUser } from "@/utils/user";
-import { getTasksCountOutputSchema } from "@/utils/validationSchemas";
-import { Roles } from "@prisma/client";
-import { CircleX } from "lucide-react";
-import { useEffect, useState } from "react";
+'use client';
+import { CountLabel } from '@/components/common/CountLabel';
+import { TaskAgentChart } from '@/components/tasks/ChartTasks';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { getCurrentUser } from '@/utils/user';
+import { getTasksCountOutputSchema } from '@/utils/validationSchemas';
+import { Roles } from '@prisma/client';
+import { CircleX } from 'lucide-react';
+import { useEffect, useState } from 'react';
 type TasksCountType = {
   UnassignedTasks: number;
   AssignedTasks: number;
@@ -21,17 +21,14 @@ const TaskSummaryPage = () => {
       setIsLoading(true);
       const user = await getCurrentUser();
       // Check for authorized roles
-      if (user.role.name !== Roles.TASK_SUPERVISOR) {
+      if (user?.role?.name !== Roles.TASK_SUPERVISOR) {
         return null;
       }
 
       // Fetch task counts
-      const response = await fetch(
-        "/api/tasks/tasksCount?role=" + user.role.name,
-      );
+      const response = await fetch('/api/tasks/tasksCount?role=' + user?.role?.name);
       const jsonResponse = await response.json();
-      const { taskCounts, success } =
-        getTasksCountOutputSchema.parse(jsonResponse);
+      const { taskCounts, success } = getTasksCountOutputSchema.parse(jsonResponse);
       setSuccess(success);
       setTasks(taskCounts);
       setIsLoading(false);
@@ -59,8 +56,8 @@ const TaskSummaryPage = () => {
             <h2 className="font-bold text-2xl">Progress</h2>
             <div className="w-full flex flex-col gap-4">
               <CountLabel
-                lineHeight={"normal"}
-                label={"Unassigned Tasks"}
+                lineHeight={'normal'}
+                label={'Unassigned Tasks'}
                 count={tasks.UnassignedTasks ?? 0}
                 align="start"
                 isList={true}
@@ -68,8 +65,8 @@ const TaskSummaryPage = () => {
                 countSize="text-7xl"
               />
               <CountLabel
-                lineHeight={"normal"}
-                label={"Assigned Tasks"}
+                lineHeight={'normal'}
+                label={'Assigned Tasks'}
                 count={tasks.AssignedTasks ?? 0}
                 align="start"
                 isList={true}

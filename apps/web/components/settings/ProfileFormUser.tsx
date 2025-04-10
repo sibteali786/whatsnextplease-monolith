@@ -374,7 +374,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                     {initialData.firstName} {initialData.lastName}
                   </p>
                   <p className="text-muted-foreground">
-                    {transformEnumValue(initialData.role.name)}
+                    {transformEnumValue(initialData?.role?.name)}
                   </p>
                   <p className="text-muted-foreground text-sm">
                     {initialData?.city && initialData?.country

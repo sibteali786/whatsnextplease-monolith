@@ -1,20 +1,17 @@
-import { CountLabel } from "@/components/common/CountLabel";
-import { TaskAgentChart } from "@/components/tasks/ChartTasks";
-import { Card } from "@/components/ui/card";
-import { getTasksCountByStatus } from "@/db/repositories/tasks/getTasksCountByStatus";
-import { getCurrentUser } from "@/utils/user";
-import { Roles } from "@prisma/client";
-import { CircleX } from "lucide-react";
+import { CountLabel } from '@/components/common/CountLabel';
+import { TaskAgentChart } from '@/components/tasks/ChartTasks';
+import { Card } from '@/components/ui/card';
+import { getTasksCountByStatus } from '@/db/repositories/tasks/getTasksCountByStatus';
+import { getCurrentUser } from '@/utils/user';
+import { Roles } from '@prisma/client';
+import { CircleX } from 'lucide-react';
 
 const TaskSummaryPage = async () => {
   const user = await getCurrentUser();
-  if (user.role.name !== Roles.CLIENT) {
+  if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
-  const { tasksWithStatus, success } = await getTasksCountByStatus(
-    user.id,
-    Roles.CLIENT,
-  );
+  const { tasksWithStatus, success } = await getTasksCountByStatus(user.id, Roles.CLIENT);
   return (
     <div className="col-span-2">
       <Card className="p-6 rounded-2xl shadow-m flex">
@@ -23,8 +20,8 @@ const TaskSummaryPage = async () => {
             <h2 className="font-bold text-2xl">Progress</h2>
             <div className="w-full flex flex-col gap-4">
               <CountLabel
-                lineHeight={"normal"}
-                label={"In-Progress Tasks"}
+                lineHeight={'normal'}
+                label={'In-Progress Tasks'}
                 count={tasksWithStatus.IN_PROGRESS ?? 0}
                 align="start"
                 isList={true}
@@ -32,8 +29,8 @@ const TaskSummaryPage = async () => {
                 countSize="text-7xl"
               />
               <CountLabel
-                lineHeight={"normal"}
-                label={"Completed Tasks"}
+                lineHeight={'normal'}
+                label={'Completed Tasks'}
                 count={tasksWithStatus.COMPLETED ?? 0}
                 align="start"
                 isList={true}
@@ -42,8 +39,8 @@ const TaskSummaryPage = async () => {
                 labelSize="lg"
               />
               <CountLabel
-                lineHeight={"normal"}
-                label={"Overdue Tasks"}
+                lineHeight={'normal'}
+                label={'Overdue Tasks'}
                 count={tasksWithStatus.OVERDUE ?? 0}
                 align="start"
                 isList={true}
@@ -57,9 +54,7 @@ const TaskSummaryPage = async () => {
         ) : (
           <div className="flex flex-col gap-4 items-center justify-center">
             <CircleX color="red" className="w-10 h-10" />
-            <p className="text-destructive text-lg text-center">
-              Something is wrong at backend{" "}
-            </p>
+            <p className="text-destructive text-lg text-center">Something is wrong at backend </p>
           </div>
         )}
         <TaskAgentChart />

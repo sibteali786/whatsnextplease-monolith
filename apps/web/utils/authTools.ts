@@ -154,6 +154,13 @@ export const signin = async ({ username, password }: { username: string; passwor
       where: {
         username,
       },
+      include: {
+        role: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
     if (!matchClient) {
       return {
@@ -268,6 +275,13 @@ export const signup = async ({
           companyName: companyName ?? '',
           role: { connect: { name: Roles.CLIENT } },
         },
+        include: {
+          role: {
+            select: {
+              name: true,
+            },
+          },
+        },
       });
 
       const token = createTokenForUser(client.id, client.username, Roles.CLIENT);
@@ -283,6 +297,13 @@ export const signup = async ({
         firstName: firstName ?? '',
         lastName: lastName ?? '',
         role: { connect: { name: role } },
+      },
+      include: {
+        role: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 

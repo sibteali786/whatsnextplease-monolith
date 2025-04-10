@@ -1,6 +1,6 @@
-import { getCurrentUser } from "@/utils/user";
-import { UserTasks } from "./UserTasks";
-import { Roles } from "@prisma/client";
+import { getCurrentUser } from '@/utils/user';
+import { UserTasks } from './UserTasks';
+import { Roles } from '@prisma/client';
 
 export default async function UserTaskList({
   userId,
@@ -11,7 +11,7 @@ export default async function UserTaskList({
   const user = await getCurrentUser();
   return (
     <div>
-      <UserTasks role={user.role.name ?? Roles.SUPER_USER} userId={userId} />
+      <UserTasks role={user?.role?.name ?? Roles.SUPER_USER} userId={userId} />
     </div>
   );
 }

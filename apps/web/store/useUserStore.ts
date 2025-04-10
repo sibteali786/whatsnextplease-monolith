@@ -1,6 +1,6 @@
-import { User } from "@prisma/client";
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { Roles, User } from '@prisma/client';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 // UserState Store with persistence
 interface UserState {
@@ -11,19 +11,23 @@ interface UserState {
 
 export const useUserStore = create<UserState>()(
   persist(
-    (set) => ({
+    set => ({
       selectedUser: null,
-      setSelectedUser: (user) => set({ selectedUser: user }),
+      setSelectedUser: user => set({ selectedUser: user }),
       clearSelectedUser: () => set({ selectedUser: null }),
     }),
     {
-      name: "user-store", // Key in localStorage
-    },
-  ),
+      name: 'user-store', // Key in localStorage
+    }
+  )
 );
 
 // LoggedInUserState Store with persistence
-type LoggedInUser = Omit<User, "passwordHash">;
+type LoggedInUser = Omit<User, 'passwordHash'> & { name?: string } & {
+  role: {
+    name: Roles | undefined;
+  } | null;
+};
 
 interface LoggedInUserState {
   user: LoggedInUser | null;
@@ -33,13 +37,13 @@ interface LoggedInUserState {
 
 export const useLoggedInUserState = create<LoggedInUserState>()(
   persist(
-    (set) => ({
+    set => ({
       user: null,
-      setUser: (user) => set({ user }),
+      setUser: user => set({ user }),
       clearUser: () => set({ user: null }),
     }),
     {
-      name: "logged-in-user-store", // Key in localStorage
-    },
-  ),
+      name: 'logged-in-user-store', // Key in localStorage
+    }
+  )
 );

@@ -9,17 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { signout } from '@/utils/user';
+import { signout, UserState } from '@/utils/user';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 
 interface NavUserProps {
-  user: {
-    id: string;
-    name: string | null;
-    avatarUrl: string | null;
-    username: string;
-    email: string;
-  };
+  user: UserState;
 }
 
 const SecureAvatar = ({
