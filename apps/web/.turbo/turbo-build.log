@@ -6,11 +6,11 @@
 [2mEnvironment variables loaded from .env[22m
 [2mPrisma schema loaded from prisma/schema.prisma[22m
 
-✔ Generated [1mPrisma Client[22m (v5.22.0)[2m to ./../../node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/@prisma/client[22m in 197ms
+✔ Generated [1mPrisma Client[22m (v5.22.0)[2m to ./../../node_modules/.pnpm/@prisma+client@5.22.0_prisma@5.22.0/node_modules/@prisma/client[22m in 504ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enhance your visibility: https://pris.ly/tip-2-optimize
+Tip: Easily identify and fix slow SQL queries in your app. Optimize helps you enhance your visibility: https://pris.ly/--optimize
 
 
 > web@0.1.0 build:cdk /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web
@@ -22,9 +22,9 @@ Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enha
 
 [2mEnvironment variables loaded from .env[22m
 [2mPrisma schema loaded from prisma/schema.prisma[22m
-[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:5432"[22m
+[2mDatasource "db": PostgreSQL database "verceldb", schema "public" at "ep-wispy-sky-a4o020n4-pooler.us-east-1.aws.neon.tech"[22m
 
-24 migrations found in prisma/migrations
+25 migrations found in prisma/migrations
 
 
 [32mNo pending migrations to apply.[39m
@@ -33,7 +33,7 @@ Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enha
 
  [37m[1m [22m[39m Creating an optimized production build ...
  [32m[1m✓[22m[39m Compiled successfully
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G[?25h
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G[?25h
 [36m./app/(dashboard)/clients/data-table.tsx[39m
 [33m61[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchClients'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
@@ -65,125 +65,26 @@ Tip: Curious about the SQL queries Prisma ORM generates? Optimize helps you enha
 [33m123[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
 [36m./components/tasks/TaskSuperVisorList.tsx[39m
-[33m83[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useCallback has missing dependencies: 'role' and 'toast'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-[33m96[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+[33m111[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useCallback has missing dependencies: 'role' and 'toast'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+[33m124[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
 [36m./components/tasks/TasksListModal.tsx[39m
 [33m66[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
 [36m./components/users/UserTasks.tsx[39m
-[33m106[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+[33m89[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
 
 [36minfo[39m  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
-[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
-[?25l [37m[1m [22m[39m Generating static pages (0/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/29)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/29)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (2/29)  [36m[=== ][39mnode:events:495
-      throw er; // Unhandled 'error' event
-      ^
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[31mFailed to compile.
+[39m
+[36m./seed.ts[39m:[33m3[39m:[33m1[39m
+[31m[1mType error[22m[39m: 'hashPW' is declared but its value is never read.
 
-TypeError: destination.write is not a function
-    at run (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/worker.js:130:27)
-    at Timeout._onTimeout (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/wait.js:51:11)
-    at listOnTimeout (node:internal/timers:569:17)
-    at process.processTimers (node:internal/timers:512:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/index.js:369:12)
-    at process.processImmediate (node:internal/timers:476:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v18.18.1
-[2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (9/29)  [36m[    ][39mnode:events:495
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/worker.js:130:27)
-    at Timeout._onTimeout (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/wait.js:51:11)
-    at listOnTimeout (node:internal/timers:569:17)
-    at process.processTimers (node:internal/timers:512:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/index.js:369:12)
-    at process.processImmediate (node:internal/timers:476:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v18.18.1
-[2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (10/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (14/29)  [36m[=   ][39mnode:events:495
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/worker.js:130:27)
-    at Timeout._onTimeout (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/wait.js:51:11)
-    at listOnTimeout (node:internal/timers:569:17)
-    at process.processTimers (node:internal/timers:512:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/index.js:369:12)
-    at process.processImmediate (node:internal/timers:476:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v18.18.1
-[2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (18/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (23/29)  [36m[=   ][39mnode:events:495
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/worker.js:130:27)
-    at Timeout._onTimeout (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/lib/wait.js:51:11)
-    at listOnTimeout (node:internal/timers:569:17)
-    at process.processTimers (node:internal/timers:512:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/thread-stream@3.1.0/node_modules/thread-stream/index.js:369:12)
-    at process.processImmediate (node:internal/timers:476:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v18.18.1
-[2K[1G[?25h [31m[1m⨯[22m[39m Static worker exited with code: 1 and signal: null
-[?25l [37m[1m [22m[39m Generating static pages (28/29)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (28/29)  [36m[    ][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (29/29)
-[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
-[2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
-
-[4mRoute (app)[24m                              [4mSize[24m     [4mFirst Load JS[24m
-┌ ƒ /                                    339 B          [37m[1m87.7 kB[22m[39m
-├ ○ /_not-found                          883 B          [37m[1m88.3 kB[22m[39m
-├ ƒ /api/file/deleteFileById             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/file/downloadFileByName         0 B                [37m[1m0 B[22m[39m
-├ ○ /api/skills                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/task/doesTaskExists             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/tasks/idsByType                 0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/tasks/tasksCount                0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/tasks/taskType                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/tasks/unassignedTasks           0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/uploadAndSaveFile               0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/user/doesUserExists             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/users/taskAgentList             0 B                [37m[1m0 B[22m[39m
-├ ƒ /clients                             5.19 kB         [37m[1m170 kB[22m[39m
-├ ƒ /clients/[clientId]                  7.47 kB         [37m[1m243 kB[22m[39m
-├ ƒ /clients/addclient                   3.7 kB          [37m[1m274 kB[22m[39m
-├ ƒ /home                                1.9 kB          [37m[1m260 kB[22m[39m
-├ ƒ /notifications/[userId]              6.75 kB         [37m[1m160 kB[22m[39m
-├ ƒ /settings/billing                    191 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /settings/myprofile                  8.42 kB         [37m[1m279 kB[22m[39m
-├ ƒ /settings/notifications              7.8 kB          [37m[1m126 kB[22m[39m
-├ ƒ /settings/picklists                  28.5 kB         [37m[1m203 kB[22m[39m
-├ ○ /signin                              9.35 kB         [37m[1m153 kB[22m[39m
-├ ○ /signup                              6.31 kB         [37m[1m171 kB[22m[39m
-├ ƒ /skills                              191 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /taskOfferings                       1.34 kB         [37m[1m260 kB[22m[39m
-├ ƒ /users                               6.39 kB         [37m[1m171 kB[22m[39m
-├ ƒ /users/[userId]                      3.26 kB         [37m[1m262 kB[22m[39m
-└ ƒ /users/adduser                       4.13 kB         [37m[1m281 kB[22m[39m
-+ First Load JS shared by all            [37m[1m87.4 kB[22m[39m
-  ├ chunks/2840-f70ee662d86af381.js      31.7 kB
-  ├ chunks/a71daf0b-e8833364bbd3a374.js  53.7 kB
-  └ other shared chunks (total)          2.01 kB
-
-
-ƒ Middleware                             [37m[1m42.8 kB[22m[39m
-
-○  (Static)   prerendered as static content
-ƒ  (Dynamic)  server-rendered on demand
-
-[?25h
+[0m [90m 1 |[39m [36mimport[39m prisma [36mfrom[39m [32m'./db/db'[39m[33m;[39m[0m
+[0m [90m 2 |[39m [36mimport[39m { [33mRoles[39m[33m,[39m [33mTaskPriorityEnum[39m[33m,[39m [33mTaskStatusEnum[39m } [36mfrom[39m [32m'@prisma/client'[39m[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 3 |[39m [36mimport[39m { hashPW } [36mfrom[39m [32m'./utils/authTools'[39m[33m;[39m [90m// Import your password hashing function[39m[0m
+[0m [90m   |[39m [31m[1m^[22m[39m[0m
+[0m [90m 4 |[39m[0m
+[0m [90m 5 |[39m [36masync[39m [36mfunction[39m main() {[0m
+[0m [90m 6 |[39m   console[33m.[39mlog([32m'Starting essential data seeding...'[39m)[33m;[39m[0m
+[?25h[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
