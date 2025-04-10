@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const { type, searchTerm, duration, role } = parsedParams;
 
-    if (role !== Roles.TASK_SUPERVISOR) {
+    if (role !== Roles.TASK_SUPERVISOR && role !== Roles.SUPER_USER) {
       return NextResponse.json(
         { success: false, message: "Unauthorized role" },
         { status: 403 },
