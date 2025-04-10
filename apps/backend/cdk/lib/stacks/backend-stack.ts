@@ -4,6 +4,7 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 import { Stage } from '../stage';
 
@@ -118,6 +119,11 @@ export class WnpBackendStack extends cdk.Stack {
           },
         ],
       });
+      const certificate = acm.Certificate.fromCertificateArn(
+        this,
+        'ApiCertificate',
+        'arn:aws:acm:us-east-1:519076116465:certificate/32c2237e-176f-469d-832e-c9d1e95ddccd'
+      );
 
       // Create a Network Load Balancer (cheaper than ALB)
       this.networkLoadBalancer = new elbv2.NetworkLoadBalancer(this, 'WnpBackendNLB', {
@@ -149,9 +155,16 @@ export class WnpBackendStack extends cdk.Stack {
       targetGroup.addTarget(this.ecsService);
 
       // Create a listener
-      const listener = this.networkLoadBalancer.addListener('Listener', {
+      const httpListener = this.networkLoadBalancer.addListener('Listener', {
         port: 80,
         protocol: elbv2.Protocol.TCP,
+        defaultTargetGroups: [targetGroup],
+      });
+
+      const httpsListener = this.networkLoadBalancer.addListener('HttpsListener', {
+        port: 443,
+        protocol: elbv2.Protocol.TLS,
+        certificates: [certificate],
         defaultTargetGroups: [targetGroup],
       });
 
@@ -161,10 +174,17 @@ export class WnpBackendStack extends cdk.Stack {
         description: 'Network Load Balancer DNS Name',
         exportName: `LoadBalancerDNS-${props.stage}`,
       });
-      new cdk.CfnOutput(this, 'ListenerARN', {
-        value: listener.listenerArn,
-        description: 'Network Load Balancer Listener ARN',
-        exportName: `ListenerARN-${props.stage}`,
+      // Output both listener ARNs
+      new cdk.CfnOutput(this, 'HttpListenerARN', {
+        value: httpListener.listenerArn,
+        description: 'Network Load Balancer HTTP Listener ARN',
+        exportName: `HttpListenerARN-${props.stage}`,
+      });
+
+      new cdk.CfnOutput(this, 'HttpsListenerARN', {
+        value: httpsListener.listenerArn,
+        description: 'Network Load Balancer HTTPS Listener ARN',
+        exportName: `HttpsListenerARN-${props.stage}`,
       });
     }
 
