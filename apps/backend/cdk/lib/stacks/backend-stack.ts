@@ -5,6 +5,7 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { Stage } from '../stage';
 
@@ -102,6 +103,15 @@ export class WnpBackendStack extends cdk.Stack {
         ec2.Port.tcp(3000),
         'Allow incoming traffic to container port'
       );
+
+      const secretsPolicy = new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:APIGatewayUrl*`],
+      });
+
+      // Add the policy to the task execution role
+      taskDefinition.taskRole.addToPrincipalPolicy(secretsPolicy);
 
       // Create the Fargate service
       this.ecsService = new ecs.FargateService(this, 'WnpBackendService', {
