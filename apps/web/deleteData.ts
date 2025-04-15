@@ -1,8 +1,8 @@
-import prisma from "./db/db"; // Assuming you have your Prisma Client set up here
+import prisma from './db/db'; // Assuming you have your Prisma Client set up here
 
 async function main() {
   // Step 1: Delete existing data
-  console.log("Deleting existing data...");
+  console.log('Deleting existing data...');
 
   await prisma.userSkill.deleteMany({});
   await prisma.skill.deleteMany({});
@@ -15,12 +15,13 @@ async function main() {
   await prisma.taskCategory.deleteMany({});
   await prisma.taskPriority.deleteMany({});
   await prisma.taskStatus.deleteMany({});
+  await prisma.notification.deleteMany({});
 
-  console.log("Existing data deleted.");
+  console.log('Existing data deleted.');
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e);
     process.exit(1);
   })
