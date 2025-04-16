@@ -7,7 +7,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -24,6 +24,19 @@ import EditTaskDialog from '../common/EditTaskDialog';
 import TaskDetailsModal from '../tasks/TaskDetailsDialog';
 import { Roles } from '@prisma/client';
 import { TaskTable } from '@/utils/validationSchemas';
+import { deleteTaskById } from '@/db/repositories/tasks/deleteTaskById';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -38,6 +51,7 @@ interface UserTasksTableProps {
   setPageSize: (pageSize: number) => void;
   taskIds: string[] | null;
   role: Roles;
+  fetchTasks?: () => Promise<void>; // Optional callback to refresh tasks
 }
 
 export function UserTasksTable({
@@ -53,22 +67,89 @@ export function UserTasksTable({
   setPageSize,
   taskIds,
   role,
+  fetchTasks,
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const { setSelectedTask, selectedTask } = useSelectedTask();
+  const { toast } = useToast();
 
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<TaskTable | null>(null);
 
-  const userTaskColumns = generateUserTaskColumns(showDescription, task => {
-    setTaskToEdit(task);
-    setIsEditDialogOpen(true);
-  });
+  // For delete confirmation
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [localData, setLocalData] = useState<TaskTable[]>(data);
+
+  // Update local data when prop data changes
+  useEffect(() => {
+    setLocalData(data);
+  }, [data]);
+
+  const handleDeleteTask = async (taskId: string) => {
+    setTaskToDelete(taskId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    setIsDeletingTask(true);
+    try {
+      const response = await deleteTaskById(taskToDelete);
+
+      if (response.success) {
+        // Optimistically update local data
+        setLocalData(prev => prev.filter(task => task.id !== taskToDelete));
+
+        toast({
+          title: 'Task deleted',
+          description: 'The task has been successfully deleted',
+          variant: 'success',
+          icon: <CheckCircle className="h-4 w-4" />,
+        });
+
+        // Refresh data from server if callback provided
+        if (fetchTasks) {
+          await fetchTasks();
+        }
+      } else {
+        toast({
+          title: 'Failed to delete task',
+          description: response.message || 'An error occurred while deleting the task',
+          variant: 'destructive',
+          icon: <AlertCircle className="h-4 w-4" />,
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+    } finally {
+      setIsDeletingTask(false);
+      setIsDeleteDialogOpen(false);
+      setTaskToDelete(null);
+    }
+  };
+
+  const userTaskColumns = generateUserTaskColumns(
+    showDescription,
+    task => {
+      setTaskToEdit(task);
+      setIsEditDialogOpen(true);
+    },
+    handleDeleteTask
+  );
 
   const table = useReactTable({
-    data,
+    data: localData,
     columns: userTaskColumns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -106,7 +187,7 @@ export function UserTasksTable({
                   <Skeleton className="h-64 w-full" />
                 </TableCell>
               </TableRow>
-            ) : data && data.length ? (
+            ) : localData && localData.length ? (
               table.getRowModel().rows.map(row => (
                 <TableRow
                   key={row.id}
@@ -151,12 +232,14 @@ export function UserTasksTable({
           clientIds={taskIds ?? []}
         />
       </div>
-      {/* Task Details and Edit Dialog */}
+
+      {/* Modals and Dialogs */}
       <TaskDetailsModal
         taskId={selectedTask?.id ?? ''}
         open={openDetailsDialog}
         setOpen={setOpenDetailsDialog}
       />
+
       {taskToEdit && (
         <EditTaskDialog
           open={isEditDialogOpen}
@@ -165,6 +248,39 @@ export function UserTasksTable({
           role={role}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the task and remove it from
+              our data store.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingTask}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => {
+                e.preventDefault();
+                confirmDeleteTask();
+              }}
+              disabled={isDeletingTask}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingTask ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -27,7 +27,8 @@ type TaskAssignees = {
 };
 export const generateUserTaskColumns = (
   showDescription = false,
-  onEditTask?: (task: TaskTable) => void
+  onEditTask?: (task: TaskTable) => void,
+  deleteTask?: (taskId: string) => void
 ): ColumnDef<TaskTable>[] => {
   return [
     {
@@ -211,7 +212,12 @@ export const generateUserTaskColumns = (
               >
                 Edit Task
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => console.log(`Delete Task: ${task.id}`)}>
+              <DropdownMenuItem
+                onClick={async e => {
+                  e.stopPropagation();
+                  return deleteTask && deleteTask(task.id);
+                }}
+              >
                 Delete Task
               </DropdownMenuItem>
             </DropdownMenuContent>

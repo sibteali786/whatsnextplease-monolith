@@ -14,6 +14,8 @@ import { ToastAction } from '../ui/toast';
 import { useCreatedTask } from '@/store/useTaskStore';
 import { CreateTaskContainer } from '../tasks/CreateTaskContainer';
 import { TaskTable } from '@/utils/validationSchemas';
+import { State } from '../DataState';
+import { CallToAction } from '../CallToAction';
 
 export const UserTasks = ({
   userId,
@@ -36,7 +38,7 @@ export const UserTasks = ({
   const createTaskHandler = async () => {
     toast({
       title: 'Creating a Draft Task',
-      description: 'Please wait while we can create a draft task for you',
+      description: 'Please wait while we create a draft task for you',
       icon: <Loader2 className="animate-spin" size={40} />,
     });
     const response = await createDraftTask(CreatorType.CLIENT, userId, role);
@@ -51,7 +53,6 @@ export const UserTasks = ({
         description: 'Please try again by clicking on the button to retry creating task',
         variant: 'destructive',
         icon: <CircleX size={40} />,
-        //TODO: ability for user to retry after a certain interval
         action: (
           <ToastAction altText="Try Again" className="mt-2" onClick={() => createTaskHandler()}>
             Try again
@@ -67,56 +68,88 @@ export const UserTasks = ({
   const [pageSize, setPageSize] = useState<number>(10);
   const [pageIndex, setPageIndex] = useState(0);
   const [taskIDs, setTaskIDs] = useState<string[] | null>([]);
+  const [error, setError] = useState<string | null>(null);
+
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const response = await getTasksByUserId(userId, role, cursor, pageSize, searchTerm, duration); // Pass searchTerm
+      const response = await getTasksByUserId(userId, role, cursor, pageSize, searchTerm, duration);
       const { taskIds, success } = await getTaskIdsByUserId(userId, searchTerm, duration, role);
-      if (response.success && response.tasks && success) {
+
+      if (response.success && success) {
         setTaskIDs(taskIds);
-        setData(response.tasks);
+        setData(response.tasks || []);
         setTotalCount(response.totalCount);
+        setError(null);
       } else {
-        console.error(response.message);
+        setError(response.message || 'Failed to fetch tasks');
       }
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
+      setError('An unexpected error occurred while fetching tasks');
     }
     setLoading(false);
   };
+
   useEffect(() => {
     fetchTasks();
-  }, [cursor, pageSize, searchTerm, duration]); // Add searchTerm to dependency array
+  }, [cursor, pageSize, searchTerm, duration]);
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Search and Filter */}
-      {role !== Roles.CLIENT ? (
+      <div className="flex justify-between">
         <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} />
-      ) : (
-        <div className="flex justify-between">
-          <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} />
-          <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
-            {' '}
-            <Plus className="h-5 w-5" /> Create New Task
-          </Button>
-          <CreateTaskContainer open={open} setOpen={setOpen} />
+        <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
+          <Plus className="h-5 w-5" /> Create New Task
+        </Button>
+        <CreateTaskContainer open={open} setOpen={setOpen} />
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : error ? (
+        <State
+          icon={CircleX}
+          variant="destructive"
+          title="Error Loading Tasks"
+          description={error}
+          ctaText="Try Again"
+          onCtaClick={fetchTasks}
+        />
+      ) : data.length === 0 ? (
+        <div className="min-h-[300px] flex items-center justify-center">
+          <CallToAction
+            link="#"
+            action="Create Your First Task"
+            title="No Tasks Found"
+            helperText="Tasks will help you organize and track your work"
+            description="Get started by creating your first task"
+            variant="primary"
+            iconType="plus"
+            className="w-full max-w-xl mx-auto"
+            buttonVariant="default"
+            onClick={createTaskHandler}
+          />
+        </div>
+      ) : (
+        <UserTasksTable
+          role={role}
+          data={data}
+          pageSize={pageSize}
+          loading={loading}
+          totalCount={totalCount}
+          cursor={cursor}
+          setCursor={setCursor}
+          pageIndex={pageIndex}
+          setPageIndex={setPageIndex}
+          showDescription={true}
+          setPageSize={setPageSize}
+          taskIds={taskIDs}
+          fetchTasks={fetchTasks}
+        />
       )}
-      <UserTasksTable
-        role={role}
-        data={data}
-        pageSize={pageSize}
-        loading={loading}
-        totalCount={totalCount}
-        cursor={cursor}
-        setCursor={setCursor}
-        pageIndex={pageIndex}
-        setPageIndex={setPageIndex}
-        showDescription={true}
-        setPageSize={setPageSize}
-        taskIds={taskIDs}
-      />
     </div>
   );
 };
-// TODO: retrieving the tasks is a UI blocking request lets use useTransition so if someone is hurried to create a new task they can do so.
