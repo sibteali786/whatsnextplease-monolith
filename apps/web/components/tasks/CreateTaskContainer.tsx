@@ -27,7 +27,7 @@ export const createTaskSchema = z.object({
   skills: z.array(z.string()).nonempty('Please select at least one skill'),
   statusName: z.nativeEnum(TaskStatusEnum).default(TaskStatusEnum.NEW),
   priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.NORMAL),
-  taskCategoryName: z.string().default('Data Entry'),
+  taskCategoryName: z.string().default('General Tasks'),
   assignedToId: z.string().optional(),
   timeForTask: z
     .string()

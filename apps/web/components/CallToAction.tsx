@@ -30,6 +30,7 @@ interface CallToActionProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'primary' | 'destructive' | 'warning';
   iconType?: 'plus' | 'alert' | 'file';
   buttonVariant?: 'default' | 'outline' | 'secondary' | 'link' | 'ghost';
+  onClick?: () => void;
 }
 
 export function CallToAction({
@@ -42,11 +43,19 @@ export function CallToAction({
   variant = 'default',
   iconType = 'plus',
   buttonVariant = 'default',
+  onClick,
   ...props
 }: CallToActionProps) {
   // Select icon based on iconType
   const IconComponent =
     iconType === 'alert' ? AlertCircle : iconType === 'file' ? FileText : PlusCircle;
+
+  const ActionButton = () => (
+    <Button variant={buttonVariant} size="lg" className="mt-2" onClick={onClick}>
+      <PlusCircle className="mr-2 h-4 w-4" />
+      {action}
+    </Button>
+  );
 
   return (
     <div className={cn(callToActionVariants({ variant }), className)} {...props}>
@@ -60,12 +69,16 @@ export function CallToAction({
         {helperText && <p className="text-sm text-muted-foreground/70">{helperText}</p>}
       </div>
 
-      <Button variant={buttonVariant} size="lg" className="mt-2" asChild>
-        <Link href={link}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          {action}
-        </Link>
-      </Button>
+      {onClick ? (
+        <ActionButton />
+      ) : (
+        <Button variant={buttonVariant} size="lg" className="mt-2" asChild>
+          <Link href={link}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {action}
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }
