@@ -9,5 +9,5 @@ export const ROLE_PERMISSIONS: Record<Roles, string[]> = {
   [Roles.DISTRICT_MANAGER]: ['/home', '/clients/:path*', '/settings'],
   [Roles.TERRITORY_MANAGER]: ['/home', '/clients', '/settings'],
   [Roles.ACCOUNT_EXECUTIVE]: ['/home', '/clients', '/skills', '/settings'],
-  [Roles.TASK_SUPERVISOR]: ['/home', '/settings'], // Define as needed
+  [Roles.TASK_SUPERVISOR]: ['/home', '/settings/*'], // Define as needed
 };

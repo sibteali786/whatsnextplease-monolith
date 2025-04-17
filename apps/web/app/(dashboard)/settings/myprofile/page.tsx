@@ -5,24 +5,22 @@ import { COOKIE_NAME } from '@/utils/constant';
 import { Roles } from '@prisma/client';
 import { useEffect, useState } from 'react';
 import { getCookie } from '@/utils/utils';
-import { useLoggedInUserState } from '@/store/useUserStore';
+import { getCurrentUser, UserState } from '@/utils/user';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
-  const { user } = useLoggedInUserState();
   const [loading, setLoading] = useState(true);
-
+  const [user, setUser] = useState<UserState | null>(null);
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Get token the same way as other pages
         const token = getCookie(COOKIE_NAME);
-
-        // Get user info first to determine rol
-
+        const userInfo = await getCurrentUser();
+        setUser(userInfo);
         // Then get profile based on role
         const profileResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/${user?.role?.name !== Roles.CLIENT ? 'user' : 'client'}/profile`,
+          `${process.env.NEXT_PUBLIC_API_URL}/${userInfo?.role?.name !== Roles.CLIENT ? 'user' : 'client'}/profile`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
