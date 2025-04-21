@@ -1,13 +1,15 @@
-"use server";
-import { TaskPriorityEnum } from "@prisma/client";
-import prisma from "@/db/db";
+'use server';
+import { TaskPriorityEnum } from '@prisma/client';
+import prisma from '@/db/db';
 import {
   GetTasksByClientIdResponse,
   GetTasksByClientIdResponseSchema,
-} from "@/utils/validationSchemas";
-import { z } from "zod";
-import logger from "@/utils/logger";
-import { handleError } from "@/utils/errorHandler";
+} from '@/utils/validationSchemas';
+import { z } from 'zod';
+import logger from '@/utils/logger';
+import { handleError } from '@/utils/errorHandler';
+import { DurationEnum } from '@/types';
+import { getDateFilter } from '@/utils/dateFilter';
 
 const GetTasksListByPriorityInputSchema = z.object({
   priority: z.nativeEnum(TaskPriorityEnum),
@@ -19,19 +21,24 @@ export const getTasksListByPriority = async (
   priority: TaskPriorityEnum,
   cursor: string | null,
   pageSize: number = 10,
-  searchTerm = "",
+  searchTerm = '',
+  duration: DurationEnum = DurationEnum.ALL
 ): Promise<GetTasksByClientIdResponse> => {
   try {
     // Validate input
     GetTasksListByPriorityInputSchema.parse({ priority, cursor, pageSize });
 
+    // Get date filter based on duration
+    const dateFilter = getDateFilter(duration);
+
     const tasks = await prisma.task.findMany({
       where: {
         priority: { priorityName: priority },
+        ...dateFilter,
         OR: searchTerm
           ? [
-              { title: { contains: searchTerm, mode: "insensitive" } },
-              { description: { contains: searchTerm, mode: "insensitive" } },
+              { title: { contains: searchTerm, mode: 'insensitive' } },
+              { description: { contains: searchTerm, mode: 'insensitive' } },
             ]
           : undefined,
       },
@@ -101,15 +108,23 @@ export const getTasksListByPriority = async (
       tasks.pop();
     }
 
+    // Count should also respect search and duration filters
     const totalCount = await prisma.task.count({
       where: {
         priority: { priorityName: priority },
+        ...dateFilter,
+        OR: searchTerm
+          ? [
+              { title: { contains: searchTerm, mode: 'insensitive' } },
+              { description: { contains: searchTerm, mode: 'insensitive' } },
+            ]
+          : undefined,
       },
     });
 
-    const tasksMod = tasks.map((task) => ({
+    const tasksMod = tasks.map(task => ({
       ...task,
-      taskSkills: task.taskSkills.map((skill) => skill.skill.name),
+      taskSkills: task.taskSkills.map(skill => skill.skill.name),
     }));
 
     const responseData = {
@@ -119,11 +134,9 @@ export const getTasksListByPriority = async (
       nextCursor,
       totalCount,
     };
-    return JSON.parse(
-      JSON.stringify(GetTasksByClientIdResponseSchema.parse(responseData)),
-    );
+    return JSON.parse(JSON.stringify(GetTasksByClientIdResponseSchema.parse(responseData)));
   } catch (error) {
-    logger.error({ error }, "Error in getTasksListByPriority");
-    return handleError(error, "getTasksListByPriority");
+    logger.error({ error }, 'Error in getTasksListByPriority');
+    return handleError(error, 'getTasksListByPriority');
   }
 };
