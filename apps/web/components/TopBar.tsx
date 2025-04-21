@@ -10,6 +10,7 @@ import { ActiveVerticalMenu } from './common/ActiveVerticalMenu';
 import { NotificationBell } from './notifications/NotificationBell';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useEffect, useState } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
@@ -40,15 +41,34 @@ const TopBar = () => {
       <div className="flex flex-row gap-6 items-center justify-around">
         <div className="flex flex-col items-center">
           <ActiveVerticalMenu activePath="/taskOfferings" />
-          <Link href="/taskOfferings">
-            <Button variant="ghost">
-              <ListChecks size={24} className="text-textPrimary" />
-            </Button>
-          </Link>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/taskOfferings">
+                  <Button variant="ghost">
+                    <ListChecks size={24} className="text-textPrimary" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Task Management</p>
+                <p className="text-xs text-muted-foreground mt-1">View and manage all tasks</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-        <Button variant={'ghost'}>
-          <MessageSquareText size={24} className="text-textPrimary" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant={'ghost'}>
+                <MessageSquareText size={24} className="text-textPrimary" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Messages</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <ModeToggle />
         <div className="flex flex-col items-center">
           <NotificationBell userId={user.id} unreadCount={unreadCount} />
