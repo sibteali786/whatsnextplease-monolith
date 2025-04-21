@@ -20,12 +20,13 @@ import { signinUser } from '@/actions/auth';
 import { z } from 'zod';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLoggedInUserState } from '@/store/useUserStore';
 import { useLoggedInClientState } from '@/store/useClientStore';
 import { trimWhitespace } from '@/utils/utils';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingOverlay } from './LoadingOverlay';
+import NProgress from 'nprogress';
 
 const SignInForm = () => {
   const router = useRouter();
@@ -39,8 +40,26 @@ const SignInForm = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const { toast } = useToast();
 
+  // Pre-fetch the home page
+  useEffect(() => {
+    const prefetchDashboard = async () => {
+      try {
+        // This will make the navigation feel faster
+        await fetch('/home');
+      } catch (e) {
+        // Silently fail
+        console.error('Prefetch failed:', e);
+      }
+    };
+
+    prefetchDashboard();
+  }, []);
+
   const onSubmit = async (data: z.infer<typeof signInSchema>) => {
     try {
+      // Start the progress bar
+      NProgress.start();
+
       // Show loading toast
       toast({
         title: 'Authenticating',
@@ -57,6 +76,9 @@ const SignInForm = () => {
       const response = await signinUser(formData);
 
       if (response && response.success) {
+        // Update progress bar
+        NProgress.set(0.7);
+
         // Update stores with user/client data
         if (response.user) {
           setUser(response.user);
@@ -71,10 +93,19 @@ const SignInForm = () => {
           variant: 'success',
         });
 
-        // Show navigation overlay and redirect
+        // Show navigation overlay
         setIsNavigating(true);
-        setTimeout(() => router.push('/home'), 500);
+
+        // Complete the progress bar
+        NProgress.set(0.9);
+
+        // Slight delay to ensure toast and progress bar are visible
+        setTimeout(() => {
+          NProgress.done();
+          router.push('/home');
+        }, 800);
       } else if (response && !response.success && response.message) {
+        NProgress.done();
         form.setError('root', { message: response.message });
         toast({
           title: 'Authentication Failed',
@@ -83,6 +114,7 @@ const SignInForm = () => {
         });
       }
     } catch (error) {
+      NProgress.done();
       console.error('Failed to sign you in: ', error);
       form.setError('root', {
         message: error instanceof Error ? error.message : 'Failed to sign in',
