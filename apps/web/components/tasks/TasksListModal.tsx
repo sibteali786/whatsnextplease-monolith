@@ -1,22 +1,17 @@
-import { useState, useEffect } from "react";
-import { TaskPriorityEnum } from "@prisma/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
-import { ArrowLeft } from "lucide-react";
-import { SearchNFilter } from "../common/SearchNFilter";
-import { getTasksListByPriority } from "@/db/repositories/tasks/getTaskListByPriority";
-import { Roles } from "@prisma/client";
-import { UserTasksTable } from "../users/UserTaskTable";
-import { TaskTable } from "@/utils/validationSchemas";
-import { getTaskIdsByPriority } from "@/utils/taskTools";
-import { transformEnumValue } from "@/utils/utils";
+import { useState, useEffect } from 'react';
+import { TaskPriorityEnum } from '@prisma/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Button } from '../ui/button';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { SearchNFilter } from '../common/SearchNFilter';
+import { getTasksListByPriority } from '@/db/repositories/tasks/getTaskListByPriority';
+import { Roles } from '@prisma/client';
+import { UserTasksTable } from '../users/UserTaskTable';
+import { TaskTable } from '@/utils/validationSchemas';
+import { getTaskIdsByPriority } from '@/utils/taskTools';
+import { transformEnumValue } from '@/utils/utils';
+import { DurationEnum, DurationEnumList } from '@/types';
+import { State } from '@/components/DataState';
 
 interface TasksListModalProps {
   open: boolean;
@@ -24,82 +19,114 @@ interface TasksListModalProps {
   priority: TaskPriorityEnum;
 }
 
-export default function TasksListModal({
-  open,
-  setOpen,
-  priority,
-}: TasksListModalProps) {
+export default function TasksListModal({ open, setOpen, priority }: TasksListModalProps) {
   const [data, setData] = useState<TaskTable[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(10);
   const [pageIndex, setPageIndex] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
   const [taskIds, setTaskIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = (term: string, durationFilter: DurationEnum = DurationEnum.ALL) => {
+    setSearchTerm(term);
+    setDuration(durationFilter);
+  };
+
   const fetchTasks = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await getTasksListByPriority(
-        priority,
-        cursor,
-        pageSize,
-        searchTerm,
-      );
+      const response = await getTasksListByPriority(priority, cursor, pageSize, searchTerm);
       const responseIds = await getTaskIdsByPriority(priority);
+
       if (response.success && responseIds && response.tasks) {
-        console.log(response.tasks);
         setData(response.tasks);
         if (responseIds.taskIds) {
           setTaskIds(responseIds.taskIds);
         }
         setTotalCount(response.totalCount ?? 0);
+      } else {
+        setError(response.message || 'Failed to fetch tasks');
       }
     } catch (error) {
-      console.error("Failed to fetch tasks:", error);
+      console.error('Failed to fetch tasks:', error);
+      setError('An unexpected error occurred while fetching tasks');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, [cursor, pageSize, searchTerm, priority]);
-
+    if (open) {
+      fetchTasks();
+    }
+  }, [open, cursor, pageSize, searchTerm, duration, priority]);
+  const listToFilterUpon: DurationEnumList = Object.values(DurationEnum).map(duration => ({
+    label: duration,
+    value: transformEnumValue(duration),
+  }));
   return (
-    <Dialog open={open} onOpenChange={() => setOpen(false)}>
-      <DialogContent className="max-w-[70%] max-h-[98%] overflow-hidden px-0">
-        <DialogHeader className="flex flex-row items-center justify-start gap-6 px-6">
-          <DialogTrigger asChild>
-            <ArrowLeft className="cursor-pointer" />
-          </DialogTrigger>
-          <DialogTitle className="text-2xl">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-[80%] max-h-[90vh] overflow-hidden flex flex-col px-0">
+        <DialogHeader className="flex flex-row items-center justify-start gap-6 px-6 pb-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            onClick={() => setOpen(false)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="sr-only">Back</span>
+          </Button>
+          <DialogTitle className="text-2xl font-bold">
             {transformEnumValue(priority)} Tasks
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           <div className="px-6">
-            <SearchNFilter onSearch={(term) => setSearchTerm(term)} />
+            <SearchNFilter onSearch={handleSearch} filterList={listToFilterUpon} />
           </div>
-          <div className="max-h-[70vh] overflow-auto px-6">
-            <UserTasksTable
-              data={data}
-              pageSize={pageSize}
-              loading={loading}
-              totalCount={totalCount}
-              cursor={cursor}
-              setCursor={setCursor}
-              pageIndex={pageIndex}
-              setPageIndex={setPageIndex}
-              showDescription={true}
-              setPageSize={setPageSize}
-              role={Roles.SUPER_USER}
-              taskIds={taskIds ?? []}
-            />
+
+          <div className="flex-1 overflow-auto px-6">
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : error ? (
+              <State
+                variant="destructive"
+                icon={Loader2}
+                title="Error Loading Tasks"
+                description={error}
+                ctaText="Try Again"
+                onCtaClick={fetchTasks}
+              />
+            ) : (
+              <UserTasksTable
+                data={data}
+                pageSize={pageSize}
+                loading={loading}
+                totalCount={totalCount}
+                cursor={cursor}
+                setCursor={setCursor}
+                pageIndex={pageIndex}
+                setPageIndex={setPageIndex}
+                showDescription={true}
+                setPageSize={setPageSize}
+                role={Roles.SUPER_USER}
+                taskIds={taskIds}
+                fetchTasks={fetchTasks}
+              />
+            )}
           </div>
         </div>
 
-        <DialogFooter className="mt-6 px-6">
+        <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Close
           </Button>
