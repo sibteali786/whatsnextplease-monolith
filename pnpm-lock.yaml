@@ -298,6 +298,9 @@ importers:
       nextjs-better-unstable-cache:
         specifier: ^1.1.0
         version: 1.1.0(next@14.2.15(@babel/core@7.26.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      nprogress:
+        specifier: ^0.2.0
+        version: 0.2.0
       pg:
         specifier: ^8.13.0
         version: 8.13.1
@@ -377,6 +380,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.17.6
+      '@types/nprogress':
+        specifier: ^0.2.3
+        version: 0.2.3
       '@types/react':
         specifier: ^18
         version: 18.3.0
@@ -3837,6 +3843,12 @@ packages:
     resolution:
       {
         integrity: sha512-jrTfRC7FM6nChvU7X2KqcrgquofrWLFDeYC1hKfwNWomVvrn7JIksqf344WN2X/y8xrgqBd2dJATZV4GbatBfg==,
+      }
+
+  '@types/nprogress@0.2.3':
+    resolution:
+      {
+        integrity: sha512-k7kRA033QNtC+gLc4VPlfnue58CM1iQLgn1IMAU8VPHGOj7oIHPp9UlhedEnD/Gl8evoCjwkZjlBORtZ3JByUA==,
       }
 
   '@types/prop-types@15.7.13':
@@ -8058,6 +8070,12 @@ packages:
         integrity: sha512-AqZtDUWOMKs1G/8lwylVjrdYgqA4d9nu8hc+0gzRxlDb1I10+FHBGMXs6aiQHFdCUUlqH99MUMuLfzWDNDtfxw==,
       }
     deprecated: This package is no longer supported.
+
+  nprogress@0.2.0:
+    resolution:
+      {
+        integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==,
+      }
 
   nwsapi@2.2.16:
     resolution:
@@ -13078,6 +13096,8 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
+  '@types/nprogress@0.2.3': {}
+
   '@types/prop-types@15.7.13': {}
 
   '@types/qs@6.9.17': {}
@@ -16500,6 +16520,8 @@ snapshots:
       console-control-strings: 1.1.0
       gauge: 3.0.2
       set-blocking: 2.0.0
+
+  nprogress@0.2.0: {}
 
   nwsapi@2.2.16: {}
 
