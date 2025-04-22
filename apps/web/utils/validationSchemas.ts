@@ -1,34 +1,29 @@
-import { DurationEnum } from "@/types";
-import {
-  Prisma,
-  Roles,
-  TaskPriorityEnum,
-  TaskStatusEnum,
-} from "@prisma/client";
-import { z } from "zod";
+import { DurationEnum } from '@/types';
+import { Prisma, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { z } from 'zod';
 // Shared Zod schema for registration
 export const registerSchema = z
   .object({
-    email: z.string().email("Please provide a valid email"),
+    email: z.string().email('Please provide a valid email'),
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters long")
-      .max(20, "Password can be at max 20 characters long")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number")
-      .regex(/[\W_]/, "Password must contain at least one special character"),
+      .min(6, 'Password must be at least 6 characters long')
+      .max(20, 'Password can be at max 20 characters long')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[\W_]/, 'Password must contain at least one special character'),
     firstName: z
       .string()
-      .min(3, "First Name must be at least 3 characters")
-      .max(20, "First Name cannot exceed 20 characters")
+      .min(3, 'First Name must be at least 3 characters')
+      .max(20, 'First Name cannot exceed 20 characters')
       .optional(),
     lastName: z
       .string()
-      .min(3, "Last Name must be at least 3 characters")
-      .max(20, "Last Name cannot exceed 20 characters")
+      .min(3, 'Last Name must be at least 3 characters')
+      .max(20, 'Last Name cannot exceed 20 characters')
       .optional(),
-    username: z.string().min(3, "Username must be at least 3 characters"),
+    username: z.string().min(3, 'Username must be at least 3 characters'),
     role: z.nativeEnum(Roles),
     companyName: z.string().optional(),
     contactName: z.string().optional(),
@@ -36,36 +31,36 @@ export const registerSchema = z
   .superRefine((data, ctx) => {
     if (data.role === Roles.CLIENT) {
       // Validate companyName and contactName for Client
-      if (!data.companyName || data.companyName.trim() === "") {
+      if (!data.companyName || data.companyName.trim() === '') {
         ctx.addIssue({
-          message: "Company Name is required for Client role",
+          message: 'Company Name is required for Client role',
           code: z.ZodIssueCode.custom,
-          path: ["companyName"],
+          path: ['companyName'],
         });
 
         return z.NEVER;
       }
-      if (!data.contactName || data.contactName.trim() === "") {
+      if (!data.contactName || data.contactName.trim() === '') {
         ctx.addIssue({
-          path: ["contactName"],
+          path: ['contactName'],
           code: z.ZodIssueCode.custom,
-          message: "Contact Name is required for Client role",
+          message: 'Contact Name is required for Client role',
         });
       }
     } else {
       // Validate firstName and lastName for non-Client roles
-      if (!data.firstName || data.firstName.trim() === "") {
+      if (!data.firstName || data.firstName.trim() === '') {
         ctx.addIssue({
-          path: ["firstName"],
+          path: ['firstName'],
           code: z.ZodIssueCode.custom,
-          message: "First Name is required for roles other than Client",
+          message: 'First Name is required for roles other than Client',
         });
       }
-      if (!data.lastName || data.lastName.trim() === "") {
+      if (!data.lastName || data.lastName.trim() === '') {
         ctx.addIssue({
-          path: ["lastName"],
+          path: ['lastName'],
           code: z.ZodIssueCode.custom,
-          message: "Last Name is required for roles other than Client",
+          message: 'Last Name is required for roles other than Client',
         });
       }
     }
@@ -73,85 +68,85 @@ export const registerSchema = z
 
 // Shared Zod schema for sign-in
 export const signInSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters long"),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
 });
 
 // Zod schema for adding a client
 export const addClientSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
   companyName: z
     .string({
-      required_error: "Company Name is required",
-      invalid_type_error: "Company Name must be a string",
+      required_error: 'Company Name is required',
+      invalid_type_error: 'Company Name must be a string',
     })
-    .min(3, "Company Name must be at least 3 characters"),
+    .min(3, 'Company Name must be at least 3 characters'),
   contactName: z
     .string({
-      required_error: "Contact Name is required",
-      invalid_type_error: "Contact Name must be a string",
+      required_error: 'Contact Name is required',
+      invalid_type_error: 'Contact Name must be a string',
     })
-    .min(3, "Contact name must be at least 3 characters"),
+    .min(3, 'Contact name must be at least 3 characters'),
   phone: z
     .string({
-      required_error: "Phone Number is required",
-      invalid_type_error: "Phone Number must be a string",
+      required_error: 'Phone Number is required',
+      invalid_type_error: 'Phone Number must be a string',
     })
-    .max(20, "Phone Number cannot exceed 20 characters")
+    .max(20, 'Phone Number cannot exceed 20 characters')
     .optional(),
   email: z
     .string({
-      required_error: "Email is required",
-      invalid_type_error: "Email must be a string",
+      required_error: 'Email is required',
+      invalid_type_error: 'Email must be a string',
     })
-    .email("Please provide a valid email address"),
+    .email('Please provide a valid email address'),
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters long")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[\W_]/, "Password must contain at least one special character"),
+    .min(6, 'Password must be at least 6 characters long')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[\W_]/, 'Password must contain at least one special character'),
   website: z
     .string({
-      required_error: "Website is required",
-      invalid_type_error: "Website must be a string",
+      required_error: 'Website is required',
+      invalid_type_error: 'Website must be a string',
     })
-    .url("Please provide a valid URL")
+    .url('Please provide a valid URL')
     .optional(),
   address1: z
     .string({
-      required_error: "Address 1 is required",
-      invalid_type_error: "Address 1 must be a string",
+      required_error: 'Address 1 is required',
+      invalid_type_error: 'Address 1 must be a string',
     })
-    .max(255, "Address 1 cannot exceed 255 characters")
+    .max(255, 'Address 1 cannot exceed 255 characters')
     .optional(),
   address2: z
     .string({
-      required_error: "Address 2 is required",
-      invalid_type_error: "Address 2 must be a string",
+      required_error: 'Address 2 is required',
+      invalid_type_error: 'Address 2 must be a string',
     })
-    .max(255, "Address 2 cannot exceed 255 characters")
+    .max(255, 'Address 2 cannot exceed 255 characters')
     .optional(),
   city: z
     .string({
-      required_error: "City is required",
-      invalid_type_error: "City must be a string",
+      required_error: 'City is required',
+      invalid_type_error: 'City must be a string',
     })
-    .max(100, "City cannot exceed 100 characters"),
+    .max(100, 'City cannot exceed 100 characters'),
   state: z
     .string({
-      required_error: "State is required",
-      invalid_type_error: "State must be a string",
+      required_error: 'State is required',
+      invalid_type_error: 'State must be a string',
     })
-    .max(50, "State cannot exceed 50 characters")
+    .max(50, 'State cannot exceed 50 characters')
     .optional(),
   zipCode: z
     .string({
-      required_error: "Zip Code is required",
-      invalid_type_error: "Zip Code must be a string",
+      required_error: 'Zip Code is required',
+      invalid_type_error: 'Zip Code must be a string',
     })
-    .max(20, "Zip Code cannot exceed 20 characters")
+    .max(20, 'Zip Code cannot exceed 20 characters')
     .optional(),
 });
 
@@ -161,17 +156,17 @@ export type AddClientInput = z.infer<typeof addClientSchema>;
 
 export const addUserSchema = z.object({
   role: z.string(),
-  username: z.string().min(3, "Username must be at least 3 characters"),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters long")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[\W_]/, "Password must contain at least one special character"),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
+    .min(6, 'Password must be at least 6 characters long')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[\W_]/, 'Password must contain at least one special character'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -211,7 +206,7 @@ export const ClientsListResponseSchema = errorSchema.merge(
     nextCursor: z.string().nullable().optional(),
     hasNextPage: z.boolean().optional(),
     totalCount: z.number().optional(),
-  }),
+  })
 );
 export type ClientsListResponse = z.infer<typeof ClientsListResponseSchema>;
 // Define the input parameters schema
@@ -229,7 +224,7 @@ export const ActiveClientSchema = z.object({
 export const ActiveClientsResponseSchema = errorSchema.merge(
   z.object({
     clients: z.array(ActiveClientSchema).optional(),
-  }),
+  })
 );
 
 export type ActiveClientsResponse = z.infer<typeof ActiveClientsResponseSchema>;
@@ -293,23 +288,19 @@ export const GetTasksByClientIdResponseSchema = errorSchema.merge(
     nextCursor: z.string().nullable().optional(),
     hasNextCursor: z.boolean().optional(),
     totalCount: z.number().optional(),
-  }),
+  })
 );
 
-export type GetTasksByClientIdResponse = z.infer<
-  typeof GetTasksByClientIdResponseSchema
->;
+export type GetTasksByClientIdResponse = z.infer<typeof GetTasksByClientIdResponseSchema>;
 export const TaskByUserIdSchema = GetTasksByClientIdResponseSchema;
 export type TaskByUserIdResponse = GetTasksByClientIdResponse;
 export const ActiveClientCountResponseSchema = errorSchema.merge(
   z.object({
     count: z.number().int().nonnegative().optional(),
-  }),
+  })
 );
 
-export type ActiveClientCountResponse = z.infer<
-  typeof ActiveClientCountResponseSchema
->;
+export type ActiveClientCountResponse = z.infer<typeof ActiveClientCountResponseSchema>;
 /**
  * Zod schema defining the structure of the file data retrieved by client ID.
  */
@@ -331,16 +322,14 @@ export const GetFilesByClientIdResponseSchema = errorSchema.merge(
     hasNextCursor: z.boolean().optional(),
     nextCursor: z.string().nullable().optional(),
     totalCount: z.number().int().nonnegative().optional(),
-  }),
+  })
 );
 
-export type GetFilesByClientIdResponse = z.infer<
-  typeof GetFilesByClientIdResponseSchema
->;
+export type GetFilesByClientIdResponse = z.infer<typeof GetFilesByClientIdResponseSchema>;
 
 // schemas/invoiceSchemas.ts (continued)
 
-export const InvoiceStatusEnum = z.enum(["PENDING", "PAID", "OVERDUE"]);
+export const InvoiceStatusEnum = z.enum(['PENDING', 'PAID', 'OVERDUE']);
 
 export const InvoiceSchema = z.object({
   id: z.string(),
@@ -364,26 +353,22 @@ export const GetInvoicesByClientIdResponseSchema = z.object({
   details: z.any().optional(),
 });
 
-export type GetInvoicesByClientIdResponse = z.infer<
-  typeof GetInvoicesByClientIdResponseSchema
->;
+export type GetInvoicesByClientIdResponse = z.infer<typeof GetInvoicesByClientIdResponseSchema>;
 
 export const CreateClientSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  companyName: z
-    .string()
-    .min(2, "Company name must be at least 2 characters long."),
+  username: z.string().min(3, 'Username must be at least 3 characters'),
+  companyName: z.string().min(2, 'Company name must be at least 2 characters long.'),
   contactName: z.string().nullable().optional(),
-  email: z.string().email("Invalid email format."),
+  email: z.string().email('Invalid email format.'),
   passwordHash: z
     .string()
-    .min(6, "Password must be at least 6 characters long")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(/[\W_]/, "Password must contain at least one special character"),
+    .min(6, 'Password must be at least 6 characters long')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[\W_]/, 'Password must contain at least one special character'),
   phone: z.string().nullable().optional(),
-  website: z.string().url("Invalid URL format.").nullable().optional(),
+  website: z.string().url('Invalid URL format.').nullable().optional(),
   address1: z.string().nullable().optional(),
   address2: z.string().nullable().optional(),
   city: z.string().nullable().optional(),
@@ -396,7 +381,7 @@ export const CreateClientSchemaResponse = CreateClientSchema.merge(
     role: z.object({
       name: z.nativeEnum(Roles),
     }),
-  }),
+  })
 );
 
 export const AddClientResponseSchema = z.object({
@@ -411,7 +396,7 @@ export type AddClientResponse = z.infer<typeof AddClientResponseSchema>;
 
 // Define Zod schema for input validation
 export const SearchTasksSchema = z.object({
-  searchTerm: z.string().min(1, "Search term cannot be empty"),
+  searchTerm: z.string().min(1, 'Search term cannot be empty'),
 });
 
 // Define the task schema for response validation
@@ -445,7 +430,7 @@ export const TaskSearchSchema = z.object({
 export const SearchTasksResponseSchema = errorSchema.merge(
   z.object({
     tasks: z.array(TaskSearchSchema).optional(),
-  }),
+  })
 );
 
 // Types for response and input
@@ -460,7 +445,7 @@ export const GetTaskByIdParamsSchema = z.object({
 export const GetTaskByIdResponseSchema = errorSchema.merge(
   z.object({
     task: TaskSchema.nullable(),
-  }),
+  })
 );
 
 export type GetTaskByIdResponse = z.infer<typeof GetTaskByIdResponseSchema>;
@@ -468,14 +453,12 @@ export type GetTaskByIdResponse = z.infer<typeof GetTaskByIdResponseSchema>;
 export const GetTasksCountByStatusResponseSchema = errorSchema.merge(
   z.object({
     tasksWithStatus: z.record(z.nativeEnum(TaskStatusEnum), z.number()),
-  }),
+  })
 );
 
-export type GetTasksCountByStatusResponse = z.infer<
-  typeof GetTasksCountByStatusResponseSchema
->;
+export type GetTasksCountByStatusResponse = z.infer<typeof GetTasksCountByStatusResponseSchema>;
 export const TaskDraftResponseSchema = errorSchema.merge(
-  z.object({ task: TaskSchema.pick({ id: true }) }),
+  z.object({ task: TaskSchema.pick({ id: true }) })
 );
 export type CreateDraftTask = z.infer<typeof TaskDraftResponseSchema>;
 export const DeleteTaskResponseSchema = TaskDraftResponseSchema;
@@ -498,7 +481,7 @@ export const UpdateTaskParamsSchema = z.object({
   timeForTask: z.string().optional(),
   overTime: z.string().optional(),
   skills: z.array(z.string()).optional(),
-  assignedToId: z.string().optional(),
+  assignedToId: z.string().optional().nullable(),
 });
 
 export type UpdateTaskParams = z.infer<typeof UpdateTaskParamsSchema>;
@@ -506,13 +489,13 @@ export type UpdateTaskParams = z.infer<typeof UpdateTaskParamsSchema>;
 export const UpdateTaskResponseSchema = errorSchema.merge(
   z.object({
     task: UpdateTaskParamsSchema.nullable(),
-  }),
+  })
 );
 
 export type UpdateTaskResponse = z.infer<typeof UpdateTaskResponseSchema>;
 // FileWithMetadata Schema
 export const FileWithMetaDataFESchema = z.object({
-  file: z.unknown().transform((value) => {
+  file: z.unknown().transform(value => {
     return value as File;
   }),
   uploadTime: z.date(),
@@ -533,15 +516,13 @@ export type UploadFileToS3 = z.infer<typeof UploadFileToS3Response>;
 export const UploadFileWithProgressSchema = errorSchema.merge(
   z.object({
     data: FileWithMetadataSchema,
-  }),
+  })
 );
 
 // TypeScript Types for Inference
 export type FileWithMetadataFE = z.infer<typeof FileWithMetaDataFESchema>;
 export type FileWithMetadata = z.infer<typeof FileWithMetadataSchema>;
-export type UploadFileWithProgress = z.infer<
-  typeof UploadFileWithProgressSchema
->;
+export type UploadFileWithProgress = z.infer<typeof UploadFileWithProgressSchema>;
 
 export const SkillsSchema = z.object({
   id: z.string(),
@@ -551,29 +532,29 @@ export const SkillsSchema = z.object({
       id: z.string(),
       name: z.string(),
       description: z.string().nullable(),
-    }),
+    })
   ),
 });
 
 export type SkillsSchema = z.infer<typeof SkillsSchema>;
 // Now we just have userId (regardless of role)
 export const FileMetadataSchema = z.object({
-  fileName: z.string().min(1, "fileName is required"),
-  fileSize: z.string().min(1, "fileSize is required"),
-  uploadedBy: z.string().min(1, "uploadedBy is required"),
+  fileName: z.string().min(1, 'fileName is required'),
+  fileSize: z.string().min(1, 'fileSize is required'),
+  uploadedBy: z.string().min(1, 'uploadedBy is required'),
   role: z.nativeEnum(Roles),
   createdAt: z.coerce.date(),
-  userId: z.string().uuid("userId must be a valid UUID"),
-  taskId: z.string().uuid("taskId must be a valid UUID"),
+  userId: z.string().uuid('userId must be a valid UUID'),
+  taskId: z.string().uuid('taskId must be a valid UUID'),
 });
 
 export type FileMetadataInput = z.infer<typeof FileMetadataSchema>;
 export const getUnassignedTasksInputSchema = z.object({
   pageSize: z
     .string()
-    .transform((value) => parseInt(value, 10))
-    .refine((value) => value > 0, {
-      message: "Page size must be a positive number",
+    .transform(value => parseInt(value, 10))
+    .refine(value => value > 0, {
+      message: 'Page size must be a positive number',
     })
     .optional(),
   cursor: z.string().optional().nullable(),
@@ -614,7 +595,7 @@ export const getUnassignedTasksOutputSchema = z.object({
 
 // Zod Schema for Input Validation
 export const getTasksCountInputSchema = z.object({
-  role: z.enum(["SUPER_USER", "TASK_SUPERVISOR"]),
+  role: z.enum(['SUPER_USER', 'TASK_SUPERVISOR']),
 });
 
 // Zod Schema for Output Validation
@@ -628,7 +609,7 @@ export const getTasksCountOutputSchema = z.object({
 
 // Input validation schema
 export const getTasksInputSchema = z.object({
-  type: z.enum(["all", "unassigned", "assigned"]).default("all"),
+  type: z.enum(['all', 'unassigned', 'assigned']).default('all'),
   cursor: z.string().optional().nullable(),
   pageSize: z.coerce.number().default(10),
   searchTerm: z.string().optional(),
@@ -642,12 +623,12 @@ export const getTasksOutputSchema = errorSchema.merge(
     hasNextCursor: z.boolean(),
     nextCursor: z.string().nullable(),
     totalCount: z.number(),
-  }),
+  })
 );
 
 // Input validation schema
 export const getIdsByTypeInputSchema = z.object({
-  type: z.enum(["all", "unassigned", "assigned"]).default("all"),
+  type: z.enum(['all', 'unassigned', 'assigned']).default('all'),
   searchTerm: z.string().optional(),
   duration: z.nativeEnum(DurationEnum).default(DurationEnum.ALL),
   role: z.nativeEnum(Roles),
@@ -656,7 +637,7 @@ export const getTaskIdsByTypeOutput = errorSchema.merge(
   z.object({
     success: z.boolean(),
     taskIds: z.array(z.string()).nullable(),
-  }),
+  })
 );
 
 const userAssigneeSchema = z.object({
@@ -671,7 +652,7 @@ export type UserAssigneeSchema = z.infer<typeof userAssigneeSchema>;
 export const getAllUsersOutputSchema = errorSchema.merge(
   z.object({
     users: z.array(userAssigneeSchema),
-  }),
+  })
 );
 
 export const getAllUsersInputSchema = z.object({
@@ -711,7 +692,7 @@ export type TaskByPriority = z.infer<typeof TaskByPrioritySchema>;
 export const TasksResponseSchema = errorSchema.merge(
   z.object({
     tasks: z.array(TaskByPrioritySchema),
-  }),
+  })
 );
 
 export type TasksResponse = z.infer<typeof TasksResponseSchema>;
