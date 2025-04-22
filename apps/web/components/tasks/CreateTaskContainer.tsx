@@ -63,6 +63,8 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
+  const [canAssignTasks, setCanAssignTasks] = useState(false);
+
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema),
     mode: 'onSubmit',
@@ -75,8 +77,21 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
 
   // Fetch skills dynamically
   useEffect(() => {
-    const fetchSkills = async () => {
+    const fetchDependencies = async () => {
       try {
+        // Get current user first to determine role
+        const currentLoggedInUser = await getCurrentUser();
+        setUser(currentLoggedInUser);
+
+        // Determine if current role can assign tasks to others
+        const roleCanAssignTasks =
+          currentLoggedInUser?.role?.name === Roles.SUPER_USER ||
+          currentLoggedInUser?.role?.name === Roles.TASK_SUPERVISOR ||
+          currentLoggedInUser?.role?.name === Roles.CLIENT;
+
+        setCanAssignTasks(roleCanAssignTasks);
+
+        // Fetch skills
         const response = await fetch('/api/skills');
         if (!response.ok) throw new Error('Failed to fetch skills');
         const data: SkillsSchema[] = await response.json();
@@ -87,39 +102,42 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
           }))
         );
         setSkills(flattenedSkills);
+
+        // Only fetch users list if the current role can assign tasks
+        if (roleCanAssignTasks) {
+          try {
+            const response = await usersList(
+              currentLoggedInUser?.role?.name ?? Roles.TASK_SUPERVISOR
+            );
+            if (response.success) {
+              setUsers(response.users);
+            } else if (response.message !== 'Not authorized') {
+              // Only show error toast if it's not an authorization issue
+              toast({
+                variant: 'destructive',
+                title: `Failed to fetch users`,
+                description: response.message || 'Unknown error occurred',
+                icon: <CircleX size={40} />,
+              });
+            }
+          } catch (error) {
+            // Silently handle error for Task Agent role
+            if (currentLoggedInUser?.role?.name !== Roles.TASK_AGENT) {
+              toast({
+                variant: 'destructive',
+                title: `Failed to fetch users`,
+                description: error instanceof Error ? error.message : 'Something went wrong!',
+                icon: <CircleX size={40} />,
+              });
+            }
+          }
+        }
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching dependencies:', error);
       }
     };
-    const fetchUsers = async () => {
-      const currentLoggedInUser = await getCurrentUser();
-      setUser(currentLoggedInUser);
-      try {
-        const response = await usersList(currentLoggedInUser?.role?.name ?? Roles.TASK_SUPERVISOR);
-        if (response.success) {
-          setUsers(response.users);
-        }
-        if (!response.success) {
-          toast({
-            variant: 'destructive',
-            title: `Failed to fetch users`,
-            description: response.details.originalError,
-            icon: <CircleX size={40} />,
-          });
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          toast({
-            variant: 'destructive',
-            title: `Failed to fetch users`,
-            description: 'Something went wrong!',
-            icon: <CircleX size={40} />,
-          });
-        }
-      }
-    };
-    fetchUsers();
-    fetchSkills();
+
+    fetchDependencies();
   }, []);
 
   const handleModalCloseRequest = () => {
@@ -215,7 +233,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
     }
   };
 
-  // TODO: the modal cross is not working
   return (
     <>
       <ModalWithConfirmation
@@ -226,7 +243,13 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
         onSubmit={form.handleSubmit(onSubmit)}
         submitButtonLabel="Create Task"
       >
-        <CreateTaskForm form={form} onSubmit={onSubmit} skills={skills} users={users} />
+        <CreateTaskForm
+          form={form}
+          onSubmit={onSubmit}
+          skills={skills}
+          users={users}
+          canAssignTasks={canAssignTasks}
+        />
       </ModalWithConfirmation>
     </>
   );

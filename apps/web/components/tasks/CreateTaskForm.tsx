@@ -40,10 +40,17 @@ interface CreateTaskFormProps {
   onSubmit: (data: z.infer<typeof createTaskSchema>) => void;
   skills: { id: string; name: string }[];
   users: UserAssigneeSchema[];
+  canAssignTasks?: boolean;
 }
 
-export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ form, skills, users }) => {
+export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
+  form,
+  skills,
+  users,
+  canAssignTasks = true,
+}) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
+
   return (
     <Form {...form}>
       <div className="space-y-6 flex-1 overflow-y-auto px-6 py-6">
@@ -76,7 +83,6 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ form, skills, us
           )}
         />
         {/* Skills */}
-        {/* FIXME: Clicking on Skills dropdown triggers form submission for unknown reason */}
         <FormField
           control={form.control}
           name="skills"
@@ -163,42 +169,49 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ form, skills, us
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="assignedToId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Assigned Task Agent</FormLabel>
-              <FormControl>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map(user => (
-                      <SelectItem key={user.id} value={user.id}>
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 rounded-lg">
-                            <AvatarImage
-                              src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                              alt={user.firstName ?? 'avatar'}
-                              className="rounded-full"
-                            />
-                            <AvatarFallback className="rounded-full">
-                              {user.firstName ? user.firstName.substring(2).toUpperCase() : 'CN'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+
+        {/* Assignee - Only show if the user has permission to assign tasks */}
+        {canAssignTasks && (
+          <FormField
+            control={form.control}
+            name="assignedToId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Assigned Task Agent</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Assignee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex items-center">
+                            <Avatar className="h-8 w-8 rounded-lg">
+                              <AvatarImage
+                                src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                alt={user.firstName ?? 'avatar'}
+                                className="rounded-full"
+                              />
+                              <AvatarFallback className="rounded-full">
+                                {user.firstName
+                                  ? user.firstName.substring(0, 2).toUpperCase()
+                                  : 'CN'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
         {/* Time for Task */}
         <FormField
           control={form.control}
@@ -210,12 +223,9 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ form, skills, us
                 <Input type="text" placeholder="e.g. 2w 1d 5h 4m" {...field} />
               </FormControl>
               <FormDescription>
-                <span className="block w-[50%]">
-                  An estimate of how much work remains until this issue will be resolved.
-                </span>
-                <span className="block w-[50%]">
-                  The format of this is &apos; *w *d *h *m &apos; (representing weeks, days, hours
-                  and minutes). Examples: 4d, 5h 30m, 60m, 3w.
+                <span className="block w-full md:w-[80%] lg:w-[50%]">
+                  The format is &apos; *w *d *h *m &apos; (representing weeks, days, hours and
+                  minutes). Examples: 4d, 5h 30m, 60m, 3w.
                 </span>
               </FormDescription>
               <FormMessage />
@@ -249,7 +259,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({ form, skills, us
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={date => date > new Date() || date < new Date('1900-01-01')}
+                    disabled={date => date < new Date('1900-01-01')}
                     autoFocus={true}
                   />
                 </PopoverContent>
