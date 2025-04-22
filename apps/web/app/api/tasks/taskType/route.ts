@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     });
 
     const { type, cursor, pageSize, searchTerm, duration, role } = parsedParams;
-    if (role !== Roles.TASK_SUPERVISOR && role !== Roles.SUPER_USER) {
+    if (role !== Roles.TASK_SUPERVISOR && role !== Roles.SUPER_USER && role !== Roles.TASK_AGENT) {
       return NextResponse.json({ success: false, message: 'Unauthorized role' }, { status: 403 });
     }
 
