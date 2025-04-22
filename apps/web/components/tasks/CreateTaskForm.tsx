@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Info } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import FileUploadArea from '@/components/common/FileUploadArea';
 import { FileWithMetadataFE, UserAssigneeSchema } from '@/utils/validationSchemas';
@@ -47,7 +47,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   form,
   skills,
   users,
-  canAssignTasks = true,
+  canAssignTasks = false,
 }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
 
@@ -171,7 +171,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         />
 
         {/* Assignee - Only show if the user has permission to assign tasks */}
-        {canAssignTasks && (
+        {canAssignTasks ? (
           <FormField
             control={form.control}
             name="assignedToId"
@@ -210,6 +210,17 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </FormItem>
             )}
           />
+        ) : (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="border rounded-md p-4 w-full">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                <span>
+                  This task will be sent to Task Supervisors for assignment after creation.
+                </span>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Time for Task */}

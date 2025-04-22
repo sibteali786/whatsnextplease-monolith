@@ -86,8 +86,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
         // Determine if current role can assign tasks to others
         const roleCanAssignTasks =
           currentLoggedInUser?.role?.name === Roles.SUPER_USER ||
-          currentLoggedInUser?.role?.name === Roles.TASK_SUPERVISOR ||
-          currentLoggedInUser?.role?.name === Roles.CLIENT;
+          currentLoggedInUser?.role?.name === Roles.TASK_SUPERVISOR;
 
         setCanAssignTasks(roleCanAssignTasks);
 
