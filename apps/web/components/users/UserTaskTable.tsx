@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -189,20 +190,25 @@ export function UserTasksTable({
               </TableRow>
             ) : localData && localData.length ? (
               table.getRowModel().rows.map(row => (
-                <TableRow
-                  key={row.id}
-                  onClick={() => {
-                    setSelectedTask(row.original);
-                    setOpenDetailsDialog(true);
-                  }}
-                  className="cursor-pointer"
-                >
-                  {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <Tooltip key={row.id} delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <TableRow
+                      key={row.id}
+                      onClick={() => {
+                        setSelectedTask(row.original);
+                        setOpenDetailsDialog(true);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      {row.getVisibleCells().map(cell => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TooltipTrigger>
+                  <TooltipContent>Show details for {row.original.title}</TooltipContent>
+                </Tooltip>
               ))
             ) : (
               <TableRow>
