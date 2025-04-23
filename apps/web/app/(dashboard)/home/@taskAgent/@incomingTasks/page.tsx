@@ -34,7 +34,7 @@ const IncomingTasksPage = () => {
         const user = await getCurrentUser();
         if (user?.role?.name === Roles.TASK_AGENT) {
           const response = await tasksByType(
-            'unassigned',
+            'assigned',
             Roles.TASK_AGENT,
             null,
             5,
