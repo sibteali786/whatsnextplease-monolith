@@ -48,6 +48,9 @@ export const generateUserTaskColumns = (
           checked={row.getIsSelected()}
           onCheckedChange={value => row.toggleSelected(!!value)}
           aria-label="Select row"
+          onCanPlay={e => {
+            e.stopPropagation();
+          }}
         />
       ),
       enableSorting: false,
@@ -165,6 +168,7 @@ export const generateUserTaskColumns = (
       header: 'Assignee',
       cell: ({ row }) => {
         const assignee: TaskAssignees = row.getValue('assignedTo');
+        const task = row.original;
         if (assignee) {
           return (
             <div className="flex items-center">
@@ -181,8 +185,21 @@ export const generateUserTaskColumns = (
               <span className="ml-2">{`${assignee.firstName} ${assignee.lastName}`}</span>
             </div>
           );
+        } else {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="default"
+                onClick={e => {
+                  e.stopPropagation();
+                  return onEditTask && onEditTask(task);
+                }}
+              >
+                Assign
+              </Button>
+            </div>
+          );
         }
-        return 'Unassigned';
       },
     },
     {
