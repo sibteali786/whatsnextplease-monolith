@@ -84,31 +84,3 @@ export async function getTaskAgents(
     };
   }
 }
-
-export async function getTaskAgentById(id: string) {
-  try {
-    const token = getCookie(COOKIE_NAME);
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskAgents/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error('Failed to fetch task agent details');
-    }
-
-    const data = await response.json();
-    console.log('Task Agent Data:', data);
-    return {
-      taskAgent: data as TaskAgent,
-      success: true,
-    };
-  } catch (error) {
-    console.error(`Error fetching task agent with ID ${id}:`, error);
-    return {
-      taskAgent: null,
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}

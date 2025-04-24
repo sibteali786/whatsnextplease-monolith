@@ -110,7 +110,7 @@ export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
       const agentId = row.original.id;
       return (
         <Link
-          href={`/taskAgents/${agentId}`}
+          href={`/users/${agentId}`}
           className="text-purple-600 hover:text-purple-800 hover:underline"
         >
           View Details
