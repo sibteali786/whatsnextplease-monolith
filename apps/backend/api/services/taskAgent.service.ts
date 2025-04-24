@@ -44,6 +44,7 @@ export class TaskAgentService {
           id: true,
         },
       });
+
       return {
         ids: users.map(user => user.id),
         totalCount: users.length,
@@ -56,6 +57,7 @@ export class TaskAgentService {
 
   /**
    * Get task agents with paginated results and task counts
+   * This optimized version reduces database queries by using aggregate
    */
   async getTaskAgents(
     cursor: string | null = null,
@@ -64,11 +66,13 @@ export class TaskAgentService {
     searchTerm: string = ''
   ): Promise<TaskAgentsResponse> {
     try {
+      // Base query to get task agents
       const whereCondition: Prisma.UserWhereInput = {
         role: {
           name: Roles.TASK_AGENT,
         },
       };
+
       // Add search term filtering if provided
       if (searchTerm) {
         whereCondition.OR = [
@@ -78,13 +82,50 @@ export class TaskAgentService {
           { email: { contains: searchTerm, mode: 'insensitive' } },
         ];
       }
-      // Fetch one more than needed to determine if there are more results
-      const users = await prisma.user.findMany({
+
+      // Get the total count
+      const totalCount = await prisma.user.count({
+        where: whereCondition,
+      });
+
+      // Get all user IDs first
+      const userIds = await prisma.user.findMany({
         where: whereCondition,
         take: pageSize + 1,
         ...(cursor && { cursor: { id: cursor }, skip: 1 }),
         orderBy: {
           id: 'asc',
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      // Check if there are more results
+      const hasMore = userIds.length > pageSize;
+      if (hasMore) {
+        userIds.pop(); // Remove the extra item
+      }
+
+      // Get nextCursor
+      const nextCursor = hasMore ? userIds[userIds.length - 1].id : null;
+
+      // If no users found, return early
+      if (userIds.length === 0) {
+        return {
+          taskAgents: [],
+          nextCursor,
+          hasMore,
+          totalCount,
+        };
+      }
+
+      // Get user details
+      const userDetails = await prisma.user.findMany({
+        where: {
+          id: {
+            in: userIds.map(u => u.id),
+          },
         },
         select: {
           id: true,
@@ -94,89 +135,136 @@ export class TaskAgentService {
         },
       });
 
-      // Check if there are more results
-      const hasMore = users.length > pageSize;
-      if (hasMore) {
-        users.pop(); // Remove the extra item
-      }
+      // Get all task counts in one query using groupBy
+      // For each status type, group by assignedToId and count
+      const taskCountsByStatus = await prisma.$transaction([
+        // Assigned tasks (NEW)
+        prisma.task.groupBy({
+          by: ['assignedToId'],
+          where: {
+            assignedToId: { in: userIds.map(u => u.id) },
+            status: { statusName: TaskStatusEnum.NEW },
+          },
+          orderBy: {
+            assignedToId: 'asc',
+          },
+          _count: { id: true },
+        }),
+        // In Progress tasks
+        prisma.task.groupBy({
+          by: ['assignedToId'],
+          where: {
+            assignedToId: { in: userIds.map(u => u.id) },
+            status: { statusName: TaskStatusEnum.IN_PROGRESS },
+          },
+          orderBy: {
+            assignedToId: 'asc',
+          },
+          _count: { id: true },
+        }),
+        // Completed tasks
+        prisma.task.groupBy({
+          by: ['assignedToId'],
+          where: {
+            assignedToId: { in: userIds.map(u => u.id) },
+            status: { statusName: TaskStatusEnum.COMPLETED },
+          },
+          orderBy: {
+            assignedToId: 'asc',
+          },
+          _count: { id: true },
+        }),
+        // Overdue tasks
+        prisma.task.groupBy({
+          by: ['assignedToId'],
+          where: {
+            assignedToId: { in: userIds.map(u => u.id) },
+            status: { statusName: TaskStatusEnum.OVERDUE },
+          },
+          orderBy: {
+            assignedToId: 'asc',
+          },
+          _count: { id: true },
+        }),
+        // Overdue tasks
+        prisma.task.groupBy({
+          by: ['assignedToId'],
+          where: {
+            assignedToId: { in: userIds.map(u => u.id) },
+            status: { statusName: TaskStatusEnum.OVERDUE },
+          },
+          orderBy: {
+            assignedToId: 'asc',
+          },
+          _count: { id: true },
+        }),
+      ]);
 
-      // Get the total count
-      const totalCount = await prisma.user.count({
-        where: whereCondition,
-      });
+      // Convert group by results to a map for easier lookup
+      const [assignedTasks, inProgressTasks, completedTasks, overdueTasks] = taskCountsByStatus;
 
-      // Calculate task counts for each agent
-      const taskAgentsWithCounts: TaskAgentWithCounts[] = await Promise.all(
-        users.map(async user => {
-          // Get assigned tasks count
-          const assignedTasksCount = await prisma.task.count({
-            where: {
-              assignedToId: user.id,
-              status: {
-                statusName: TaskStatusEnum.NEW,
-              },
-            },
-          });
-
-          // Get in progress tasks count
-          const inProgressTasksCount = await prisma.task.count({
-            where: {
-              assignedToId: user.id,
-              status: {
-                statusName: TaskStatusEnum.IN_PROGRESS,
-              },
-            },
-          });
-
-          // Get completed tasks count
-          const completedTasksCount = await prisma.task.count({
-            where: {
-              assignedToId: user.id,
-              status: {
-                statusName: TaskStatusEnum.COMPLETED,
-              },
-            },
-          });
-
-          // Get overdue tasks count
-          const overdueTasksCount = await prisma.task.count({
-            where: {
-              assignedToId: user.id,
-              status: {
-                statusName: TaskStatusEnum.OVERDUE,
-              },
-            },
-          });
-
-          return {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            designation: user.designation,
-            assignedTasksCount,
-            inProgressTasksCount,
-            completedTasksCount,
-            overdueTasksCount,
-          };
-        })
+      // Create lookup maps
+      const assignedTasksMap = new Map(
+        assignedTasks.map(item => [
+          item.assignedToId,
+          typeof item._count === 'object' ? (item._count.id ?? 0) : 0,
+        ])
       );
 
-      // Apply the available/working filter after counts are calculated
-      let filteredAgents = taskAgentsWithCounts;
+      const inProgressTasksMap = new Map(
+        inProgressTasks.map(item => [
+          item.assignedToId,
+          typeof item._count === 'object' ? (item._count.id ?? 0) : 0,
+        ])
+      );
 
+      const completedTasksMap = new Map(
+        completedTasks.map(item => [
+          item.assignedToId,
+          typeof item._count === 'object' ? (item._count.id ?? 0) : 0,
+        ])
+      );
+
+      const overdueTasksMap = new Map(
+        overdueTasks.map(item => [
+          item.assignedToId,
+          typeof item._count === 'object' ? (item._count.id ?? 0) : 0,
+        ])
+      );
+
+      // Build the task agents with counts
+      let taskAgentsWithCounts = userDetails.map(user => {
+        const assignedTasksCount = assignedTasksMap.get(user.id) || 0;
+        const inProgressTasksCount = inProgressTasksMap.get(user.id) || 0;
+        const completedTasksCount = completedTasksMap.get(user.id) || 0;
+        const overdueTasksCount = overdueTasksMap.get(user.id) || 0;
+
+        return {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          designation: user.designation,
+          assignedTasksCount,
+          inProgressTasksCount,
+          completedTasksCount,
+          overdueTasksCount,
+        };
+      });
+
+      // Apply the available/working filter
       if (filterStatus === 'available') {
-        filteredAgents = taskAgentsWithCounts.filter(
+        taskAgentsWithCounts = taskAgentsWithCounts.filter(
           agent => agent.assignedTasksCount === 0 && agent.inProgressTasksCount === 0
         );
       } else if (filterStatus === 'working') {
-        filteredAgents = taskAgentsWithCounts.filter(
+        taskAgentsWithCounts = taskAgentsWithCounts.filter(
           agent => agent.assignedTasksCount > 0 || agent.inProgressTasksCount > 0
         );
       }
 
       return {
-        taskAgents: filteredAgents,
-        nextCursor: hasMore ? users[users.length - 1].id : null,
+        taskAgents: taskAgentsWithCounts,
+        nextCursor,
         hasMore,
         totalCount,
       };
@@ -185,8 +273,10 @@ export class TaskAgentService {
       throw new Error('Failed to retrieve task agents');
     }
   }
+
   /**
    * Get task agent details by ID with task counts
+   * This optimized version reduces database queries by using countBy
    */
   async getTaskAgentById(id: string): Promise<TaskAgentWithCounts | null> {
     try {
@@ -209,45 +299,43 @@ export class TaskAgentService {
         return null;
       }
 
-      // Get assigned tasks count
-      const assignedTasksCount = await prisma.task.count({
-        where: {
-          assignedToId: user.id,
-          status: {
-            statusName: TaskStatusEnum.NEW,
+      // Get all task counts in one transaction
+      const taskCounts = await prisma.$transaction([
+        // Assigned tasks (NEW)
+        prisma.task.count({
+          where: {
+            assignedToId: id,
+            status: { statusName: TaskStatusEnum.NEW },
           },
-        },
-      });
+        }),
 
-      // Get in progress tasks count
-      const inProgressTasksCount = await prisma.task.count({
-        where: {
-          assignedToId: user.id,
-          status: {
-            statusName: TaskStatusEnum.IN_PROGRESS,
+        // In Progress tasks
+        prisma.task.count({
+          where: {
+            assignedToId: id,
+            status: { statusName: TaskStatusEnum.IN_PROGRESS },
           },
-        },
-      });
+        }),
 
-      // Get completed tasks count
-      const completedTasksCount = await prisma.task.count({
-        where: {
-          assignedToId: user.id,
-          status: {
-            statusName: TaskStatusEnum.COMPLETED,
+        // Completed tasks
+        prisma.task.count({
+          where: {
+            assignedToId: id,
+            status: { statusName: TaskStatusEnum.COMPLETED },
           },
-        },
-      });
+        }),
 
-      // Get overdue tasks count
-      const overdueTasksCount = await prisma.task.count({
-        where: {
-          assignedToId: user.id,
-          status: {
-            statusName: TaskStatusEnum.OVERDUE,
+        // Overdue tasks
+        prisma.task.count({
+          where: {
+            assignedToId: id,
+            status: { statusName: TaskStatusEnum.OVERDUE },
           },
-        },
-      });
+        }),
+      ]);
+
+      const [assignedTasksCount, inProgressTasksCount, completedTasksCount, overdueTasksCount] =
+        taskCounts;
 
       return {
         id: user.id,
