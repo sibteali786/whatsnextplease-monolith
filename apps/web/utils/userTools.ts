@@ -1,8 +1,8 @@
-"use server";
-import { getDateFilter } from "@/utils/dateFilter";
-import prisma from "@/db/db";
-import { DurationEnum } from "@/types";
-import { Roles } from "@prisma/client";
+'use server';
+import { getDateFilter } from '@/utils/dateFilter';
+import prisma from '@/db/db';
+import { DurationEnum } from '@/types';
+import { Roles } from '@prisma/client';
 
 export const getUserIds = async () => {
   try {
@@ -12,13 +12,13 @@ export const getUserIds = async () => {
         id: true,
       },
       orderBy: {
-        id: "asc", // Ensure the same ordering as `getClientsList`
+        id: 'asc', // Ensure the same ordering as `getClientsList`
       },
     });
-    return userIds.map((user) => user.id); // Return only the list of IDs
+    return userIds.map(user => user.id); // Return only the list of IDs
   } catch (error) {
-    console.error("Error in getUserIds:", error);
-    throw new Error("Failed to retrieve user IDs.");
+    console.error('Error in getUserIds:', error);
+    throw new Error('Failed to retrieve user IDs.');
   }
 };
 
@@ -43,7 +43,7 @@ export interface UserDetailsCardProps {
 
 export const getUserById = async (userId: string): Promise<UserById> => {
   if (!userId) {
-    return { user: null, message: "Invalid user id" };
+    return { user: null, message: 'Invalid user id' };
   }
   try {
     const user = await prisma.user.findUnique({
@@ -65,13 +65,13 @@ export const getUserById = async (userId: string): Promise<UserById> => {
     });
 
     if (!user) {
-      return { user: null, message: "User not found" };
+      return { user: null, message: 'User not found' };
     }
 
-    return { user, message: "Successfully retrieved user" };
+    return { user, message: 'Successfully retrieved user' };
   } catch (e) {
     console.log(e);
-    throw new Error("Failed to retrieve user");
+    throw new Error('Failed to retrieve user');
   }
 };
 export interface GetTaskIdsByUserIdResponse {
@@ -85,19 +85,19 @@ export const getTaskIdsByUserId = async (
   userId: string,
   searchTerm: string,
   duration: DurationEnum = DurationEnum.ALL, // Added duration parameter
-  role: Roles,
+  role: Roles
 ): Promise<GetTaskIdsByUserIdResponse> => {
   try {
-    if (role !== Roles.TASK_AGENT && role !== Roles.CLIENT) {
+    if (role !== Roles.TASK_AGENT && role !== Roles.TASK_SUPERVISOR && role !== Roles.CLIENT) {
       return {
         success: false,
         taskIds: [],
-        message: "Invalid role. Only Task Agent and Client are supported.",
+        message: 'Invalid role. Only Task Agent and Client are supported.',
       };
     }
 
     const whereCondition =
-      role === Roles.TASK_AGENT
+      role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR
         ? { assignedToId: userId }
         : { createdByClientId: userId };
 
@@ -109,24 +109,24 @@ export const getTaskIdsByUserId = async (
         ...dateFilter, // Apply date filter
         ...(searchTerm && {
           OR: [
-            { title: { contains: searchTerm, mode: "insensitive" } },
-            { description: { contains: searchTerm, mode: "insensitive" } },
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
           ],
         }),
       },
-      orderBy: { id: "asc" },
+      orderBy: { id: 'asc' },
       select: {
         id: true,
       },
     });
     return {
-      taskIds: taskIds.map((task) => task.id),
-      message: "Successfully retrieved task IDs for the user.",
+      taskIds: taskIds.map(task => task.id),
+      message: 'Successfully retrieved task IDs for the user.',
       success: true,
     };
   } catch (e) {
     console.error(e);
-    throw new Error("Failed to retrieve tasks by user ID");
+    throw new Error('Failed to retrieve tasks by user ID');
   }
 };
 
@@ -149,7 +149,7 @@ export async function getUserSkills(userId: string) {
     });
 
     // Transform the data into a simpler structure
-    const skills = userSkills.map((userSkill) => ({
+    const skills = userSkills.map(userSkill => ({
       id: userSkill.skill.id,
       name: userSkill.skill.name,
       description: userSkill.skill.description,
@@ -161,10 +161,10 @@ export async function getUserSkills(userId: string) {
       skills,
     };
   } catch (error) {
-    console.error("Error fetching user skills:", error);
+    console.error('Error fetching user skills:', error);
     return {
       success: false,
-      error: "Failed to fetch user skills",
+      error: 'Failed to fetch user skills',
     };
   }
 }
@@ -173,23 +173,23 @@ export async function getUserSkills(userId: string) {
 
 export const getFileIdsByUserId = async (userId: string) => {
   try {
-    if (typeof userId !== "string" || userId.trim().length === 0) {
+    if (typeof userId !== 'string' || userId.trim().length === 0) {
       return {
-        message: "Invalid user ID provided.",
+        message: 'Invalid user ID provided.',
         fileIds: null,
       };
     }
     const files = await prisma.file.findMany({
       where: { ownerUserId: userId },
-      orderBy: { id: "asc" },
+      orderBy: { id: 'asc' },
       select: { id: true },
     });
     return {
-      fileIds: files.map((file) => file.id),
-      message: "successfully retrieved ids ",
+      fileIds: files.map(file => file.id),
+      message: 'successfully retrieved ids ',
     };
   } catch (e) {
     console.error(e);
-    throw new Error("Failed to retrieve file ids by given user id");
+    throw new Error('Failed to retrieve file ids by given user id');
   }
 };

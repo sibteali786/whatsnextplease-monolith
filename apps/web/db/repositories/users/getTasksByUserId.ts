@@ -1,36 +1,33 @@
-"use server";
-import prisma from "@/db/db";
-import logger from "@/utils/logger";
-import { Roles } from "@prisma/client";
-import { getDateFilter } from "@/utils/dateFilter";
-import { DurationEnum } from "@/types";
-import {
-  TaskByUserIdResponse,
-  TaskByUserIdSchema,
-} from "@/utils/validationSchemas";
+'use server';
+import prisma from '@/db/db';
+import logger from '@/utils/logger';
+import { Roles } from '@prisma/client';
+import { getDateFilter } from '@/utils/dateFilter';
+import { DurationEnum } from '@/types';
+import { TaskByUserIdResponse, TaskByUserIdSchema } from '@/utils/validationSchemas';
 
 export const getTasksByUserId = async (
   userId: string,
   role: Roles,
   cursor: string | null,
   pageSize = 10,
-  searchTerm = "",
-  duration: DurationEnum = DurationEnum.ALL,
+  searchTerm = '',
+  duration: DurationEnum = DurationEnum.ALL
 ): Promise<TaskByUserIdResponse> => {
   try {
-    if (role !== Roles.TASK_AGENT && role !== Roles.CLIENT) {
+    if (role !== Roles.TASK_AGENT && role !== Roles.TASK_SUPERVISOR && role !== Roles.CLIENT) {
       return {
         success: false,
         tasks: [],
         nextCursor: null,
         hasNextCursor: false,
-        message: "Invalid role. Only Task Agent and Client are supported.",
+        message: 'Invalid role. Only Task Agent and Client are supported.',
         totalCount: 0,
       };
     }
 
     const whereCondition =
-      role === Roles.TASK_AGENT
+      role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR
         ? { assignedToId: userId }
         : { createdByClientId: userId };
 
@@ -41,14 +38,14 @@ export const getTasksByUserId = async (
         ...dateFilter,
         OR: searchTerm
           ? [
-              { title: { contains: searchTerm, mode: "insensitive" } },
-              { description: { contains: searchTerm, mode: "insensitive" } },
+              { title: { contains: searchTerm, mode: 'insensitive' } },
+              { description: { contains: searchTerm, mode: 'insensitive' } },
             ]
           : undefined,
       },
       take: pageSize + 1,
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-      orderBy: { id: "asc" },
+      orderBy: { id: 'asc' },
       select: {
         id: true,
         title: true,
@@ -105,15 +102,15 @@ export const getTasksByUserId = async (
         ...dateFilter,
         OR: searchTerm
           ? [
-              { title: { contains: searchTerm, mode: "insensitive" } },
-              { description: { contains: searchTerm, mode: "insensitive" } },
+              { title: { contains: searchTerm, mode: 'insensitive' } },
+              { description: { contains: searchTerm, mode: 'insensitive' } },
             ]
           : undefined,
       },
     });
     // Format tasks to match the shape needed by update:
-    const formattedTasks = tasks.map((task) => {
-      const skills = task.taskSkills.map((ts) => ts.skill.name);
+    const formattedTasks = tasks.map(task => {
+      const skills = task.taskSkills.map(ts => ts.skill.name);
       return {
         ...task,
         taskSkills: skills,
@@ -126,12 +123,10 @@ export const getTasksByUserId = async (
       nextCursor,
       totalCount,
     };
-    const parsedResponse = JSON.parse(
-      JSON.stringify(TaskByUserIdSchema.parse(response)),
-    );
+    const parsedResponse = JSON.parse(JSON.stringify(TaskByUserIdSchema.parse(response)));
     return parsedResponse;
   } catch (error) {
-    logger.error({ error }, "Error in getTasksByUserId");
-    throw new Error("Failed to retrieve tasks for the given user");
+    logger.error({ error }, 'Error in getTasksByUserId');
+    throw new Error('Failed to retrieve tasks for the given user');
   }
 };
