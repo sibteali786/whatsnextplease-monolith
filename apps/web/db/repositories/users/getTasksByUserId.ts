@@ -5,6 +5,7 @@ import { Roles } from '@prisma/client';
 import { getDateFilter } from '@/utils/dateFilter';
 import { DurationEnum } from '@/types';
 import { TaskByUserIdResponse, TaskByUserIdSchema } from '@/utils/validationSchemas';
+import { canViewTasks, getTaskFilterCondition } from '@/utils/commonUtils/taskPermissions';
 
 export const getTasksByUserId = async (
   userId: string,
@@ -15,23 +16,22 @@ export const getTasksByUserId = async (
   duration: DurationEnum = DurationEnum.ALL
 ): Promise<TaskByUserIdResponse> => {
   try {
-    if (role !== Roles.TASK_AGENT && role !== Roles.TASK_SUPERVISOR && role !== Roles.CLIENT) {
+    // Check if the role has permission to view tasks
+    if (!canViewTasks(role)) {
       return {
         success: false,
         tasks: [],
         nextCursor: null,
         hasNextCursor: false,
-        message: 'Invalid role. Only Task Agent and Client are supported.',
+        message: `Role ${role} is not authorized to view tasks.`,
         totalCount: 0,
       };
     }
 
-    const whereCondition =
-      role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR
-        ? { assignedToId: userId }
-        : { createdByClientId: userId };
-
+    // Get the appropriate filter condition based on role
+    const whereCondition = getTaskFilterCondition(userId, role);
     const dateFilter = getDateFilter(duration);
+
     const tasks = await prisma.task.findMany({
       where: {
         ...whereCondition,
@@ -108,6 +108,7 @@ export const getTasksByUserId = async (
           : undefined,
       },
     });
+
     // Format tasks to match the shape needed by update:
     const formattedTasks = tasks.map(task => {
       const skills = task.taskSkills.map(ts => ts.skill.name);
@@ -116,6 +117,7 @@ export const getTasksByUserId = async (
         taskSkills: skills,
       };
     });
+
     const response = {
       success: true,
       tasks: formattedTasks,
@@ -123,6 +125,7 @@ export const getTasksByUserId = async (
       nextCursor,
       totalCount,
     };
+
     const parsedResponse = JSON.parse(JSON.stringify(TaskByUserIdSchema.parse(response)));
     return parsedResponse;
   } catch (error) {

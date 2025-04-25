@@ -3,6 +3,7 @@ import { getDateFilter } from '@/utils/dateFilter';
 import prisma from '@/db/db';
 import { DurationEnum } from '@/types';
 import { Roles } from '@prisma/client';
+import { canViewTasks, getTaskFilterCondition } from './commonUtils/taskPermissions';
 
 export const getUserIds = async () => {
   try {
@@ -84,41 +85,40 @@ export interface GetTaskIdsByUserIdResponse {
 export const getTaskIdsByUserId = async (
   userId: string,
   searchTerm: string,
-  duration: DurationEnum = DurationEnum.ALL, // Added duration parameter
+  duration: DurationEnum = DurationEnum.ALL,
   role: Roles
 ): Promise<GetTaskIdsByUserIdResponse> => {
   try {
-    if (role !== Roles.TASK_AGENT && role !== Roles.TASK_SUPERVISOR && role !== Roles.CLIENT) {
+    // Check if the role has permission to view tasks
+    if (!canViewTasks(role)) {
       return {
         success: false,
         taskIds: [],
-        message: 'Invalid role. Only Task Agent and Client are supported.',
+        message: `Role ${role} is not authorized to view tasks.`,
       };
     }
 
-    const whereCondition =
-      role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR
-        ? { assignedToId: userId }
-        : { createdByClientId: userId };
-
+    // Get the appropriate filter condition based on role
+    const whereCondition = getTaskFilterCondition(userId, role);
     const dateFilter = getDateFilter(duration);
 
     const taskIds = await prisma.task.findMany({
       where: {
         ...whereCondition,
-        ...dateFilter, // Apply date filter
-        ...(searchTerm && {
-          OR: [
-            { title: { contains: searchTerm, mode: 'insensitive' } },
-            { description: { contains: searchTerm, mode: 'insensitive' } },
-          ],
-        }),
+        ...dateFilter,
+        OR: searchTerm
+          ? [
+              { title: { contains: searchTerm, mode: 'insensitive' } },
+              { description: { contains: searchTerm, mode: 'insensitive' } },
+            ]
+          : undefined,
       },
       orderBy: { id: 'asc' },
       select: {
         id: true,
       },
     });
+
     return {
       taskIds: taskIds.map(task => task.id),
       message: 'Successfully retrieved task IDs for the user.',
