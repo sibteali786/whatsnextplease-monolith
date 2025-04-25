@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   flexRender,
@@ -6,8 +6,8 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+} from '@tanstack/react-table';
+import { useEffect, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -15,18 +15,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/components/Pagination";
-import { useRouter } from "next/navigation";
-import { columns, User } from "./columns";
-import { useUserStore } from "@/store/useUserStore";
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/Pagination';
+import { useRouter } from 'next/navigation';
+import { columns, User } from './columns';
+import { useUserStore } from '@/store/useUserStore';
+import { CustomTooltip } from '@/components/CustomTooltip';
 
 // Define a generic type for the DataTable
 interface DataTableProps {
   fetchData: (
     cursor: string | null,
-    pageSize: number,
+    pageSize: number
   ) => Promise<{
     users: User[];
     nextCursor?: string;
@@ -55,7 +56,7 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
       setData(response.users);
       setTotalCount(response.totalCount);
     } catch (error) {
-      console.error("Failed to fetch data:", error);
+      console.error('Failed to fetch data:', error);
     }
     setLoading(false);
   };
@@ -91,16 +92,13 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map(header => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -114,26 +112,35 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
                 </TableCell>
               </TableRow>
             ) : data.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
+              table.getRowModel().rows.map(row => (
+                <CustomTooltip
                   key={row.id}
-                  onClick={() => {
-                    setSelectedUser({
-                      id: row.original.id ?? "",
-                      name: `${row.original.firstName} ${row.original.lastName}`,
-                    });
-                    router.push(`/users/${row.original.id}`);
-                  }}
+                  content={
+                    <span className="font-semibold">
+                      Show details for {row.original.firstName + ' ' + row.original.lastName}
+                    </span>
+                  }
+                  variant="primary"
+                  delayDuration={100}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                  <TableRow
+                    key={row.id}
+                    onClick={() => {
+                      setSelectedUser({
+                        id: row.original.id ?? '',
+                        name: `${row.original.firstName} ${row.original.lastName}`,
+                      });
+                      router.push(`/users/${row.original.id}`);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </CustomTooltip>
               ))
             ) : (
               <TableRow>
@@ -148,7 +155,7 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
       {/* Integrate Pagination */}
       <div className="flex flex-row my-2">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <Pagination
