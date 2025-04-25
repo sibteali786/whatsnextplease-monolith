@@ -18,7 +18,11 @@
     "db:ready": "bash ./scripts/wait-for-db.sh",
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npm run db:seed:script",
-    "db:seed:script": "tsx seed.ts"
+    "db:seed:script": "tsx seed.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.679.0",
@@ -80,8 +84,9 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.0.1",
+    "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
     "@types/bcrypt": "^5.0.2",
     "@types/jest": "^29.5.13",
@@ -91,6 +96,9 @@
     "@types/nprogress": "^0.2.3",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4.4.1",
+    "@vitest/coverage-v8": "^3.1.2",
+    "@vitest/ui": "^3.1.2",
     "eslint": "^8",
     "eslint-config-next": "14.2.15",
     "globals": "^15.12.0",
@@ -98,6 +106,7 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-mock-extended": "^4.0.0-beta1",
+    "jsdom": "^26.1.0",
     "lint-staged": "^15.2.10",
     "pino-pretty": "^13.0.0",
     "postcss": "^8",
@@ -105,6 +114,8 @@
     "prisma": "^6.6.0",
     "tailwindcss": "^3.4.1",
     "ts-jest": "^29.2.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.1.2"
   }
 }
