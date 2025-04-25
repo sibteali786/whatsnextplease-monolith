@@ -8,6 +8,7 @@ import { skillCategoryRoutes } from './routes/skillCategory.routes';
 import { taskCategoryRoutes } from './routes/taskCategory.routes';
 import { skillRoutes } from './routes/skill.routes';
 import { taskAgentRoutes } from './routes/taskAgent.routes';
+import { entityRoutes } from './routes/entity.routes';
 
 export async function createServer() {
   const app = express();
@@ -21,6 +22,7 @@ export async function createServer() {
   app.use('/user', userRoutes);
   app.use('/client', clientRoutes);
   app.use('/skill', skillRoutes);
+  app.use('/entity', entityRoutes);
   app.use('/skillCategory', skillCategoryRoutes);
   app.use('/taskCategory', taskCategoryRoutes);
   app.use('/taskAgents', taskAgentRoutes);
