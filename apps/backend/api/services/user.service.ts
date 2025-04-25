@@ -69,4 +69,9 @@ export class UserService {
     const { passwordHash, roleId, ...rest } = updatedUser;
     return rest;
   }
+  async deleteUser(userId: string) {
+    return await prisma.user.delete({
+      where: { id: userId },
+    });
+  }
 }

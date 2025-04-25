@@ -52,4 +52,9 @@ export class ClientService {
     });
     return updatedClientOutput;
   }
+  async deleteClient(clientId: string) {
+    return await prisma.client.delete({
+      where: { id: clientId },
+    });
+  }
 }

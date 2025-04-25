@@ -158,7 +158,33 @@ export class ClientController {
     }
   };
 
+  private handleDeleteClient = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const clientId = req.params.id;
+
+      if (!clientId) {
+        throw new BadRequestError('Client ID is required');
+      }
+
+      // Check if client exists before attempting to delete
+      await checkIfClientExists(clientId);
+
+      await this.clientService.deleteClient(clientId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Client deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getClientProfile = asyncHandler(this.handleGetClientProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
+  deleteClient = asyncHandler(this.handleDeleteClient);
 }

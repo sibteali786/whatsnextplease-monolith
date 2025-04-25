@@ -193,8 +193,34 @@ export class UserController {
       next(error);
     }
   };
+  private handleDeleteUser = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const userId = req.params.id;
+
+      if (!userId) {
+        throw new BadRequestError('User ID is required');
+      }
+
+      // Check if user exists before attempting to delete
+      await checkIfUserExists(userId);
+
+      await this.userService.deleteUser(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'User deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
+  deleteUser = asyncHandler(this.handleDeleteUser);
 }

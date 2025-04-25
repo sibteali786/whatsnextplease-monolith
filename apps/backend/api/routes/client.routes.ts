@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth';
+import { requireRole, verifyToken } from '../middleware/auth';
 import multer from 'multer';
 import { ClientController } from '../controller/client.controller';
+import { Roles } from '@prisma/client';
 
 const router = Router();
 const controller = new ClientController();
@@ -21,4 +22,10 @@ router.patch(
 );
 router.get('/profile', verifyToken, controller.getClientProfile);
 router.patch('/profile', verifyToken, controller.updateProfile);
+router.delete(
+  '/:id',
+  verifyToken,
+  requireRole([Roles.SUPER_USER, Roles.TASK_SUPERVISOR]),
+  controller.deleteClient
+);
 export const clientRoutes = router;
