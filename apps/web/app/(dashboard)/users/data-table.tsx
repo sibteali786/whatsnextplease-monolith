@@ -19,7 +19,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/Pagination';
 import { useRouter } from 'next/navigation';
-import { columns, User } from './columns';
+import { User, createColumns } from './columns';
 import { useUserStore } from '@/store/useUserStore';
 import { CustomTooltip } from '@/components/CustomTooltip';
 
@@ -65,12 +65,15 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
     fetchItems();
   }, [cursor, pageSize]);
 
+  // Create columns with refresh data callback
+  const columns = createColumns(fetchItems);
+
   // Calculate total number of pages
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const table = useReactTable({
     data,
-    columns: columns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),

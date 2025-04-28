@@ -5,6 +5,7 @@ This doc reflects how a particular feature used to be and how it was improved.
 ## Table of Contents
 
 - [Task Permission](#task-permissions)
+- [Entity API Documentation](#entity-api-documentation)
 
 ## Task Permissions
 
@@ -144,3 +145,172 @@ export const TASK_VIEWER_ROLES = [
 - **Maintainability**: Changes to role permissions only need to be made in one place
 - **Testability**: Permission logic can be tested independently
 - **Documentation**: The permission groups serve as documentation for what roles have what permissions
+
+## Entity API Documentation
+
+### Overview
+
+The Entity API provides a unified interface for operations on different entity types (users and clients) through a consistent set of endpoints. This design simplifies frontend integration by abstracting the underlying entity type while maintaining proper authorization and validation.
+
+### Base URL
+
+```
+/entity
+```
+
+### Authentication
+
+All endpoints require a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <token>
+```
+
+### Entity Types
+
+The API supports the following entity types:
+
+- `user` - User entity
+- `client` - Client entity
+
+### Endpoints
+
+#### Get Entity Profile
+
+Retrieve profile information for a specific entity.
+
+```
+GET /entity/:type/:id
+```
+
+##### Path Parameters
+
+| Parameter | Type   | Description                                    |
+| --------- | ------ | ---------------------------------------------- |
+| type      | string | Entity type. Must be either "user" or "client" |
+| id        | string | Entity ID                                      |
+
+##### Response
+
+```json
+{
+  "id": "string",
+  "username": "string",
+  "email": "string",
+  "avatarUrl": "string"
+  // Additional fields based on entity type
+}
+```
+
+##### Status Codes
+
+- 200 - Success
+- 400 - Bad request (invalid entity type)
+- 401 - Unauthorized (missing or invalid token)
+- 404 - Entity not found
+
+##### Permissions
+
+- Available to all authenticated users
+
+---
+
+#### Delete Entity
+
+Delete an entity by ID.
+
+```
+DELETE /entity/:type/:id
+```
+
+##### Path Parameters
+
+| Parameter | Type   | Description                                    |
+| --------- | ------ | ---------------------------------------------- |
+| type      | string | Entity type. Must be either "user" or "client" |
+| id        | string | Entity ID                                      |
+
+##### Response
+
+```json
+{
+  "success": true,
+  "message": "User/Client deleted successfully"
+}
+```
+
+##### Status Codes
+
+- 200 - Success
+- 400 - Bad request (invalid entity type)
+- 401 - Unauthorized (missing or invalid token)
+- 403 - Forbidden (insufficient permissions)
+- 404 - Entity not found
+
+##### Permissions
+
+- Requires SUPER_USER or TASK_SUPERVISOR role
+
+### Error Responses
+
+All error responses follow the same format:
+
+```json
+{
+  "code": "ERROR_CODE",
+  "status": 400,
+  "message": "Error message",
+  "details": {}
+}
+```
+
+Common error codes:
+
+- `BAD_REQUEST` - Invalid input parameters
+- `UNAUTHORIZED` - Authentication required
+- `FORBIDDEN` - Insufficient permissions
+- `NOT_FOUND` - Resource not found
+- `INTERNAL_SERVER_ERROR` - Server error
+
+### Example Usage (Frontend)
+
+```typescript
+// Using the EntityClient
+const apiClient = new EntityClient(API_URL, authToken);
+
+// Delete a user
+await apiClient.deleteEntity(EntityType.USER, userId);
+
+// Get a client profile
+const clientProfile = await apiClient.getEntityProfile(EntityType.CLIENT, clientId);
+```
+
+### Implementation Details
+
+#### Controller Structure
+
+The EntityController delegates operations to the appropriate service based on the entity type:
+
+```typescript
+if (entityType === 'user') {
+  // Use UserService
+} else if (entityType === 'client') {
+  // Use ClientService
+}
+```
+
+#### Validation Flow
+
+1. Request validation (entity type, required parameters)
+2. Authorization check (role-based permissions)
+3. Entity existence verification
+4. Operation execution
+
+#### Extending the API
+
+To add support for a new entity type:
+
+1. Update the entity type validation to include the new type
+2. Add the appropriate service to the EntityController
+3. Implement handling for the new type in each method
+4. Update unit and integration tests
