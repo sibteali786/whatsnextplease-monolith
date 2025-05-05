@@ -65,17 +65,33 @@ export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
   },
   {
     accessorKey: 'assignedTasksCount',
-    header: 'Assigned Tasks',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="text-primary"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Assigned Tasks
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const value = row.getValue('assignedTasksCount') as number;
-      return (
-        <div className="text-center">{value === 0 ? '0' : value < 10 ? `0${value}` : value}</div>
-      );
+      return <p className="text-center">{value === 0 ? '0' : value < 10 ? `0${value}` : value}</p>;
     },
   },
   {
     accessorKey: 'inProgressTasksCount',
-    header: 'In Progress Tasks',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="text-warning"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        In Progress Tasks
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const value = row.getValue('inProgressTasksCount') as number;
       return (
@@ -85,7 +101,16 @@ export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
   },
   {
     accessorKey: 'completedTasksCount',
-    header: 'Completed Tasks',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="text-success"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Completed Tasks
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const value = row.getValue('completedTasksCount') as number;
       return (
@@ -95,7 +120,16 @@ export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
   },
   {
     accessorKey: 'overdueTasksCount',
-    header: 'Overdue Tasks',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="text-destructive"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Overdue Tasks
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const value = row.getValue('overdueTasksCount') as number;
       return (

@@ -71,7 +71,7 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
       {taskStats && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
+            <Card className="bg-primary text-white">
               <CardHeader>
                 <CardTitle className="text-xl text-center">Assigned Tasks</CardTitle>
               </CardHeader>
@@ -86,12 +86,12 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-warning text-white">
               <CardHeader>
                 <CardTitle className="text-xl text-center">In Progress</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-5xl font-bold text-center text-yellow-500">
+                <p className="text-5xl font-bold text-center">
                   {taskStats.inProgressTasksCount === 0
                     ? '0'
                     : taskStats.inProgressTasksCount < 10
@@ -101,12 +101,12 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-success text-white">
               <CardHeader>
                 <CardTitle className="text-xl text-center">Completed</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-5xl font-bold text-center text-green-500">
+                <p className="text-5xl font-bold text-center">
                   {taskStats.completedTasksCount === 0
                     ? '0'
                     : taskStats.completedTasksCount < 10
@@ -116,12 +116,12 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-destructive text-white">
               <CardHeader>
                 <CardTitle className="text-xl text-center">Overdue</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-5xl font-bold text-center text-red-500">
+                <p className="text-5xl font-bold text-center">
                   {taskStats.overdueTasksCount === 0
                     ? '0'
                     : taskStats.overdueTasksCount < 10
