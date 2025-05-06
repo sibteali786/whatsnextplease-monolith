@@ -4,6 +4,7 @@ import { createServer } from './server';
 import prisma from './config/db';
 import { Express } from 'express';
 import { logger } from './utils/logger';
+import { TaskOverdueScheduler } from './schedulers/taskOverdueScheduler';
 
 let app: Express | null = null;
 
@@ -23,9 +24,11 @@ initializeServer()
     server.listen(env.PORT, () => {
       logger.info(`Server running on http://localhost:${env.PORT}`);
     });
-
+    // Initialize task scheduler
+    const taskScheduler = new TaskOverdueScheduler();
     const shutdown = async (signal: string) => {
       logger.info(`\n${signal} received. Closing server...`);
+      taskScheduler.stop();
       await prisma.$disconnect();
       logger.info('Database disconnected, Server Shutting down...');
       process.exit(0);
