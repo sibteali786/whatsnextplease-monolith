@@ -1,10 +1,8 @@
+// api/schedulers/overdueTasksWorker.ts
 import { parentPort, workerData } from 'worker_threads';
 import { PrismaClient, NotificationType, Roles, TaskStatusEnum } from '@prisma/client';
 import { NotificationService } from '../services/notification.service.js';
 import { NotificationPayload } from '../services/notificationDelivery.service.js';
-
-// Make sure this file is compiled to JS
-// Using .js extension in imports helps resolve modules correctly
 
 async function main() {
   const prisma = new PrismaClient();
@@ -12,60 +10,115 @@ async function main() {
   const { batchSize = 50 } = workerData || {};
 
   try {
-    // Get total overdue tasks
+    // First, find the OVERDUE status ID (Do this first to validate setup)
+    const overdueStatus = await prisma.taskStatus.findFirst({
+      where: { statusName: TaskStatusEnum.OVERDUE },
+    });
+
+    if (!overdueStatus) {
+      console.error('OVERDUE task status not found in the database');
+      throw new Error('OVERDUE task status not found in the database');
+    }
+
+    console.log('Found OVERDUE status:', overdueStatus);
+
+    // Find tasks that are overdue but not marked as OVERDUE status
     const count = await prisma.task.count({
       where: {
         dueDate: { lt: new Date() },
-        status: { statusName: { not: TaskStatusEnum.COMPLETED } },
+        status: {
+          statusName: {
+            notIn: [TaskStatusEnum.COMPLETED, TaskStatusEnum.OVERDUE],
+          },
+        },
       },
     });
+
+    console.log(`Found ${count} tasks to update`);
 
     // Process in batches
     let processed = 0;
     let notificationsCreated = 0;
+    let tasksUpdated = 0;
     const batches = Math.ceil(count / batchSize);
 
     for (let batch = 0; batch < batches; batch++) {
       const tasks = await prisma.task.findMany({
         where: {
           dueDate: { lt: new Date() },
-          status: { statusName: { not: TaskStatusEnum.COMPLETED } },
+          status: {
+            statusName: {
+              notIn: [TaskStatusEnum.COMPLETED, TaskStatusEnum.OVERDUE],
+            },
+          },
         },
         include: { assignedTo: true, status: true },
         skip: batch * batchSize,
         take: batchSize,
       });
 
+      console.log(`Batch ${batch + 1}/${batches}: Found ${tasks.length} tasks`);
+
       // Get supervisors once per batch
       const supervisors = await prisma.user.findMany({
         where: { role: { name: Roles.TASK_SUPERVISOR } },
       });
 
+      console.log(`Found ${supervisors.length} supervisors to notify`);
+
       for (const task of tasks) {
+        // Update task status to OVERDUE
+        console.log(`Updating task ${task.id} (${task.title}) to OVERDUE status`);
+        try {
+          const updatedTask = await prisma.task.update({
+            where: { id: task.id },
+            data: { statusId: overdueStatus.id },
+          });
+          console.log(`Successfully updated task ${task.id} to status: ${updatedTask.statusId}`);
+          tasksUpdated++;
+        } catch (updateError) {
+          console.error(`Failed to update task ${task.id}:`, updateError);
+          continue; // Skip to next task
+        }
+
         if (task.assignedToId) {
           // Notify task assignee
-          await createAndDeliverNotification(
-            notificationService,
-            NotificationType.TASK_MODIFIED,
-            `Task "${task.title}" is now overdue`,
-            task.assignedToId,
-            { taskId: task.id, status: task.status.statusName }
-          );
-          notificationsCreated++;
+          try {
+            await createAndDeliverNotification(
+              notificationService,
+              NotificationType.TASK_MODIFIED,
+              `Task "${task.title}" is now overdue`,
+              task.assignedToId,
+              { taskId: task.id, status: TaskStatusEnum.OVERDUE }
+            );
+            notificationsCreated++;
+            console.log(`Notified assignee ${task.assignedTo?.firstName} about task ${task.id}`);
+          } catch (notifyError) {
+            console.error(`Failed to notify assignee for task ${task.id}:`, notifyError);
+          }
         }
 
         // Notify supervisors
         for (const supervisor of supervisors) {
-          await createAndDeliverNotification(
-            notificationService,
-            NotificationType.TASK_MODIFIED,
-            `Task "${task.title}" assigned to ${task.assignedTo?.firstName || 'someone'} is now overdue`,
-            supervisor.id,
-            { taskId: task.id, status: task.status.statusName }
-          );
-          notificationsCreated++;
+          try {
+            await createAndDeliverNotification(
+              notificationService,
+              NotificationType.TASK_MODIFIED,
+              `Task "${task.title}" assigned to ${task.assignedTo?.firstName || 'someone'} is now overdue`,
+              supervisor.id,
+              { taskId: task.id, status: TaskStatusEnum.OVERDUE }
+            );
+            notificationsCreated++;
+            console.log(`Notified supervisor ${supervisor.firstName} about task ${task.id}`);
+          } catch (notifyError) {
+            console.error(
+              `Failed to notify supervisor ${supervisor.id} for task ${task.id}:`,
+              notifyError
+            );
+          }
         }
       }
+
       processed += tasks.length;
 
       // Report progress to parent
@@ -73,17 +126,24 @@ async function main() {
         parentPort.postMessage({
           progress: `${processed}/${count}`,
           tasksProcessed: processed,
+          tasksUpdated,
           notificationsCreated,
         });
       }
     }
+
     // Report final results
     if (parentPort) {
       parentPort.postMessage({
         tasksProcessed: processed,
+        tasksUpdated,
         notificationsCreated,
       });
     }
+
+    console.log(
+      `Worker completed: Processed ${processed} tasks, updated ${tasksUpdated}, created ${notificationsCreated} notifications`
+    );
   } finally {
     await prisma.$disconnect();
   }
@@ -103,6 +163,7 @@ async function createAndDeliverNotification(
   const payload: NotificationPayload = { type, message, data };
   await service.deliverNotification(payload, notificationData);
   await service.updateDeliveryStatus(notification.id);
+  return notification;
 }
 
 main().catch(error => {
