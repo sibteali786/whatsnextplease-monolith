@@ -19,6 +19,7 @@ import { getCurrentUser, UserState } from '@/utils/user';
 import { createNotification } from '@/db/repositories/notifications/notifications';
 import { Button } from '../ui/button';
 import { COOKIE_NAME } from '@/utils/constant';
+import { useRouter } from 'next/navigation';
 
 export const createTaskSchema = z.object({
   title: z
@@ -67,6 +68,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [canAssignTasks, setCanAssignTasks] = useState(false);
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema),
@@ -137,7 +139,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
             icon: <AlertCircle size={40} />,
             action: (
               <Button
-                onClick={() => (window.location.href = '/settings/picklists')}
+                onClick={() => router.push('/settings/picklists')}
                 variant="outline"
                 className="mt-2"
               >

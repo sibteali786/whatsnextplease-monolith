@@ -7,9 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { UserTasksTable } from '../users/UserTaskTable';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { useToast } from '@/hooks/use-toast';
-import { CircleX, Loader2, Plus } from 'lucide-react';
+import { AlertCircle, CircleX, Loader2, Plus } from 'lucide-react';
 import { taskIdsByType } from '@/db/repositories/tasks/taskIdsByType';
-import { TaskTable } from '@/utils/validationSchemas';
+import { SkillsSchema, TaskTable } from '@/utils/validationSchemas';
 import { Button } from '../ui/button';
 import { CreateTaskContainer } from './CreateTaskContainer';
 import { ToastAction } from '../ui/toast';
@@ -17,6 +17,9 @@ import { createDraftTask } from '@/db/repositories/tasks/createDraftTask';
 import { useCreatedTask } from '@/store/useTaskStore';
 import { State } from '../DataState';
 import { CallToAction } from '../CallToAction';
+import { getCookie } from '@/utils/utils';
+import { COOKIE_NAME } from '@/utils/constant';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export const TaskSuperVisorList = ({
   userId,
@@ -41,6 +44,9 @@ export const TaskSuperVisorList = ({
   const [error, setError] = useState<string | null>(null);
   const { toast, dismiss } = useToast();
   const { setCreatedTask } = useCreatedTask();
+  const [hasSkills, setHasSkills] = useState(false);
+  const [hasTaskCategories, setHasTaskCategories] = useState(false);
+  const [checkingPrerequisites, setCheckingPrerequisites] = useState(true);
 
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term);
@@ -48,6 +54,30 @@ export const TaskSuperVisorList = ({
   };
 
   const createTaskHandler = async () => {
+    if (!hasSkills || !hasTaskCategories) {
+      toast({
+        title: 'Setup Required',
+        description: 'You need to set up task categories and skills before creating tasks.',
+        variant: 'destructive',
+        icon: <AlertCircle size={40} />,
+        action: (
+          <Button
+            onClick={() => (window.location.href = '/settings/picklists')}
+            variant="outline"
+            className="mt-2"
+          >
+            Go to Settings
+          </Button>
+        ),
+      });
+      return;
+    }
+
+    toast({
+      title: 'Creating a Draft Task',
+      description: 'Please wait while we create a draft task for you',
+      icon: <Loader2 className="animate-spin" size={40} />,
+    });
     toast({
       title: 'Creating a Draft Task',
       description: 'Please wait while we create a draft task for you',
@@ -105,6 +135,42 @@ export const TaskSuperVisorList = ({
   useEffect(() => {
     fetchTasks();
   }, [activeTab, searchTerm, duration, pageSize, cursor, fetchTasks]);
+  useEffect(() => {
+    const checkPrerequisites = async () => {
+      setCheckingPrerequisites(true);
+      try {
+        const [skillsResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/skills'),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
+            headers: {
+              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+              'Content-Type': 'application/json',
+            },
+          }),
+        ]);
+
+        const skillsData: SkillsSchema[] = await skillsResponse.json();
+        const categoriesData = await categoriesResponse.json();
+
+        // Check if there are any skills
+        const flattenedSkills = skillsData.flatMap(category =>
+          category.skills.map(skill => ({
+            id: skill.id,
+            name: skill.name,
+          }))
+        );
+
+        setHasSkills(flattenedSkills.length > 0);
+        setHasTaskCategories(categoriesData.length > 0);
+      } catch (error) {
+        console.error('Error checking prerequisites:', error);
+      } finally {
+        setCheckingPrerequisites(false);
+      }
+    };
+
+    checkPrerequisites();
+  }, []);
 
   const renderTaskTable = () => (
     <UserTasksTable
@@ -170,9 +236,33 @@ export const TaskSuperVisorList = ({
 
   return (
     <div className="flex flex-col gap-4">
+      {!checkingPrerequisites && (!hasSkills || !hasTaskCategories) && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Required Setup Missing</AlertTitle>
+          <AlertDescription>
+            <div className="space-y-2">
+              {!hasTaskCategories && <p>• Task categories are required to create tasks.</p>}
+              {!hasSkills && <p>• Skills are required to create tasks.</p>}
+              <p>As a Task Supervisor, you need to set these up first.</p>
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = '/settings/picklists')}
+                className="mt-2"
+              >
+                Go to Settings
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex justify-between">
         <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} />
-        <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
+        <Button
+          className="flex gap-2 font-bold text-base"
+          onClick={() => createTaskHandler()}
+          disabled={!hasSkills || !hasTaskCategories}
+        >
           <Plus className="h-5 w-5" /> Create New Task
         </Button>
         <CreateTaskContainer open={open} setOpen={setOpen} />
