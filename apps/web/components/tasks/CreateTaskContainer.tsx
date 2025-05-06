@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Roles, TaskPriorityEnum, TaskStatusEnum, NotificationType } from '@prisma/client';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, CircleX, XCircle } from 'lucide-react';
-import { parseOriginalEstimate, trimWhitespace } from '@/utils/utils';
+import { AlertCircle, CheckCircle, CircleX, XCircle } from 'lucide-react';
+import { getCookie, parseOriginalEstimate, trimWhitespace } from '@/utils/utils';
 import { updateTaskById } from '@/db/repositories/tasks/updateTaskbyId';
 import { deleteTaskById } from '@/db/repositories/tasks/deleteTaskById';
 import { useCreatedTask } from '@/store/useTaskStore';
@@ -17,6 +17,8 @@ import { SkillsSchema, UserAssigneeSchema } from '@/utils/validationSchemas';
 import { usersList } from '@/db/repositories/users/usersList';
 import { getCurrentUser, UserState } from '@/utils/user';
 import { createNotification } from '@/db/repositories/notifications/notifications';
+import { Button } from '../ui/button';
+import { COOKIE_NAME } from '@/utils/constant';
 
 export const createTaskSchema = z.object({
   title: z
@@ -64,12 +66,13 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [canAssignTasks, setCanAssignTasks] = useState(false);
+  const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
 
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema),
     mode: 'onSubmit',
     defaultValues: {
-      taskCategoryName: 'Data Entry',
+      taskCategoryName: 'General Tasks',
       statusName: TaskStatusEnum.NEW,
       priorityName: TaskPriorityEnum.NORMAL,
     },
@@ -90,11 +93,25 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
 
         setCanAssignTasks(roleCanAssignTasks);
 
-        // Fetch skills
-        const response = await fetch('/api/skills');
-        if (!response.ok) throw new Error('Failed to fetch skills');
-        const data: SkillsSchema[] = await response.json();
-        const flattenedSkills = data.flatMap(category =>
+        // Fetch both skills and task categories
+        const [skillsResponse, categoriesResponse] = await Promise.all([
+          fetch('/api/skills'),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
+            headers: {
+              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+              'Content-Type': 'application/json',
+            },
+          }),
+        ]);
+
+        if (!skillsResponse.ok) throw new Error('Failed to fetch skills');
+        if (!categoriesResponse.ok) throw new Error('Failed to fetch task categories');
+
+        const skillsData: SkillsSchema[] = await skillsResponse.json();
+        const categoriesData = await categoriesResponse.json();
+
+        // Process skills
+        const flattenedSkills = skillsData.flatMap(category =>
           category.skills.map(skill => ({
             id: skill.id,
             name: skill.name,
@@ -109,6 +126,30 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
           });
         }
         setSkills(flattenedSkills);
+
+        // Process task categories
+        setTaskCategories(categoriesData);
+        if (categoriesData.length === 0) {
+          toast({
+            variant: 'destructive',
+            title: 'No Task Categories Found',
+            description: 'You need to create at least one task category before creating tasks.',
+            icon: <AlertCircle size={40} />,
+            action: (
+              <Button
+                onClick={() => (window.location.href = '/settings/picklists')}
+                variant="outline"
+                className="mt-2"
+              >
+                Add Categories
+              </Button>
+            ),
+          });
+        } else {
+          // Set default task category if available
+          const defaultCategory = categoriesData[0]?.categoryName || 'General Tasks';
+          form.setValue('taskCategoryName', defaultCategory);
+        }
 
         // Only fetch users list if the current role can assign tasks
         if (roleCanAssignTasks) {
@@ -141,6 +182,12 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
         }
       } catch (error) {
         console.error('Error fetching dependencies:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Setup Error',
+          description: error instanceof Error ? error.message : 'Failed to load required data',
+          icon: <CircleX size={40} />,
+        });
       }
     };
 
@@ -228,12 +275,45 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
           }
         }
       } else {
-        toast({
-          title: 'Failed to create new task',
-          description: response.message,
-          variant: 'destructive',
-          icon: <CircleX size={40} />,
-        });
+        // Improved error handling with specific messages and actions
+        if (response.message?.includes('Invalid statusName, priorityName or taskCategoryName')) {
+          toast({
+            title: 'Missing Task Configuration',
+            description: (
+              <div>
+                <p>One or more required task settings don&apos;t exist in the system:</p>
+                <ul className="list-disc pl-5 mt-2">
+                  {trimmedData.taskCategoryName && (
+                    <li>Task Category: {trimmedData.taskCategoryName}</li>
+                  )}
+                  {trimmedData.statusName && <li>Status: {trimmedData.statusName}</li>}
+                  {trimmedData.priorityName && <li>Priority: {trimmedData.priorityName}</li>}
+                </ul>
+                <p className="mt-2">
+                  You need to set up these configurations before creating tasks.
+                </p>
+              </div>
+            ),
+            variant: 'destructive',
+            icon: <CircleX size={40} />,
+            action: (
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = '/settings/picklists')}
+                className="mt-2"
+              >
+                Go to Settings
+              </Button>
+            ),
+          });
+        } else {
+          toast({
+            title: 'Failed to create new task',
+            description: response.message,
+            variant: 'destructive',
+            icon: <CircleX size={40} />,
+          });
+        }
       }
     } catch (error) {
       console.error('Error updating task', error);
@@ -255,6 +335,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
           onSubmit={onSubmit}
           skills={skills}
           users={users}
+          taskCategories={taskCategories}
           canAssignTasks={canAssignTasks}
         />
       </ModalWithConfirmation>

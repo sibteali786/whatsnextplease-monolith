@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Info } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Info } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import FileUploadArea from '@/components/common/FileUploadArea';
 import { FileWithMetadataFE, UserAssigneeSchema } from '@/utils/validationSchemas';
@@ -41,6 +41,7 @@ interface CreateTaskFormProps {
   skills: { id: string; name: string }[];
   users: UserAssigneeSchema[];
   canAssignTasks?: boolean;
+  taskCategories: { id: string; categoryName: string }[];
 }
 
 export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
@@ -48,6 +49,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   skills,
   users,
   canAssignTasks = false,
+  taskCategories,
 }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
 
@@ -161,10 +163,37 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
           name="taskCategoryName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Task Category</FormLabel>
-              <FormControl>
-                <Input placeholder="Task Category" {...field} />
-              </FormControl>
+              <FormLabel>Task Category*</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+                disabled={taskCategories.length === 0}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {taskCategories.length > 0 ? (
+                    taskCategories.map(category => (
+                      <SelectItem key={category.id} value={category.categoryName}>
+                        {category.categoryName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-categories" disabled>
+                      No categories available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {taskCategories.length === 0 && (
+                <div className="mt-2 text-sm text-yellow-500 flex items-center">
+                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  You need to add task categories before creating tasks
+                </div>
+              )}
               <FormMessage />
             </FormItem>
           )}
