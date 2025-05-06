@@ -1,6 +1,6 @@
 // app/api/skills/route.ts
-import { NextResponse } from "next/server";
-import prisma from "@/db/db";
+import { NextResponse } from 'next/server';
+import prisma from '@/db/db';
 
 export async function GET() {
   try {
@@ -17,20 +17,15 @@ export async function GET() {
         },
       },
       orderBy: {
-        categoryName: "asc",
+        categoryName: 'asc',
       },
     });
 
-    // Associate the cache for this response with the 'skills:list' tag
-    const response = NextResponse.json(categories, {
-      headers: {
-        "x-next-revalidate-tag": "skills:list",
-      },
-    });
+    const response = NextResponse.json(categories);
 
     return response;
   } catch (error) {
-    console.error("Error fetching data:", error);
-    return new NextResponse("Failed to fetch skills", { status: 500 });
+    console.error('Error fetching data:', error);
+    return new NextResponse('Failed to fetch skills', { status: 500 });
   }
 }

@@ -100,6 +100,14 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
             name: skill.name,
           }))
         );
+        if (flattenedSkills.length === 0) {
+          toast({
+            variant: 'destructive',
+            title: 'No skills found',
+            description: 'Please add skills to the system before creating a task.',
+            icon: <CircleX size={40} />,
+          });
+        }
         setSkills(flattenedSkills);
 
         // Only fetch users list if the current role can assign tasks
