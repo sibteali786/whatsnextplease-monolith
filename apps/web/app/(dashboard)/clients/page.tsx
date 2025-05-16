@@ -1,13 +1,12 @@
-import { DataTable } from "./data-table";
-import Search from "@/components/Search";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { getAllClientIds } from "@/utils/clientActions";
-import getClientsList from "@/db/repositories/clients/getClients";
+import { DataTable } from './data-table';
+import Search from '@/components/Search';
+import { PlusCircle } from 'lucide-react';
+import { getAllClientIds } from '@/utils/clientActions';
+import getClientsList from '@/db/repositories/clients/getClients';
+import { LinkButton } from '@/components/ui/LinkButton';
 
 const fetchClients = async (cursor: string | null, pageSize: number) => {
-  "use server";
+  'use server';
 
   const { clients, nextCursor, totalCount } = await getClientsList({
     cursor: cursor,
@@ -23,12 +22,10 @@ export default async function ClientsPage() {
       <div className="flex flex-row justify-between items-center">
         <Search placeholder="Search titles" />
 
-        <Link href="clients/addclient">
-          <Button className="gap-2">
-            <PlusCircle />
-            Add Client
-          </Button>
-        </Link>
+        <LinkButton href="clients/addclient" prefetch={true} className="gap-2">
+          <PlusCircle />
+          Add Client
+        </LinkButton>
       </div>
 
       <DataTable fetchData={fetchClients} clientIds={clientIds} />

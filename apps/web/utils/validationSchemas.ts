@@ -133,7 +133,8 @@ export const addClientSchema = z.object({
       required_error: 'City is required',
       invalid_type_error: 'City must be a string',
     })
-    .max(100, 'City cannot exceed 100 characters'),
+    .max(100, 'City cannot exceed 100 characters')
+    .optional(),
   state: z
     .string({
       required_error: 'State is required',
