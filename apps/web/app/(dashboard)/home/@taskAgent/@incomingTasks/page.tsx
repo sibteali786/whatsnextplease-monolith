@@ -7,8 +7,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
@@ -21,6 +19,7 @@ import { useState, useEffect } from 'react';
 import { TaskTable } from '@/utils/validationSchemas';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { DurationEnum } from '@/types';
+import { LinkButton } from '@/components/ui/LinkButton';
 
 const IncomingTasksPage = () => {
   const [tasks, setTasks] = useState<TaskTable[]>([]);
@@ -147,11 +146,15 @@ const IncomingTasksPage = () => {
       </CardContent>
 
       <CardFooter className="pt-1 pb-4 flex justify-end">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/taskOfferings" className="flex items-center gap-1">
-            <span>View All Tasks</span>
-          </Link>
-        </Button>
+        <LinkButton
+          href="/taskOfferings"
+          className="flex items-center gap-1"
+          variant={'outline'}
+          size={'sm'}
+          prefetch={true}
+        >
+          <span>View All Tasks</span>
+        </LinkButton>
       </CardFooter>
     </Card>
   );

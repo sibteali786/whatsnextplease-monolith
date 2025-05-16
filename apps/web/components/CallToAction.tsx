@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { Button } from './ui/button';
 import { PlusCircle, AlertCircle, FileText } from 'lucide-react';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
+import { LinkButton } from './ui/LinkButton';
 
 const callToActionVariants = cva(
   'flex flex-col items-center justify-center gap-6 rounded-xl border p-8 text-center transition-all hover:border-primary/50 hover:shadow-md',
@@ -72,12 +72,10 @@ export function CallToAction({
       {onClick ? (
         <ActionButton />
       ) : (
-        <Button variant={buttonVariant} size="lg" className="mt-2" asChild>
-          <Link href={link}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {action}
-          </Link>
-        </Button>
+        <LinkButton href={link} variant={buttonVariant} size="lg" className="mt-2">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {action}
+        </LinkButton>
       )}
     </div>
   );

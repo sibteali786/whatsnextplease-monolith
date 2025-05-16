@@ -14,7 +14,7 @@ export interface LinkButtonProps
 
 const LinkButton = React.forwardRef<HTMLAnchorElement, LinkButtonProps>(
   ({ className, variant, size, href, external, prefetch, children, ...props }, ref) => {
-    const buttonClasses = cn(buttonVariants({ variant, size, className }));
+    const buttonClasses = cn(buttonVariants({ className, variant, size }));
 
     // External links should use regular anchor tag and open in a new tab
     if (external) {

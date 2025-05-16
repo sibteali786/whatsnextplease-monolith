@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import Link from 'next/link';
+import { LinkButton } from '@/components/ui/LinkButton';
 
 // Update interface to match actual API response
 export interface TaskAgent {
@@ -143,12 +143,9 @@ export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
     cell: ({ row }) => {
       const agentId = row.original.id;
       return (
-        <Link
-          href={`/users/${agentId}`}
-          className="text-purple-600 hover:text-purple-800 hover:underline"
-        >
+        <LinkButton href={`/users/${agentId}`} variant="default" prefetch={true} size="sm">
           View Details
-        </Link>
+        </LinkButton>
       );
     },
   },

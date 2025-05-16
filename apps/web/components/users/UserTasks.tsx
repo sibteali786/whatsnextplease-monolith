@@ -41,7 +41,13 @@ export const UserTasks = ({
       description: 'Please wait while we create a draft task for you',
       icon: <Loader2 className="animate-spin" size={40} />,
     });
-    const response = await createDraftTask(CreatorType.CLIENT, userId, role);
+    let creatorType: CreatorType;
+    if (role !== Roles.CLIENT) {
+      creatorType = CreatorType.USER;
+    } else {
+      creatorType = CreatorType.CLIENT;
+    }
+    const response = await createDraftTask(creatorType, userId, role);
     if (response.success) {
       // hides the toast when response is succeeded
       dismiss();

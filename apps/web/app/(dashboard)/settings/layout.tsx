@@ -13,8 +13,8 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { User2, Bell, CreditCard, List } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LinkButton } from '@/components/ui/LinkButton';
 
 const menuItems = [
   { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
@@ -52,10 +52,15 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                                 isActive={pathname === item.href}
                                 className="hover:bg-accent/50"
                               >
-                                <Link href={item.href} className="text-lg text-textPrimary">
+                                <LinkButton
+                                  href={item.href}
+                                  className="text-lg text-textPrimary"
+                                  variant={'ghost'}
+                                  prefetch={true}
+                                >
                                   <item.icon className="h-4 w-4" />
                                   <span>{item.label}</span>
-                                </Link>
+                                </LinkButton>
                               </SidebarMenuButton>
                             </SidebarMenuItem>
                           ))}

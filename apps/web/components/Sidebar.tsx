@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home,
@@ -18,6 +17,7 @@ import { Button } from './ui/button';
 import { signout } from '@/utils/user';
 import { Roles } from '@prisma/client';
 import { Logo } from './assets/Logo';
+import { LinkButton } from './ui/LinkButton';
 
 // Define role-based permissions for sidebar links
 const ROLE_PERMISSIONS: Record<
@@ -72,7 +72,9 @@ const Sidebar = ({ role }: { role: Roles }) => {
           {allowedLinks.map(({ path, label, Icon }) => (
             <div key={path} className={commonItemDivClasses}>
               <ActiveMenu pathname={path} activePath={pathname} />
-              <Link
+              <LinkButton
+                variant={'ghost'}
+                size={'lg'}
                 href={path}
                 className={`${commonProperties} ${
                   pathname.startsWith(path) ? 'text-purple-600' : 'text-textPrimary'
@@ -80,7 +82,7 @@ const Sidebar = ({ role }: { role: Roles }) => {
               >
                 <Icon className="w-5 h-5" />
                 <p className="w-28">{label}</p>
-              </Link>
+              </LinkButton>
             </div>
           ))}
         </nav>

@@ -7,8 +7,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
@@ -17,6 +15,7 @@ import { getCurrentUser } from '@/utils/user';
 import { Roles } from '@prisma/client';
 import { CallToAction } from '@/components/CallToAction';
 import { PlusCircle, ClipboardList } from 'lucide-react';
+import { LinkButton } from '@/components/ui/LinkButton';
 
 const RecentTasksPage = async () => {
   const user = await getCurrentUser();
@@ -90,12 +89,16 @@ const RecentTasksPage = async () => {
 
       {tasks && tasks.length > 0 && (
         <CardFooter className="pt-1 pb-4 flex justify-end">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/taskOfferings" className="flex items-center gap-1">
-              <span>View All Tasks</span>
-              <PlusCircle className="h-4 w-4 ml-1" />
-            </Link>
-          </Button>
+          <LinkButton
+            href="/taskOfferings"
+            className="flex items-center gap-1"
+            prefetch={true}
+            variant={'outline'}
+            size={'sm'}
+          >
+            <span>View All Tasks</span>
+            <PlusCircle className="h-4 w-4 ml-1" />
+          </LinkButton>
         </CardFooter>
       )}
     </Card>
