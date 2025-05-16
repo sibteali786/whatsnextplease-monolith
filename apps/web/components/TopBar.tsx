@@ -4,13 +4,13 @@ import { Input } from './ui/input';
 import { ModeToggle } from '@/utils/modeToggle';
 import { NavUser } from './common/NavUser';
 import { getCurrentUser, UserState } from '@/utils/user';
-import Link from 'next/link';
 import { Button } from './ui/button';
 import { ActiveVerticalMenu } from './common/ActiveVerticalMenu';
 import { NotificationBell } from './notifications/NotificationBell';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useEffect, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { LinkButton } from './ui/LinkButton';
 
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
@@ -44,11 +44,9 @@ const TopBar = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link href="/taskOfferings">
-                  <Button variant="ghost">
-                    <ListChecks size={24} className="text-textPrimary" />
-                  </Button>
-                </Link>
+                <LinkButton href="/taskOfferings" prefetch={true} variant={'ghost'}>
+                  <ListChecks size={24} className="text-textPrimary" />
+                </LinkButton>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Task Management</p>

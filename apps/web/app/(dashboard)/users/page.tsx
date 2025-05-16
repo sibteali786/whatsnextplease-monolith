@@ -1,13 +1,12 @@
-import Search from "@/components/Search";
-import { Button } from "@/components/ui/button";
-import { getUserIds } from "@/utils/userTools";
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
-import { DataTable } from "./data-table";
-import getUsers from "@/db/repositories/users/getUsers";
+import Search from '@/components/Search';
+import { getUserIds } from '@/utils/userTools';
+import { PlusCircle } from 'lucide-react';
+import { DataTable } from './data-table';
+import getUsers from '@/db/repositories/users/getUsers';
+import { LinkButton } from '@/components/ui/LinkButton';
 
 const fetchUsers = async (cursor: string | null, pageSize: number) => {
-  "use server";
+  'use server';
 
   const { users, nextCursor, totalCount } = await getUsers({
     cursor: cursor,
@@ -22,10 +21,10 @@ export default async function Users() {
     <div className="container mx-auto py-4">
       <div className="flex flex-row justify-between items-center">
         <Search placeholder="Search titles" />
-        <Button className="gap-2">
+        <LinkButton className="gap-2" href="users/adduser" prefetch={true}>
           <PlusCircle />
-          <Link href="users/adduser">Add User</Link>
-        </Button>
+          Add User
+        </LinkButton>
       </div>
       <DataTable fetchData={fetchUsers} userIds={userIds} />
     </div>
