@@ -1,32 +1,37 @@
-"use server";
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager";
-import { config } from "dotenv";
+'use server';
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
+import { config } from 'dotenv';
 
 config();
 
 export const getApiGatewayUrl = async (
-  secretName: string = process.env.API_GATEWAY_SECRET_NAME ?? "",
+  secretName: string = process.env.API_GATEWAY_SECRET_NAME ?? ''
 ) => {
   const client = new SecretsManagerClient({
-    region: process.env.AWS_REGION ?? "us-east-1",
+    region: process.env.AWS_REGION ?? 'us-east-1',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    },
   });
+
   let response;
   try {
     response = await client.send(
       new GetSecretValueCommand({
         SecretId: secretName,
-        VersionStage: "AWSCURRENT", // VersionStage defaults to AWSCURRENT if unspecified
-      }),
+        VersionStage: 'AWSCURRENT',
+      })
     );
   } catch (error) {
-    // For a list of exceptions thrown, see
-    // https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-    console.error("Unable to get api url", error);
+    console.error('Unable to get api url', error);
+    throw new Error(`Failed to retrieve secret: ${secretName}`);
   }
-  if (!response) return;
-  const secret = response.SecretString ? JSON.parse(response.SecretString) : {};
-  return secret.apiGateUrl ?? "";
+
+  if (!response?.SecretString) {
+    throw new Error('Secret response is empty');
+  }
+
+  const secret = JSON.parse(response.SecretString);
+  return secret.apiGateUrl ?? '';
 };
