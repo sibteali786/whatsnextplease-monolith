@@ -53,18 +53,19 @@ export default function TaskAgentsPage() {
   return (
     <div className="container mx-auto py-4">
       <div className="flex flex-col space-y-4">
+        <div>
+          <h1 className="text-xl font-bold">Task Agents</h1>
+        </div>
         <div className="flex flex-row justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold">Task Agents</h1>
+          <Tabs defaultValue="all" className="w-full" onValueChange={setStatus}>
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="available">Available</TabsTrigger>
+              <TabsTrigger value="working">Working</TabsTrigger>
+            </TabsList>
+          </Tabs>
           <Search placeholder="Search Task Agent" onSearch={handleSearch} />
         </div>
-
-        <Tabs defaultValue="all" className="w-full" onValueChange={setStatus}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="available">Available</TabsTrigger>
-            <TabsTrigger value="working">Working</TabsTrigger>
-          </TabsList>
-        </Tabs>
 
         <TaskAgentTable
           fetchData={fetchData}
