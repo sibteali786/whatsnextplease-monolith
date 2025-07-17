@@ -1,27 +1,25 @@
-"use client";
+'use client';
 
-import { DynamicBreadcrumb } from "../components/DynamicBreadcrumb";
-import { usePathname } from "next/navigation";
-import { useClientStore } from "@/store/useClientStore";
+import { DynamicBreadcrumb } from '../components/DynamicBreadcrumb';
+import { usePathname } from 'next/navigation';
+import { useUserStore } from '@/store/useUserStore';
 
 export const UserBreadCrumbs: React.FC = () => {
   const pathname = usePathname();
-  const { selectedClient } = useClientStore();
+  const { selectedUser } = useUserStore();
 
   const breadcrumbLinks = [
-    { href: "/users", label: "Users" },
-    ...(pathname === "/users/adduser"
-      ? [{ href: "/users/adduser", label: "Add User" }]
-      : []),
-    ...(selectedClient && pathname === `/users/${selectedClient?.id}`
+    { href: '/users', label: 'Users' },
+    ...(pathname === '/users/adduser' ? [{ href: '/users/adduser', label: 'Add User' }] : []),
+    ...(selectedUser && pathname === `/users/${selectedUser?.id}`
       ? [
           {
-            href: `/users/${selectedClient.id}`,
-            label: selectedClient.username,
+            href: `/users/${selectedUser.id}`,
+            label: selectedUser.name || selectedUser.id || 'User Details',
           },
         ]
       : []),
   ];
-  //TODO: the selectedClient does not persist so need to save state in local storage.
+  //TODO: the selectedUser does not persist so need to save state in local storage.
   return <DynamicBreadcrumb links={breadcrumbLinks} />;
 };

@@ -53,7 +53,7 @@ export default function TaskAgentsPage() {
   return (
     <div className="container mx-auto py-4">
       <div className="flex flex-col space-y-4">
-        <div className="flex flex-row justify-between items-center">
+        <div className="flex flex-row justify-between items-center gap-4">
           <h1 className="text-2xl font-bold">Task Agents</h1>
           <Search placeholder="Search Task Agent" onSearch={handleSearch} />
         </div>

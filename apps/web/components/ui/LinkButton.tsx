@@ -10,6 +10,7 @@ export interface LinkButtonProps
   href: string;
   external?: boolean;
   prefetch?: boolean;
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 const LinkButton = React.forwardRef<HTMLAnchorElement, LinkButtonProps>(

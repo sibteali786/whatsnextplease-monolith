@@ -18,8 +18,10 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/Pagination';
-import { taskAgentColumns } from './task-agent-columns';
+import { createTaskAgentColumns } from './task-agent-columns';
 import { TaskAgent } from '@/utils/taskAgentApi';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/store/useUserStore';
 
 interface TaskAgentTableProps {
   fetchData: (
@@ -44,7 +46,8 @@ export function TaskAgentTable({ fetchData, agentIds, status, searchTerm }: Task
   const [pageIndex, setPageIndex] = useState<number>(0);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
-
+  const router = useRouter();
+  const { setSelectedUser } = useUserStore();
   const fetchAgents = async () => {
     setLoading(true);
     try {
@@ -57,7 +60,12 @@ export function TaskAgentTable({ fetchData, agentIds, status, searchTerm }: Task
     }
     setLoading(false);
   };
-
+  // Create handler function
+  const handleUserClick = (user: { id: string; name: string }) => {
+    setSelectedUser(user);
+    router.push(`/users/${user.id}`);
+  };
+  const taskAgentColumns = createTaskAgentColumns(handleUserClick);
   useEffect(() => {
     fetchAgents();
   }, [cursor, pageSize, status, searchTerm]);

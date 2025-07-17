@@ -18,7 +18,9 @@ export interface TaskAgent {
   overdueTasksCount: number;
 }
 
-export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
+export const createTaskAgentColumns = (
+  onUserClick: (user: { id: string; name: string }) => void
+): ColumnDef<TaskAgent>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -142,8 +144,18 @@ export const taskAgentColumns: ColumnDef<TaskAgent>[] = [
     header: 'Details',
     cell: ({ row }) => {
       const agentId = row.original.id;
+      const agentName = `${row.original.firstName} ${row.original.lastName}`;
       return (
-        <LinkButton href={`/users/${agentId}`} variant="default" prefetch={true} size="sm">
+        <LinkButton
+          href={`/users/${agentId}`}
+          variant="default"
+          prefetch={true}
+          size="sm"
+          onClick={e => {
+            e.stopPropagation();
+            onUserClick({ id: agentId, name: agentName });
+          }}
+        >
           View Details
         </LinkButton>
       );
