@@ -1,4 +1,5 @@
-"use client";
+// Enhanced FileTable with error handling and retry logic
+'use client';
 
 import {
   flexRender,
@@ -6,8 +7,8 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { useEffect, useRef, useState, useTransition } from "react";
+} from '@tanstack/react-table';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   Table,
   TableBody,
@@ -15,22 +16,24 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/components/Pagination";
-import { fileColumns, FileType } from "./file-columns";
-import { useParams } from "next/navigation";
-import { Button } from "../ui/button";
-import { Loader2, UploadCloud } from "lucide-react";
-import { handleFileUpload } from "@/utils/fileHandler";
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/Pagination';
+import { fileColumns, FileType } from './file-columns';
+import { Button } from '../ui/button';
+import { Loader2, UploadCloud, AlertCircle, RefreshCw } from 'lucide-react';
+import { useCurrentUser } from '@/utils/authUtils';
+import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface FileTableProps {
   fileIds: string[] | null;
   id: string;
+  context: 'CLIENT_PROFILE' | 'USER_PROFILE';
   fetchData: (
     id: string,
     cursor: string | null,
-    pageSize: number,
+    pageSize: number
   ) => Promise<{
     files: FileType[] | undefined;
     success: boolean;
@@ -40,7 +43,7 @@ interface FileTableProps {
   }>;
 }
 
-export function FileTable({ fetchData, id }: FileTableProps) {
+export function FileTable({ fetchData, id, context }: FileTableProps) {
   const [data, setData] = useState<FileType[] | undefined>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -49,11 +52,58 @@ export function FileTable({ fetchData, id }: FileTableProps) {
   const [pageIndex, setPageIndex] = useState<number>(0);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
-  const { clientId }: { clientId: string } = useParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Transition for showing the loading state
   const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+  const hasShownErrorToast = useRef(false);
+
+  // Use the enhanced current user hook with retry logic
+  const {
+    user,
+    loading: userLoading,
+    error: userError,
+    retryCount,
+    maxRetries,
+    refetch,
+  } = useCurrentUser();
+
+  useEffect(() => {
+    if (userError && retryCount >= maxRetries && !hasShownErrorToast.current) {
+      hasShownErrorToast.current = true;
+
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'Unable to load user data. File upload is temporarily disabled.',
+        icon: <AlertCircle size={20} />,
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log('🔄 Toast retry button clicked');
+              hasShownErrorToast.current = false; // Reset flag when retrying
+              refetch();
+              toast({
+                title: 'Retrying...',
+                description: 'Attempting to reconnect.',
+              });
+            }}
+          >
+            <RefreshCw size={16} className="mr-2" />
+            Retry
+          </Button>
+        ),
+      });
+    }
+  }, [userError, retryCount, maxRetries]); // Only these dependencies
+
+  // Reset the flag when user is successfully loaded
+  useEffect(() => {
+    if (user) {
+      hasShownErrorToast.current = false;
+    }
+  }, [user]);
 
   const fetchFiles = async () => {
     setLoading(true);
@@ -64,10 +114,10 @@ export function FileTable({ fetchData, id }: FileTableProps) {
         setTotalCount(response.totalCount);
         setCursor(response.nextCursor ?? null);
       } else {
-        console.error("Failed to fetch files");
+        console.error('Failed to fetch files');
       }
     } catch (error) {
-      console.error("Error fetching files:", error);
+      console.error('Error fetching files:', error);
     }
     setLoading(false);
   };
@@ -82,24 +132,90 @@ export function FileTable({ fetchData, id }: FileTableProps) {
     }
   };
 
-  const handleFileChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const formData = new FormData();
-      formData.append("file", file);
-      startTransition(async () => {
-        try {
-          const response = await handleFileUpload(formData, clientId);
-          if (response.success) {
-            fetchFiles();
-          }
-          console.log("File uploaded successfully", response.file);
-        } catch (error) {
-          console.error("Error uploading file:", error);
-        }
+    if (!file) {
+      return;
+    }
+
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'Please ensure you are logged in to upload files.',
+        icon: <AlertCircle size={20} />,
+        action: (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetch();
+              toast({
+                title: 'Retrying...',
+                description: 'Attempting to reconnect.',
+              });
+            }}
+          >
+            <RefreshCw size={16} className="mr-2" />
+            Retry
+          </Button>
+        ),
       });
+      return;
+    }
+
+    const metadata = {
+      fileName: file.name,
+      fileSize: `${file.size / 1000}kb`,
+      uploadedBy: user.name || user.username,
+      createdAt: new Date().toISOString(),
+      role: user.role?.name || 'CLIENT',
+      userId: user.id,
+      ...(context === 'CLIENT_PROFILE' && { targetClientId: id }),
+      ...(context === 'USER_PROFILE' && { targetUserId: id }),
+      uploadContext: context,
+    };
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('metadata', JSON.stringify(metadata));
+
+    startTransition(async () => {
+      try {
+        const response = await fetch('/api/uploadAndSaveFile', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          fetchFiles();
+          toast({
+            title: 'Upload Successful',
+            description: `${file.name} has been uploaded successfully.`,
+          });
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: result.message || 'Failed to upload file.',
+            icon: <AlertCircle size={20} />,
+          });
+        }
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Upload Error',
+          description: 'An error occurred while uploading the file.',
+          icon: <AlertCircle size={20} />,
+        });
+      }
+    });
+
+    // Clear the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -124,6 +240,9 @@ export function FileTable({ fetchData, id }: FileTableProps) {
     },
   });
 
+  // Show upload disabled alert when user failed to load
+  const showUploadDisabledAlert = userError && retryCount >= maxRetries;
+
   return (
     <>
       <div className="space-y-2 rounded-md border">
@@ -131,39 +250,67 @@ export function FileTable({ fetchData, id }: FileTableProps) {
           <h2 className="text-lg">Files Uploaded</h2>
           <div className="flex items-center gap-3">
             <Button variant="outline">Download All</Button>
-            <Button
-              variant="default"
-              className="gap-2"
-              onClick={handleUploadClick}
-              disabled={isPending}
-            >
-              {isPending ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <UploadCloud size={20} />
-              )}
-              {isPending ? "Uploading..." : "Upload"}
-            </Button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-            />
+
+            {/* Show upload button only when user is available */}
+            {user && !userLoading && !showUploadDisabledAlert ? (
+              <Button
+                variant="default"
+                className="gap-2"
+                onClick={handleUploadClick}
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <UploadCloud size={20} />
+                )}
+                {isPending ? 'Uploading...' : 'Upload'}
+              </Button>
+            ) : userLoading ? (
+              <Skeleton className="h-10 w-24" />
+            ) : null}
+
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
           </div>
         </div>
+
+        {/* Show alert when upload is disabled due to user auth issues */}
+        {showUploadDisabledAlert && (
+          <div className="px-4 pb-2">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription className="flex items-center justify-between">
+                <span>File upload is temporarily disabled due to authentication issues.</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    refetch();
+                    toast({
+                      title: 'Retrying...',
+                      description: 'Attempting to reconnect.',
+                    });
+                  }}
+                  className="ml-2"
+                >
+                  <RefreshCw size={16} className="mr-2" />
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         <Table className="p-4">
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map(header => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -177,14 +324,11 @@ export function FileTable({ fetchData, id }: FileTableProps) {
                 </TableCell>
               </TableRow>
             ) : data && data.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map(row => (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map(cell => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -201,7 +345,7 @@ export function FileTable({ fetchData, id }: FileTableProps) {
       </div>
       <div className="flex flex-row my-2">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <Pagination

@@ -539,14 +539,27 @@ export const SkillsSchema = z.object({
 
 export type SkillsSchema = z.infer<typeof SkillsSchema>;
 // Now we just have userId (regardless of role)
+
+export enum UploadContextType {
+  TASK = 'TASK',
+  CLIENT_PROFILE = 'CLIENT_PROFILE',
+  USER_PROFILE = 'USER_PROFILE',
+}
 export const FileMetadataSchema = z.object({
-  fileName: z.string().min(1, 'fileName is required'),
-  fileSize: z.string().min(1, 'fileSize is required'),
-  uploadedBy: z.string().min(1, 'uploadedBy is required'),
-  role: z.nativeEnum(Roles),
-  createdAt: z.coerce.date(),
-  userId: z.string().uuid('userId must be a valid UUID'),
-  taskId: z.string().uuid('taskId must be a valid UUID'),
+  fileName: z.string(),
+  fileSize: z.string(),
+  uploadedBy: z.string(),
+  createdAt: z.string(),
+  role: z.string(),
+  userId: z.string(), // The uploader's ID
+
+  // Context-specific fields (one of these should be present)
+  taskId: z.string().optional(), // For task files
+  targetClientId: z.string().optional(), // For client profile files
+  targetUserId: z.string().optional(), // For user profile files
+
+  // Upload context type
+  uploadContext: z.nativeEnum(UploadContextType),
 });
 
 export type FileMetadataInput = z.infer<typeof FileMetadataSchema>;

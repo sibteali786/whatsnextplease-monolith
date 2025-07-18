@@ -1,23 +1,19 @@
-import { getFilesByClientId } from "@/db/repositories/clients/getFilesByClientId";
-import { FileTable } from "./file-table";
-import { getFileIdsByClientId } from "@/utils/clientActions";
+import { getFilesByClientId } from '@/db/repositories/clients/getFilesByClientId';
+import { FileTable } from './file-table';
+import { getFileIdsByClientId } from '@/utils/clientActions';
+import { UploadContextType } from '@/utils/validationSchemas';
 
-const fetchFiles = async (
-  id: string,
-  cursor: string | null,
-  pageSize: number,
-) => {
-  "use server";
-  const { files, success, hasNextCursor, nextCursor, totalCount } =
-    await getFilesByClientId(id, cursor, pageSize);
+const fetchFiles = async (id: string, cursor: string | null, pageSize: number) => {
+  'use server';
+  const { files, success, hasNextCursor, nextCursor, totalCount } = await getFilesByClientId(
+    id,
+    cursor,
+    pageSize
+  );
   return { files, success, hasNextCursor, nextCursor, totalCount };
 };
 
-export default async function ClientFileList({
-  clientId,
-}: {
-  clientId: string;
-}) {
+export default async function ClientFileList({ clientId }: { clientId: string }) {
   const fileIds = await getFileIdsByClientId(clientId);
   return (
     <div>
@@ -25,6 +21,7 @@ export default async function ClientFileList({
         id={clientId}
         fetchData={fetchFiles}
         fileIds={fileIds.fileIds ?? []}
+        context={UploadContextType.CLIENT_PROFILE}
       />
     </div>
   );

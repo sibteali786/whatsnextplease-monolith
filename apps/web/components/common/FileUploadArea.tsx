@@ -7,7 +7,7 @@ import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CircleCheckBig, CircleX } from 'lucide-react';
 import logger from '@/utils/logger';
-import { FileWithMetadataFE } from '@/utils/validationSchemas';
+import { FileWithMetadataFE, UploadContextType } from '@/utils/validationSchemas';
 import { deleteFileFromS3 } from '@/db/repositories/files/deleteFileFromS3';
 import { useCreatedTask } from '@/store/useTaskStore';
 import { getCurrentUser, UserState } from '@/utils/user';
@@ -127,6 +127,7 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
           role: user?.role?.name,
           userId: user?.id,
           taskId: taskId,
+          uploadContext: UploadContextType.TASK,
         };
 
         // Create FormData
