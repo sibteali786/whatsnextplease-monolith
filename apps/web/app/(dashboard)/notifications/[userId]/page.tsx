@@ -7,7 +7,6 @@ import { Bell, Loader2, XCircle } from 'lucide-react';
 export default function Notifications() {
   const { notifications, isLoading, error, markAsRead, markingRead, markAllAsRead } =
     useNotifications();
-  console.log('Rendering Notifications page with context:', useNotifications());
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">

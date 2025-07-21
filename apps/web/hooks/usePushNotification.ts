@@ -40,6 +40,7 @@ export const usePushNotification = () => {
   const subscribeToNotifications = async () => {
     try {
       const permission = await Notification.requestPermission();
+      console.log('Permission ', permission);
       if (permission !== 'granted') {
         throw new Error('Permission not granted for notifications');
       }
