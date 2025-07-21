@@ -19,6 +19,7 @@
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npm run db:seed:script",
     "db:seed:script": "tsx seed.ts",
+	"db:seed:placeholder": "tsx placeholder-seed.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",

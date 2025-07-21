@@ -9,7 +9,7 @@ import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, CircleX, Loader2, Plus } from 'lucide-react';
 import { taskIdsByType } from '@/db/repositories/tasks/taskIdsByType';
-import { SkillsSchema, TaskTable } from '@/utils/validationSchemas';
+import { TaskTable } from '@/utils/validationSchemas';
 import { Button } from '../ui/button';
 import { CreateTaskContainer } from './CreateTaskContainer';
 import { ToastAction } from '../ui/toast';
@@ -140,7 +140,12 @@ export const TaskSuperVisorList = ({
       setCheckingPrerequisites(true);
       try {
         const [skillsResponse, categoriesResponse] = await Promise.all([
-          fetch('/api/skills'),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
+            headers: {
+              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+              'Content-Type': 'application/json',
+            },
+          }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
             headers: {
               Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
@@ -149,18 +154,12 @@ export const TaskSuperVisorList = ({
           }),
         ]);
 
-        const skillsData: SkillsSchema[] = await skillsResponse.json();
+        const skillsData = await skillsResponse.json();
         const categoriesData = await categoriesResponse.json();
 
         // Check if there are any skills
-        const flattenedSkills = skillsData.flatMap(category =>
-          category.skills.map(skill => ({
-            id: skill.id,
-            name: skill.name,
-          }))
-        );
 
-        setHasSkills(flattenedSkills.length > 0);
+        setHasSkills(skillsData.length > 0);
         setHasTaskCategories(categoriesData.length > 0);
       } catch (error) {
         console.error('Error checking prerequisites:', error);

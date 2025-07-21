@@ -13,7 +13,7 @@ import { useCreatedTask } from '@/store/useTaskStore';
 import { CreateTaskForm } from './CreateTaskForm';
 import { useEffect, useState } from 'react';
 import ModalWithConfirmation from '../common/ModalWithConfirmation';
-import { SkillsSchema, UserAssigneeSchema } from '@/utils/validationSchemas';
+import { UserAssigneeSchema } from '@/utils/validationSchemas';
 import { usersList } from '@/db/repositories/users/usersList';
 import { getCurrentUser, UserState } from '@/utils/user';
 import { createNotification } from '@/db/repositories/notifications/notifications';
@@ -97,7 +97,12 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
 
         // Fetch both skills and task categories
         const [skillsResponse, categoriesResponse] = await Promise.all([
-          fetch('/api/skills'),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
+            headers: {
+              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+              'Content-Type': 'application/json',
+            },
+          }),
           fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
             headers: {
               Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
@@ -109,17 +114,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
         if (!skillsResponse.ok) throw new Error('Failed to fetch skills');
         if (!categoriesResponse.ok) throw new Error('Failed to fetch task categories');
 
-        const skillsData: SkillsSchema[] = await skillsResponse.json();
+        const skillsData = await skillsResponse.json();
         const categoriesData = await categoriesResponse.json();
-
-        // Process skills
-        const flattenedSkills = skillsData.flatMap(category =>
-          category.skills.map(skill => ({
-            id: skill.id,
-            name: skill.name,
-          }))
-        );
-        if (flattenedSkills.length === 0) {
+        if (skillsData.length === 0) {
           toast({
             variant: 'destructive',
             title: 'No skills found',
@@ -127,7 +124,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
             icon: <CircleX size={40} />,
           });
         }
-        setSkills(flattenedSkills);
+        setSkills(skillsData);
 
         // Process task categories
         setTaskCategories(categoriesData);

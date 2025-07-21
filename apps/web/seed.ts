@@ -4,12 +4,55 @@ import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 async function main() {
   console.log('Starting essential data seeding...');
 
-  // Only clear the necessary tables to avoid foreign key issues
-  console.log('Clearing existing role data...');
-  await prisma.role.deleteMany({});
+  // Clear all data in the correct order to handle foreign key constraints
+  console.log('🗑️  Clearing all existing data...');
+
+  try {
+    // Delete in reverse dependency order to avoid foreign key constraint errors
+    console.log('Deleting dependent data...');
+
+    // Delete junction tables and dependent records first
+    await prisma.pushSubscription.deleteMany({});
+    await prisma.taskHistory.deleteMany({});
+    await prisma.auditLog.deleteMany({});
+    await prisma.notification.deleteMany({});
+    await prisma.userSchedule.deleteMany({});
+    await prisma.messageParticipant.deleteMany({});
+    await prisma.message.deleteMany({});
+    await prisma.messageThread.deleteMany({});
+    await prisma.invoice.deleteMany({});
+    await prisma.taskFile.deleteMany({});
+    await prisma.taskSkill.deleteMany({});
+    await prisma.task.deleteMany({});
+    await prisma.file.deleteMany({});
+    await prisma.fileCategory.deleteMany({});
+    await prisma.rate.deleteMany({});
+    await prisma.taskOffering.deleteMany({});
+    await prisma.taskCategory.deleteMany({});
+    await prisma.clientBilling.deleteMany({});
+    await prisma.client.deleteMany({});
+    await prisma.userTerritory.deleteMany({});
+    await prisma.userSkill.deleteMany({});
+    await prisma.user.deleteMany({});
+    await prisma.territory.deleteMany({});
+    await prisma.district.deleteMany({});
+    await prisma.skill.deleteMany({});
+    await prisma.skillCategory.deleteMany({});
+    await prisma.picklist.deleteMany({});
+
+    // Delete core lookup tables last
+    await prisma.role.deleteMany({});
+    await prisma.taskPriority.deleteMany({});
+    await prisma.taskStatus.deleteMany({});
+
+    console.log('✅ All existing data cleared successfully');
+  } catch (error) {
+    console.error('❌ Error clearing data:', error);
+    // Continue with seeding even if clearing fails (in case DB is empty)
+  }
 
   // Step 1: Seed Roles - these are critical for user creation
-  console.log('Seeding roles...');
+  console.log('🎭 Seeding roles...');
   const rolesData = [
     { name: Roles.SUPER_USER, description: 'Has rights to all modules' },
     { name: Roles.DISTRICT_MANAGER, description: 'Oversees sales in specific areas' },
@@ -24,11 +67,11 @@ async function main() {
     await prisma.role.create({
       data: roleData,
     });
-    console.log(`Role created: ${roleData.name}`);
+    console.log(`✓ Role created: ${roleData.name}`);
   }
 
   // Step 2: Seed Task Priorities - required for task creation
-  console.log('Seeding task priorities...');
+  console.log('⚡ Seeding task priorities...');
   const taskPrioritiesData = [
     { priorityName: TaskPriorityEnum.URGENT },
     { priorityName: TaskPriorityEnum.NORMAL },
@@ -36,20 +79,14 @@ async function main() {
   ];
 
   for (const priorityData of taskPrioritiesData) {
-    try {
-      await prisma.taskPriority.create({
-        data: priorityData,
-      });
-      console.log(`Task priority created: ${priorityData.priorityName}`);
-    } catch (error) {
-      console.log(
-        `Task priority ${priorityData.priorityName} already exists or couldn't be created`
-      );
-    }
+    await prisma.taskPriority.create({
+      data: priorityData,
+    });
+    console.log(`✓ Task priority created: ${priorityData.priorityName}`);
   }
 
   // Step 3: Seed Task Statuses - required for task creation
-  console.log('Seeding task statuses...');
+  console.log('📊 Seeding task statuses...');
   const taskStatusesData = [
     { statusName: TaskStatusEnum.NEW },
     { statusName: TaskStatusEnum.IN_PROGRESS },
@@ -58,22 +95,24 @@ async function main() {
   ];
 
   for (const statusData of taskStatusesData) {
-    try {
-      await prisma.taskStatus.create({
-        data: statusData,
-      });
-      console.log(`Task status created: ${statusData.statusName}`);
-    } catch (error) {
-      console.log(`Task status ${statusData.statusName} already exists or couldn't be created`);
-    }
+    await prisma.taskStatus.create({
+      data: statusData,
+    });
+    console.log(`✓ Task status created: ${statusData.statusName}`);
   }
 
-  console.log('Essential data seeding completed.');
+  console.log('🎉 Essential data seeding completed successfully!');
+  console.log(`
+📋 Summary:
+- ${rolesData.length} roles created
+- ${taskPrioritiesData.length} task priorities created  
+- ${taskStatusesData.length} task statuses created
+  `);
 }
 
 main()
   .catch(e => {
-    console.error('Error during seeding:', e);
+    console.error('❌ Error during essential data seeding:', e);
     process.exit(1);
   })
   .finally(async () => {
