@@ -22,8 +22,7 @@ import { Tooltip } from '@radix-ui/react-tooltip';
 import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 import { FileAttachmentsList } from '../files/FileAttachmentList';
 import { useToast } from '@/hooks/use-toast';
-import { getMimeType, sanitizeFileName } from '@/utils/fileUtils';
-import { getCurrentUser, UserState } from '@/utils/user';
+import { fileAPI } from '@/utils/fileAPI';
 
 export default function TaskDetailsDialog({
   open,
@@ -34,7 +33,6 @@ export default function TaskDetailsDialog({
   taskId: string;
   setOpen: (open: boolean) => void;
 }) {
-  const [user, setUser] = useState<UserState>();
   const [taskDetails, setTaskDetails] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState<TaskFile[]>([]);
@@ -44,10 +42,6 @@ export default function TaskDetailsDialog({
   useEffect(() => {
     async function fetchTaskDetails() {
       if (!taskId || !open) return;
-      const user = await getCurrentUser();
-      if (user) {
-        setUser(user);
-      }
       try {
         setLoading(true);
         const { success, task } = await getTaskById(taskId);
@@ -82,42 +76,38 @@ export default function TaskDetailsDialog({
   const [, startTransition] = useTransition();
   const handleDownload = async (file: FileSchemaType) => {
     setLoadingFileIds(prev => [...prev, file.id]);
-    const fileKey = `tasks/${taskDetails?.id}/users/${user?.id}/${sanitizeFileName(file.fileName)}`;
-    const fileType = getMimeType(file.fileName);
     startTransition(async () => {
       try {
-        const response = await fetch('/api/file/downloadFileByName', {
-          method: 'POST',
-          body: JSON.stringify({ fileKey, fileType }),
-        });
+        const result = await fileAPI.generateDownloadUrl(file.id);
 
-        const json = await response.json();
-
-        if (json.success) {
-          // Create temporary anchor element to trigger download
+        if (result.success && 'downloadUrl' in result && 'fileName' in result) {
           const downloadLink = document.createElement('a');
-          downloadLink.href = json.downloadUrl;
-          downloadLink.setAttribute('download', file.fileName);
+          downloadLink.href = result.downloadUrl as string;
+          downloadLink.setAttribute(
+            'download',
+            (result.fileName as string) || (file.fileName as string)
+          );
           document.body.appendChild(downloadLink);
           downloadLink.click();
           document.body.removeChild(downloadLink);
         } else {
           toast({
             title: 'Download Failed',
-            description: json.message,
+            description: result.error || result.message || 'Failed to generate download URL',
             variant: 'destructive',
             icon: <CircleX size={40} />,
           });
         }
       } catch (error) {
-        if (error instanceof Error) {
-          toast({
-            title: 'Error',
-            description: error.message || 'An error occurred while downloading the file.',
-            variant: 'destructive',
-            icon: <CircleX size={40} />,
-          });
-        }
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error
+              ? error.message
+              : 'An error occurred while downloading the file.',
+          variant: 'destructive',
+          icon: <CircleX size={40} />,
+        });
       } finally {
         setLoadingFileIds(prev => prev.filter(id => id !== file.id));
       }

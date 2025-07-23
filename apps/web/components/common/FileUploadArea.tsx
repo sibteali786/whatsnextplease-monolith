@@ -1,4 +1,4 @@
-// FileUploadArea.tsx
+// FileUploadArea.tsx - Updated to use backend API
 import { useEffect, useState } from 'react';
 import FilePreview from './FilePreview';
 import { Input } from '../ui/input';
@@ -8,15 +8,13 @@ import { useToast } from '@/hooks/use-toast';
 import { CircleCheckBig, CircleX } from 'lucide-react';
 import logger from '@/utils/logger';
 import { FileWithMetadataFE, UploadContextType } from '@/utils/validationSchemas';
-import { deleteFileFromS3 } from '@/db/repositories/files/deleteFileFromS3';
 import { useCreatedTask } from '@/store/useTaskStore';
 import { getCurrentUser, UserState } from '@/utils/user';
-import { ALLOWED_FILE_TYPES, sanitizeFileName } from '@/utils/fileUtils';
+import { ALLOWED_FILE_TYPES } from '@/utils/fileUtils';
+import { fileAPI } from '@/utils/fileAPI';
 
 const MAX_CONCURRENT_UPLOADS = 3;
-
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
 const MAX_RETRY_ATTEMPTS = 2;
 const RETRY_DELAY = 1000; // 1 second
 
@@ -26,6 +24,7 @@ interface FileUploadAreaProps {
 
 export interface FileState extends FileWithMetadataFE {
   isDeleting?: boolean;
+  fileId?: string; // Add fileId for tracking uploaded files
 }
 
 const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
@@ -106,6 +105,7 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
       inProgressUploads.add(nextFile);
 
       try {
+        // Progress simulation
         const interval = setInterval(() => {
           setFiles(prevFiles =>
             prevFiles.map(f => {
@@ -135,21 +135,22 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
         formData.append('file', nextFile.file);
         formData.append('metadata', JSON.stringify(payload));
 
-        const response = await fetch('/api/uploadAndSaveFile', {
-          method: 'POST',
-          body: formData,
-        });
+        // Use backend API instead of NextJS route
+        const result = await fileAPI.uploadFile(formData);
 
         clearInterval(interval);
 
-        const json = await response.json();
-
-        if (response.ok && json.success) {
-          // Update file progress to 100%
+        if (result.success) {
+          // Update file progress to 100% and store fileId for future operations
           setFiles(prevFiles =>
             prevFiles.map(f =>
               f.file === nextFile.file
-                ? { ...f, progress: 100, uploadTime: json.data.uploadTime }
+                ? {
+                    ...f,
+                    progress: 100,
+                    uploadTime: new Date(result.data?.uploadTime || new Date().toISOString()),
+                    fileId: result.data?.fileId, // Store backend file ID
+                  }
                 : f
             )
           );
@@ -160,10 +161,11 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
             icon: <CircleCheckBig size={40} />,
           });
         } else {
+          // Remove failed upload from UI
           setFiles(prevFiles => prevFiles.filter(f => f.file !== nextFile.file));
           toast({
             title: 'File Upload Failed',
-            description: `The file "${nextFile.file.name}" failed to upload. ${json.message ?? ''}`,
+            description: `The file "${nextFile.file.name}" failed to upload. ${result.error || result.message || ''}`,
             variant: 'destructive',
             icon: <CircleX size={40} />,
           });
@@ -192,15 +194,25 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
       return;
     }
 
-    const file = files[index].file;
+    const fileState = files[index];
+    const { file, fileId } = fileState;
+
+    // If file hasn't been uploaded yet (no fileId), just remove from UI
+    if (!fileId) {
+      const updatedFiles = files.filter((_, i) => i !== index);
+      setFiles(updatedFiles);
+      onFilesChange(updatedFiles);
+      return;
+    }
 
     try {
       // Show loading state
       setFiles(prevFiles =>
         prevFiles.map((f, i) => (i === index ? { ...f, isDeleting: true } : f))
       );
-      const s3FileKey = `tasks/${taskId}/users/${user?.id}/${sanitizeFileName(file.name)}`;
-      const result = await deleteFileFromS3(s3FileKey);
+
+      // Use backend API to delete file
+      const result = await fileAPI.deleteFile(fileId);
 
       if (result.success) {
         const updatedFiles = files.filter((_, i) => i !== index);
@@ -220,7 +232,7 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
         logger.error(`Failed to delete ${file.name} after ${MAX_RETRY_ATTEMPTS} attempts`);
         toast({
           title: 'File Deletion Failed',
-          description: `The file "${file.name}" failed to delete after multiple attempts.`,
+          description: `The file "${file.name}" failed to delete after multiple attempts. ${result.error || ''}`,
           variant: 'destructive',
           icon: <CircleX size={40} />,
         });
@@ -231,6 +243,7 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
         title: 'Error',
         description: 'An unexpected error occurred while deleting the file.',
         variant: 'destructive',
+        icon: <CircleX size={40} />,
       });
     } finally {
       // Clear loading state if operation failed
@@ -246,7 +259,6 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
         onDragOver={e => e.preventDefault()}
         onDrop={handleDrop}
         onKeyDown={e => {
-          // Allow keyboard users to trigger file upload dialog with Enter key
           if (e.key === 'Enter') {
             document.getElementById('file-input')?.click();
           }
@@ -274,7 +286,11 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
       {files.length > 0 && (
         <div className="flex flex-wrap gap-4">
           {files.map((fileData, index) => (
-            <FilePreview key={index} fileData={fileData} onRemove={() => removeFile(index)} />
+            <FilePreview
+              key={`${fileData.file.name}-${fileData.uploadTime?.getTime() || index}`}
+              fileData={fileData}
+              onRemove={() => removeFile(index)}
+            />
           ))}
         </div>
       )}
@@ -283,5 +299,3 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
 };
 
 export default FileUploadArea;
-
-// FIXME: Calling remove readily / almost simultaenously causues isse that later file is not removed ( from UI )but from backend its removed fix it

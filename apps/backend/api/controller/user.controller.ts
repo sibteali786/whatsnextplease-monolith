@@ -41,7 +41,7 @@ export class UserController {
             // Extract the file key from the CloudFront URL
             oldFileKey = currentUser.avatarUrl.split('/').slice(3).join('/');
             // Check if file exists before trying to delete it
-            const fileExists = await this.s3Service.doesFileExists(oldFileKey);
+            const fileExists = await this.s3Service.doesFileExist(oldFileKey);
             if (!fileExists) {
               logger.warn(`Old profile picture not found in S3: ${oldFileKey}`);
               oldFileKey = null; // Reset to avoid deletion attempt
@@ -61,20 +61,22 @@ export class UserController {
         }
       }
       // Get presigned URL and upload
-      const presignedUrl = await this.s3Service.generatePresignedUrl(fileKey, file.mimetype);
+      const presignedUrl = await this.s3Service.generatePresignedUploadUrl(fileKey, file.mimetype);
 
-      // Upload to S3
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.mimetype },
-        body: file.buffer,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new FileUploadError('Failed to upload file to S3', {
-          statusCode: uploadResponse.status,
-          fileName: file.originalname,
+      if (presignedUrl && presignedUrl?.uploadUrl) {
+        // Upload to S3
+        const uploadResponse = await fetch(presignedUrl.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.mimetype },
+          body: file.buffer,
         });
+
+        if (!uploadResponse.ok) {
+          throw new FileUploadError('Failed to upload file to S3', {
+            statusCode: uploadResponse.status,
+            fileName: file.originalname,
+          });
+        }
       }
 
       // Generate profile URL

@@ -42,19 +42,21 @@ export class ClientController {
       if (currentClient?.avatarUrl) {
         oldFileKey = currentClient.avatarUrl.split('/').slice(3).join('/');
       }
-      const preSignedURl = await this.s3Service.generatePresignedUrl(fileKey, file.mimetype);
-      const s3UploadedFileResponse = await fetch(preSignedURl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file.mimetype,
-        },
-        body: file.buffer,
-      });
-      if (!s3UploadedFileResponse.ok) {
-        throw new FileUploadError('Failed to upload file to S3', {
-          statusCode: s3UploadedFileResponse.status,
-          fileName: file.originalname,
+      const preSignedURl = await this.s3Service.generatePresignedUploadUrl(fileKey, file.mimetype);
+      if (preSignedURl && preSignedURl.uploadUrl) {
+        const s3UploadedFileResponse = await fetch(preSignedURl?.uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.mimetype,
+          },
+          body: file.buffer,
         });
+        if (!s3UploadedFileResponse.ok) {
+          throw new FileUploadError('Failed to upload file to S3', {
+            statusCode: s3UploadedFileResponse.status,
+            fileName: file.originalname,
+          });
+        }
       }
 
       const profileUrl = this.s3Service.generateCloudFrontUrl(fileKey);

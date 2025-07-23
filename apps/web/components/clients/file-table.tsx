@@ -25,6 +25,7 @@ import { Loader2, UploadCloud, AlertCircle, RefreshCw } from 'lucide-react';
 import { useCurrentUser } from '@/utils/authUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { fileAPI } from '@/utils/fileAPI';
 
 interface FileTableProps {
   fileIds: string[] | null;
@@ -182,13 +183,8 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
 
     startTransition(async () => {
       try {
-        const response = await fetch('/api/uploadAndSaveFile', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const result = await response.json();
-        if (result.success) {
+        const response = await fileAPI.uploadFile(formData);
+        if (response.success) {
           fetchFiles();
           toast({
             title: 'Upload Successful',
@@ -198,7 +194,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           toast({
             variant: 'destructive',
             title: 'Upload Failed',
-            description: result.message || 'Failed to upload file.',
+            description: response.error || response.message || 'Failed to upload file.',
             icon: <AlertCircle size={20} />,
           });
         }

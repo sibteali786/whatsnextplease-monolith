@@ -9,6 +9,7 @@ import { taskCategoryRoutes } from './routes/taskCategory.routes';
 import { skillRoutes } from './routes/skill.routes';
 import { taskAgentRoutes } from './routes/taskAgent.routes';
 import { entityRoutes } from './routes/entity.routes';
+import { fileRoutes } from './routes/file.routes';
 
 export async function createServer() {
   const app = express();
@@ -26,6 +27,7 @@ export async function createServer() {
   app.use('/skillCategory', skillCategoryRoutes);
   app.use('/taskCategory', taskCategoryRoutes);
   app.use('/taskAgents', taskAgentRoutes);
+  app.use('/files', fileRoutes);
   // Health check route
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });

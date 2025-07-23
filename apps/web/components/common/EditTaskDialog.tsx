@@ -47,6 +47,7 @@ import { usersList } from '@/db/repositories/users/usersList';
 import { FileSchemaType, TaskFile, TaskTable, UserAssigneeSchema } from '@/utils/validationSchemas';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { FileAttachmentsList } from '../files/FileAttachmentList';
+import { fileAPI } from '@/utils/fileAPI'; // Import the API client
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -173,19 +174,15 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
   }, [task, open, form]);
 
   const [, startTransition] = useTransition();
+
+  // Updated delete handler using backend API
   const deleteFileHandler = async (fileId: string) => {
     setLoadingFileIds(prev => [...prev, fileId]);
     startTransition(async () => {
       try {
-        const response = await fetch('/api/file/deleteFileById', {
-          method: 'DELETE',
-          body: JSON.stringify({ id: fileId }),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        const data = await response.json();
-        if (data.success) {
+        const result = await fileAPI.deleteFile(fileId);
+
+        if (result.success) {
           // Update local state after successful deletion
           setFiles(prevFiles => prevFiles.filter(file => file.file.id !== fileId));
           toast({
@@ -197,63 +194,59 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
         } else {
           toast({
             title: 'Failed to delete file',
-            description: data.message,
+            description: result.error || result.message || 'Unknown error',
             variant: 'destructive',
             icon: <CircleX size={40} />,
           });
         }
       } catch (error) {
         console.error('Error deleting file', error);
-        if (error instanceof Error) {
-          toast({
-            title: 'Error',
-            description: error.message || 'Failed to delete file',
-            variant: 'destructive',
-            icon: <CircleX size={40} />,
-          });
-        }
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to delete file',
+          variant: 'destructive',
+          icon: <CircleX size={40} />,
+        });
       } finally {
         setLoadingFileIds(prev => prev.filter(id => id !== fileId));
       }
     });
   };
 
+  // Updated download handler using backend API
   const handleDownload = async (file: FileSchemaType) => {
     setLoadingFileIds(prev => [...prev, file.id]);
     startTransition(async () => {
       try {
-        const response = await fetch('/api/file/downloadFileByName', {
-          method: 'POST',
-          body: JSON.stringify({ file }),
-        });
+        const result = await fileAPI.generateDownloadUrl(file.id);
 
-        const json = await response.json();
-
-        if (json.success) {
+        if (result.success && 'downloadUrl' in result && 'fileName' in result) {
           // Create temporary anchor element to trigger download
           const link = document.createElement('a');
-          link.href = json.downloadUrl;
-          link.setAttribute('download', file.fileName);
+          link.href = result.downloadUrl as string;
+          link.setAttribute('download', (result.fileName as string) || (file.fileName as string));
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
         } else {
           toast({
             title: 'Download Failed',
-            description: json.message,
+            description: result.error || result.message || 'Failed to generate download URL',
             variant: 'destructive',
             icon: <CircleX size={40} />,
           });
         }
       } catch (error) {
-        if (error instanceof Error) {
-          toast({
-            title: 'Error',
-            description: error.message || 'An error occurred while downloading the file.',
-            variant: 'destructive',
-            icon: <CircleX size={40} />,
-          });
-        }
+        console.error('Error downloading file', error);
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error
+              ? error.message
+              : 'An error occurred while downloading the file.',
+          variant: 'destructive',
+          icon: <CircleX size={40} />,
+        });
       } finally {
         setLoadingFileIds(prev => prev.filter(id => id !== file.id));
       }

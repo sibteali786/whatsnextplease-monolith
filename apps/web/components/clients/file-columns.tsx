@@ -1,14 +1,9 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { ColumnDef, Row } from "@tanstack/react-table";
-import {
-  ArrowUpDown,
-  CircleCheckBig,
-  FileIcon,
-  MoreHorizontal,
-} from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from '@/components/ui/button';
+import { ColumnDef, Row } from '@tanstack/react-table';
+import { ArrowUpDown, CircleCheckBig, FileIcon, MoreHorizontal } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useTransition } from "react";
-import { deleteFileById } from "@/db/repositories/files/deleteFilebyId";
+} from '@/components/ui/dropdown-menu';
+import { useTransition } from 'react';
 export type FileType = {
   id: string;
   fileName: string;
@@ -27,26 +21,26 @@ export type FileType = {
   lastUpdated: Date;
   uploadedBy: string;
 };
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from '@/hooks/use-toast';
+import { fileAPI } from '@/utils/fileAPI';
 
 // Define columns for the Files table
 export const fileColumns: ColumnDef<FileType>[] = [
   {
-    id: "select",
+    id: 'select',
     header: ({ table }) => (
       <Checkbox
         checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
+          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')
         }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        onCheckedChange={value => row.toggleSelected(!!value)}
         aria-label="Select row"
       />
     ),
@@ -54,18 +48,15 @@ export const fileColumns: ColumnDef<FileType>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "fileName",
+    accessorKey: 'fileName',
     header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
+      <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
         File name
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }) => {
-      const fileName: string = row.getValue("fileName");
+      const fileName: string = row.getValue('fileName');
       return (
         <div className="gap-1 flex flex-row items-center">
           <Button
@@ -81,31 +72,31 @@ export const fileColumns: ColumnDef<FileType>[] = [
     },
   },
   {
-    accessorKey: "fileSize",
-    header: "File size",
+    accessorKey: 'fileSize',
+    header: 'File size',
   },
   {
-    accessorKey: "dateUploaded",
-    header: "Date uploaded",
+    accessorKey: 'dateUploaded',
+    header: 'Date uploaded',
     cell: ({ row }) => {
-      const date: Date = row.getValue("dateUploaded");
-      return date ? new Date(date).toLocaleDateString() : "N/A";
+      const date: Date = row.getValue('dateUploaded');
+      return date ? new Date(date).toLocaleDateString() : 'N/A';
     },
   },
   {
-    accessorKey: "lastUpdated",
-    header: "Last updated",
+    accessorKey: 'lastUpdated',
+    header: 'Last updated',
     cell: ({ row }) => {
-      const date: Date = row.getValue("lastUpdated");
-      return date ? new Date(date).toLocaleDateString() : "N/A";
+      const date: Date = row.getValue('lastUpdated');
+      return date ? new Date(date).toLocaleDateString() : 'N/A';
     },
   },
   {
-    accessorKey: "uploadedBy",
-    header: "Uploaded by",
+    accessorKey: 'uploadedBy',
+    header: 'Uploaded by',
   },
   {
-    id: "actions",
+    id: 'actions',
     cell: ({ row }) => <CellAction row={row} />,
   },
 ];
@@ -119,18 +110,28 @@ export const CellAction: React.FC<CellActionProps> = ({ row }) => {
   const handleDeleteFile = () => {
     startTransition(async () => {
       try {
-        const response = await deleteFileById(file.id);
-        console.log(response);
-        toast({
-          title: "File deleted successfully!",
-          description: `The file ${file.fileName} is deleted`,
-          variant: "success",
-          icon: <CircleCheckBig size={40} />,
-        });
-        // Optional: Refresh or update the UI to reflect the deleted file
+        const result = await fileAPI.deleteFile(file.id);
+        if (result.success) {
+          toast({
+            title: 'File deleted successfully!',
+            description: `The file ${file.fileName} is deleted`,
+            variant: 'success',
+            icon: <CircleCheckBig size={40} />,
+          });
+        } else {
+          toast({
+            title: 'Failed to delete file',
+            description: result.error || result.message || 'Unknown error',
+            variant: 'destructive',
+          });
+        }
       } catch (error) {
-        console.error("Error deleting file:", error);
-        // toast({ title: "Failed to delete file", status: "error" });
+        console.error('Error deleting file:', error);
+        toast({
+          title: 'Failed to delete file',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        });
       }
     });
   };
@@ -145,14 +146,12 @@ export const CellAction: React.FC<CellActionProps> = ({ row }) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem
-          onClick={() => navigator.clipboard.writeText(file.id)}
-        >
+        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(file.id)}>
           Copy File ID
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleDeleteFile} disabled={isPending}>
-          {isPending ? "Deleting..." : "Delete File"}
+          {isPending ? 'Deleting...' : 'Delete File'}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
