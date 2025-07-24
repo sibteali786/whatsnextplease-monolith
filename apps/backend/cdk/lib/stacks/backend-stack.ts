@@ -132,7 +132,7 @@ export class WnpBackendStack extends cdk.Stack {
       const certificate = acm.Certificate.fromCertificateArn(
         this,
         'ApiCertificate',
-        'arn:aws:acm:us-east-1:519076116465:certificate/32c2237e-176f-469d-832e-c9d1e95ddccd'
+        'arn:aws:acm:us-east-1:519076116465:certificate/4f07baf8-6438-47e8-bc56-8a74285946d9'
       );
 
       // Create a Network Load Balancer (cheaper than ALB)
