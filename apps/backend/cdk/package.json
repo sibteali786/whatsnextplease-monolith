@@ -13,6 +13,8 @@
 	"bootstrap:prod":"STAGE=production cdk bootstrap",
 	"deploy:dev": "STAGE=development cdk deploy",
     "deploy:prod": "STAGE=production cdk deploy",
+	"deploy:prod:fargate:skipped": "SKIP_FARGATE=true STAGE=production cdk deploy",
+	"deploy:dev:fargate:skipped": "SKIP_FARGATE=true STAGE=development cdk deploy",
     "diff:dev": "STAGE=development cdk diff",
     "diff:prod": "STAGE=production cdk diff",
     "synth:dev": "STAGE=development cdk synth",

@@ -49,7 +49,7 @@ export class WnpBackendStack extends cdk.Stack {
       emptyOnDelete: !isProduction,
       lifecycleRules: [
         {
-          maxImageCount: isProduction ? 30 : 5, // COST REDUCTION: Keep fewer images
+          maxImageCount: isProduction ? 6 : 5, // COST REDUCTION: Keep fewer images
           description: 'keep only recent images',
         },
       ],
@@ -155,7 +155,7 @@ export class WnpBackendStack extends cdk.Stack {
           port: '3000',
           protocol: elbv2.Protocol.HTTP,
           path: '/health',
-          interval: cdk.Duration.seconds(60), // Reduced frequency
+          interval: cdk.Duration.minutes(5), // Reduced frequency
           healthyThresholdCount: 2,
           unhealthyThresholdCount: 2,
         },
