@@ -25,4 +25,16 @@ router.post('/push-subscription', verifyToken, async (req: AuthenticatedRequest,
   res.status(201).json({ message: 'Push subscription saved' });
 });
 
+router.delete(
+  '/push-subscription',
+  verifyToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { endpoint } = req.body;
+
+    await pushNotificationService.deleteSubscription(endpoint);
+
+    res.status(200).json({ message: 'Push subscription removed' });
+  }
+);
+
 export const notificationRoutes = router;

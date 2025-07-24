@@ -21,8 +21,15 @@ export class PushNotificationService {
     clientId: string | null,
     subscription: webpush.PushSubscription
   ) {
-    return prisma.pushSubscription.create({
-      data: {
+    return prisma.pushSubscription.upsert({
+      where: { endpoint: subscription.endpoint },
+      update: {
+        userId,
+        clientId,
+        auth: subscription.keys.auth,
+        p256dh: subscription.keys.p256dh,
+      },
+      create: {
         userId,
         clientId,
         endpoint: subscription.endpoint,
@@ -75,6 +82,12 @@ export class PushNotificationService {
     } catch (error) {
       logger.error('Failed to send push notification:', error);
     }
+  }
+
+  async deleteSubscription(endpoint: string) {
+    return prisma.pushSubscription.deleteMany({
+      where: { endpoint },
+    });
   }
 }
 export const pushNotificationService = new PushNotificationService();
