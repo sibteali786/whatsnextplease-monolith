@@ -1,6 +1,6 @@
 import { useToast } from '@/hooks/use-toast';
 import { COOKIE_NAME } from '@/utils/constant';
-import { getCookie } from '@/utils/utils';
+import { getCookie, trimWhitespace } from '@/utils/utils';
 import { ErrorResponse, SkillCategoryCreateSchema, SkillCreateSchema } from '@wnp/types';
 import { useState } from 'react';
 import { z } from 'zod';
@@ -71,6 +71,7 @@ export const PicklistContainer = ({
   const handleTaskSubmit = async (data: z.infer<typeof SkillCategoryCreateSchema>) => {
     setIsSubmitting(true);
     const token = getCookie(COOKIE_NAME);
+    const trimmedData = trimWhitespace(data);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/create`, {
         method: 'POST',
@@ -78,7 +79,7 @@ export const PicklistContainer = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(trimmedData),
       });
       const createdTask = await response.json();
       if (createdTask) {
