@@ -16,7 +16,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { usePushNotification } from '@/hooks/usePushNotification';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
 const FormSchema = z.object({
@@ -39,25 +39,29 @@ export function NotificationSettingsForm() {
   }, [subscription, form]);
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     const { desktop_notifications } = data;
+    const originalValue = !!subscription;
     try {
       if (desktop_notifications) {
         await subscribeToNotifications();
         toast({
-          title: 'Desktop notifications enabled',
-          icon: <CheckCircle className="text-green-500" />,
+          title: 'Notifications',
+          description: 'Desktop notifications enabled',
+          icon: <CheckCircle />,
           variant: 'success',
         });
       } else {
         await unsubscribeFromNotifications();
         toast({
-          title: 'Desktop notifications disabled',
+          title: 'Notifications',
+          description: 'Desktop notifications disabled',
+          icon: <XCircle />,
           variant: 'success',
         });
       }
     } catch (error) {
       console.error('Failed to update notifications:', error);
       // Revert form state on error
-      form.setValue('desktop_notifications', !!subscription);
+      form.setValue('desktop_notifications', originalValue);
       toast({
         title: 'Failed to update notifications',
         variant: 'destructive',

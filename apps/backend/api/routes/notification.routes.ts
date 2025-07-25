@@ -20,9 +20,14 @@ router.post('/push-subscription', verifyToken, async (req: AuthenticatedRequest,
   const { subscription } = req.body;
   const userId = req.user?.role === Roles.CLIENT && req.user?.id ? null : (req.user?.id ?? null);
   const clientId = req.user?.role === Roles.CLIENT ? (req.user?.id ?? null) : null;
-
-  await pushNotificationService.saveSubscription(userId, clientId, subscription);
-  res.status(201).json({ message: 'Push subscription saved' });
+  try {
+    await pushNotificationService.saveSubscription(userId, clientId, subscription);
+    res.status(201).json({ message: 'Push subscription saved' });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({ error: 'Failed to save push subscription: ' + error.message });
+    }
+  }
 });
 
 router.delete(
@@ -30,10 +35,18 @@ router.delete(
   verifyToken,
   async (req: AuthenticatedRequest, res: Response) => {
     const { endpoint } = req.body;
-
-    await pushNotificationService.deleteSubscription(endpoint);
-
-    res.status(200).json({ message: 'Push subscription removed' });
+    if (typeof endpoint !== 'string' || endpoint.trim() === '') {
+      res.status(400).json({ error: 'Invalid endpoint. It must be a non-empty string.' });
+      return;
+    }
+    try {
+      await pushNotificationService.deleteSubscription(endpoint);
+      res.status(200).json({ message: 'Push subscription removed' });
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(500).json({ error: 'Failed to remove push subscription: ' + error.message });
+      }
+    }
   }
 );
 
