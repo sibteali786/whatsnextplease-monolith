@@ -16,7 +16,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { usePushNotification } from '@/hooks/usePushNotification';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { useEffect } from 'react';
 
 const FormSchema = z.object({
@@ -25,7 +25,8 @@ const FormSchema = z.object({
 
 export function NotificationSettingsForm() {
   const { toast } = useToast();
-  const { isPushSupported, subscription, subscribeToNotifications } = usePushNotification();
+  const { isPushSupported, subscription, subscribeToNotifications, unsubscribeFromNotifications } =
+    usePushNotification();
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -38,31 +39,34 @@ export function NotificationSettingsForm() {
   }, [subscription, form]);
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     const { desktop_notifications } = data;
-    if (desktop_notifications) {
-      try {
+    const originalValue = !!subscription;
+    try {
+      if (desktop_notifications) {
         await subscribeToNotifications();
         toast({
-          title: 'You have successfully subscribed to push notifications',
-          icon: <CheckCircle className="text-green-500" />,
+          title: 'Notifications',
+          description: 'Desktop notifications enabled',
+          icon: <CheckCircle />,
           variant: 'success',
         });
-      } catch (error) {
-        console.error('Failed to enable notifications:', error);
+      } else {
+        await unsubscribeFromNotifications();
         toast({
-          title: 'Failed to enable notifications',
-          description: 'Please try again later' + error,
-          variant: 'destructive',
+          title: 'Notifications',
+          description: 'Desktop notifications disabled',
+          icon: <XCircle />,
+          variant: 'success',
         });
       }
+    } catch (error) {
+      console.error('Failed to update notifications:', error);
+      // Revert form state on error
+      form.setValue('desktop_notifications', originalValue);
+      toast({
+        title: 'Failed to update notifications',
+        variant: 'destructive',
+      });
     }
-    toast({
-      title: 'You submitted the following values:',
-      description: (
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      ),
-    });
   };
 
   return (

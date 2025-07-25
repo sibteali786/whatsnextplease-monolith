@@ -74,9 +74,33 @@ export const usePushNotification = () => {
     }
   };
 
+  const unsubscribeFromNotifications = async () => {
+    try {
+      if (subscription) {
+        await subscription.unsubscribe();
+
+        const token = getCookie(COOKIE_NAME);
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/push-subscription`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+
+        setSubscription(null);
+      }
+    } catch (error) {
+      console.error('Error unsubscribing:', error);
+      throw error;
+    }
+  };
+
   return {
     isPushSupported: 'serviceWorker' in navigator && 'PushManager' in window,
     subscription,
     subscribeToNotifications,
+    unsubscribeFromNotifications,
   };
 };
