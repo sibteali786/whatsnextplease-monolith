@@ -221,8 +221,95 @@ export class UserController {
     }
   };
 
+  /**
+   * Get all users with roles for permission management
+   * Only accessible by SUPER_USER
+   */
+  getUsersWithRolesHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await this.userService.getUsersWithRoles();
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        message: result.message,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.message,
+        error: result.error,
+      });
+    }
+  });
+
+  /**
+   * Update user role
+   * Only accessible by SUPER_USER
+   */
+  updateUserRoleHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const { userId } = req.params;
+    const { roleId } = req.body;
+    const updatedByUserId = req.user?.id;
+
+    if (!roleId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role ID is required',
+      });
+    }
+
+    if (!updatedByUserId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+    }
+
+    const result = await this.userService.updateUserRole(userId, roleId, updatedByUserId);
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        message: result.message,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.message,
+        error: result.error,
+      });
+    }
+  });
+
+  /**
+   * Get available roles for dropdown
+   * Only accessible by SUPER_USER
+   */
+  getAvailableRolesHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const result = await this.userService.getAvailableRoles();
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        message: result.message,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.message,
+        error: result.error,
+      });
+    }
+  });
+
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
   deleteUser = asyncHandler(this.handleDeleteUser);
+  getUsersWithRoles = asyncHandler(this.getUsersWithRolesHandler);
+  updateUserRole = asyncHandler(this.updateUserRoleHandler);
+  getAvailableRoles = asyncHandler(this.getAvailableRolesHandler);
 }

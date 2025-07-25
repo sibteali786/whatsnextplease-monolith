@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { User } from '@prisma/client';
+import { Roles, User } from '@prisma/client';
 import prisma from '../config/db';
 import { UpdateProfileDto } from '@wnp/types';
+import { logger } from '../utils/logger';
 export interface UserProfile extends Omit<User, 'passwordHash'> {
   role: {
     name: string;
@@ -73,5 +74,172 @@ export class UserService {
     return await prisma.user.delete({
       where: { id: userId },
     });
+  }
+
+  /**
+   * Get all users with their roles for permission management
+   * Only accessible by SUPER_USER
+   */
+  async getUsersWithRoles() {
+    try {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          email: true,
+          avatarUrl: true,
+          roleId: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+        },
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      });
+
+      return {
+        success: true,
+        data: users,
+        message: 'Users retrieved successfully',
+      };
+    } catch (error) {
+      logger.error('Error fetching users with roles:', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve users',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Update user role
+   * Only accessible by SUPER_USER
+   * CLIENT role cannot be changed
+   */
+  async updateUserRole(userId: string, newRoleId: string, updatedByUserId: string) {
+    try {
+      // First, get the current user to check if they're a client
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { role: true },
+      });
+
+      if (!currentUser) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      // Prevent changing CLIENT role
+      if (currentUser.role?.name === Roles.CLIENT) {
+        return {
+          success: false,
+          message: 'Cannot change role for CLIENT users',
+        };
+      }
+
+      // Get the new role to validate it exists and isn't CLIENT
+      const newRole = await prisma.role.findUnique({
+        where: { id: newRoleId },
+      });
+
+      if (!newRole) {
+        return {
+          success: false,
+          message: 'Invalid role selected',
+        };
+      }
+
+      if (newRole.name === Roles.CLIENT) {
+        return {
+          success: false,
+          message: 'Cannot assign CLIENT role through this interface',
+        };
+      }
+
+      // Update the user's role
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { roleId: newRoleId },
+        include: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+        },
+      });
+
+      // Log the role change for audit purposes
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: `Role changed from ${currentUser.role?.name} to ${newRole.name} for user ${currentUser.id}${currentUser.username ? ` (${currentUser.username})` : ''}`,
+            userId: updatedByUserId,
+            timestamp: new Date(),
+          },
+        });
+      } catch (auditError) {
+        logger.error('Failed to create audit log entry:', auditError);
+        // Optionally, you can decide whether to continue or return a warning here
+      }
+
+      return {
+        success: true,
+        data: updatedUser,
+        message: 'User role updated successfully',
+      };
+    } catch (error) {
+      logger.error('Error updating user role:', error);
+      return {
+        success: false,
+        message: 'Failed to update user role',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get all available roles except CLIENT
+   * Used for the role dropdown
+   */
+  async getAvailableRoles() {
+    try {
+      const roles = await prisma.role.findMany({
+        where: {
+          name: {
+            not: Roles.CLIENT,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+        orderBy: { name: 'asc' },
+      });
+
+      return {
+        success: true,
+        data: roles,
+        message: 'Roles retrieved successfully',
+      };
+    } catch (error) {
+      logger.error('Error fetching available roles:', error);
+      return {
+        success: false,
+        message: 'Failed to retrieve roles',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 }
