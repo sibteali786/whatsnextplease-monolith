@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Shield, Settings } from 'lucide-react';
+import { Users, Shield, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCookie } from '@/utils/utils';
@@ -47,6 +47,9 @@ interface Role {
   name: string;
   description?: string;
 }
+
+// Maximum length for role description before truncation
+const ROLE_DESCRIPTION_MAX_LENGTH = 24;
 
 // Role color mapping for better UX
 const getRoleColor = (roleName: string) => {
@@ -77,40 +80,55 @@ export default function PermissionsClient() {
   const [refreshing, setRefreshing] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  });
 
   // Fetch users with roles
-  const fetchUsersWithRoles = useCallback(async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-        },
-      });
+  const fetchUsersWithRoles = useCallback(
+    async (page = pagination.page, limit = pagination.limit) => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles?page=${page}&limit=${limit}`,
+          {
+            headers: {
+              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+            },
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
 
-      const result = await response.json();
-      if (result.success) {
-        setUsers(result.data);
-      } else {
-        throw new Error(result.message);
+        const result = await response.json();
+        if (result.success) {
+          setUsers(result.data);
+          setPagination(result.pagination);
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: `Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: 'destructive',
+        });
       }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: 'destructive',
-      });
-    }
-  }, [toast]);
+    },
+    [toast, pagination.page, pagination.limit]
+  );
 
   // Manual refresh handler
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchUsersWithRoles();
+      await fetchUsersWithRoles(pagination.page, pagination.limit);
       toast({
         title: 'Success',
         description: 'User data refreshed successfully',
@@ -330,11 +348,13 @@ export default function PermissionsClient() {
                             <SelectContent>
                               {availableRoles.map(role => (
                                 <SelectItem key={role.id} value={role.id}>
-                                  <div className="flex flex-col">
+                                  <div className="flex flex-col items-start">
                                     <span>{formatRoleName(role.name)}</span>
                                     {role.description && (
-                                      <span className="text-xs text-muted-foreground">
-                                        {role.description}
+                                      <span className="text-xs text-muted-foreground text-left">
+                                        {role.description.length > ROLE_DESCRIPTION_MAX_LENGTH
+                                          ? `${role.description.slice(0, ROLE_DESCRIPTION_MAX_LENGTH)}...`
+                                          : role.description}
                                       </span>
                                     )}
                                   </div>
@@ -350,6 +370,72 @@ export default function PermissionsClient() {
           </Table>
         </CardContent>
       </Card>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-muted-foreground">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of{' '}
+            {pagination.totalCount} users
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm">Rows per page:</span>
+            <Select
+              value={pagination.limit.toString()}
+              onValueChange={value => {
+                setPagination(prev => ({ ...prev, limit: parseInt(value), page: 1 }));
+                fetchUsersWithRoles(1, parseInt(value));
+              }}
+            >
+              <SelectTrigger className="w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newPage = pagination.page - 1;
+                setPagination(prev => ({ ...prev, page: newPage }));
+                fetchUsersWithRoles(newPage, pagination.limit);
+              }}
+              disabled={!pagination.hasPreviousPage}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+
+            <span className="text-sm">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newPage = pagination.page + 1;
+                setPagination(prev => ({ ...prev, page: newPage }));
+                fetchUsersWithRoles(newPage, pagination.limit);
+              }}
+              disabled={!pagination.hasNextPage}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

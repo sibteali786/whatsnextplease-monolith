@@ -226,14 +226,13 @@ export class UserController {
    * Only accessible by SUPER_USER
    */
   getUsersWithRolesHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const result = await this.userService.getUsersWithRoles();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 100); // Cap at 100
+
+    const result = await this.userService.getUsersWithRoles(page, limit);
 
     if (result.success) {
-      res.status(200).json({
-        success: true,
-        data: result.data,
-        message: result.message,
-      });
+      res.status(200).json(result);
     } else {
       res.status(500).json({
         success: false,

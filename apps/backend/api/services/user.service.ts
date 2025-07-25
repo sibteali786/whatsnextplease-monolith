@@ -80,34 +80,51 @@ export class UserService {
    * Get all users with their roles for permission management
    * Only accessible by SUPER_USER
    */
-  async getUsersWithRoles() {
+  async getUsersWithRoles(page = 1, limit = 10) {
     try {
-      const users = await prisma.user.findMany({
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          username: true,
-          email: true,
-          avatarUrl: true,
-          roleId: true,
-          role: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
+      const skip = (page - 1) * limit;
+
+      const [users, totalCount] = await Promise.all([
+        prisma.user.findMany({
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            email: true,
+            avatarUrl: true,
+            roleId: true,
+            role: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+              },
             },
           },
-        },
-        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-      });
+          orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+        }),
+        prisma.user.count(),
+      ]);
 
+      const totalPages = Math.ceil(totalCount / limit);
       return {
         success: true,
         data: users,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
         message: 'Users retrieved successfully',
       };
     } catch (error) {
+      // existing error handling
       logger.error('Error fetching users with roles:', error);
       return {
         success: false,
