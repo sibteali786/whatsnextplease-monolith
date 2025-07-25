@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Roles, User } from '@prisma/client';
+import { Prisma, Roles, User } from '@prisma/client';
 import prisma from '../config/db';
 import { UpdateProfileDto } from '@wnp/types';
 import { logger } from '../utils/logger';
@@ -80,14 +80,24 @@ export class UserService {
    * Get all users with their roles for permission management
    * Only accessible by SUPER_USER
    */
-  async getUsersWithRoles(page = 1, limit = 10) {
+  async getUsersWithRoles(page = 1, limit = 10, searchTerm: string = '') {
     try {
       const skip = (page - 1) * limit;
-
+      const searchConditions = searchTerm
+        ? {
+            OR: [
+              { firstName: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+              { lastName: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+              { username: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+              { email: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+            ],
+          }
+        : {};
       const [users, totalCount] = await Promise.all([
         prisma.user.findMany({
           skip,
           take: limit,
+          where: searchConditions,
           select: {
             id: true,
             firstName: true,
@@ -106,9 +116,9 @@ export class UserService {
           },
           orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
         }),
-        prisma.user.count(),
+        prisma.user.count({ where: searchConditions }),
       ]);
-
+      console.log('Users', users);
       const totalPages = Math.ceil(totalCount / limit);
       return {
         success: true,

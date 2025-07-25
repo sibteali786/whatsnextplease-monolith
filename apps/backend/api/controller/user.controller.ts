@@ -228,8 +228,8 @@ export class UserController {
   getUsersWithRolesHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100); // Cap at 100
-
-    const result = await this.userService.getUsersWithRoles(page, limit);
+    const searchTerm = (req.query.search as string) || '';
+    const result = await this.userService.getUsersWithRoles(page, limit, searchTerm);
 
     if (result.success) {
       res.status(200).json(result);
