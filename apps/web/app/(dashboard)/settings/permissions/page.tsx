@@ -92,6 +92,7 @@ export default function PermissionsClient() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
 
   // Debounce search
   useEffect(() => {
@@ -105,15 +106,26 @@ export default function PermissionsClient() {
   useEffect(() => {
     if (debouncedSearchTerm !== searchTerm.trim()) return;
     setPagination(prev => ({ ...prev, page: 1 }));
-    fetchUsersWithRoles(1, pagination.limit, debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
+    fetchUsersWithRoles(1, pagination.limit, debouncedSearchTerm, roleFilter);
+  }, [debouncedSearchTerm, roleFilter]);
 
   // Fetch users with roles
   const fetchUsersWithRoles = useCallback(
-    async (page = pagination.page, limit = pagination.limit, search = debouncedSearchTerm) => {
+    async (
+      page = pagination.page,
+      limit = pagination.limit,
+      search = debouncedSearchTerm,
+      role = roleFilter
+    ) => {
       try {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+          ...(search && { search }),
+          ...(role && { role }),
+        });
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles?${params}`,
           {
             headers: {
               Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
@@ -140,14 +152,14 @@ export default function PermissionsClient() {
         });
       }
     },
-    [toast, pagination.page, pagination.limit, debouncedSearchTerm]
+    [toast, pagination.page, pagination.limit, debouncedSearchTerm, roleFilter]
   );
 
   // Manual refresh handler
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchUsersWithRoles(pagination.page, pagination.limit);
+      await fetchUsersWithRoles(pagination.page, pagination.limit, debouncedSearchTerm, roleFilter);
       toast({
         title: 'Success',
         description: 'User data refreshed successfully',
@@ -282,15 +294,32 @@ export default function PermissionsClient() {
           </p>
         </CardContent>
       </Card>
-      {/* Search Bar */}
-      <div className="relative w-full max-w-sm">
-        <Input
-          placeholder="Search users by name, username, or email..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Search and Filter Bar */}
+      <div className="flex items-center space-x-4 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Input
+            placeholder="Search users by name, username, or email..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        </div>
+
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL_ROLES">All Roles</SelectItem>
+            {availableRoles.map(role => (
+              <SelectItem key={role.id} value={role.name}>
+                {formatRoleName(role.name)}
+              </SelectItem>
+            ))}
+            <SelectItem value="CLIENT">Client</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {/* Users Table */}
       <Card>
@@ -436,7 +465,7 @@ export default function PermissionsClient() {
               onClick={() => {
                 const newPage = pagination.page - 1;
                 setPagination(prev => ({ ...prev, page: newPage }));
-                fetchUsersWithRoles(newPage, pagination.limit);
+                fetchUsersWithRoles(newPage, pagination.limit, debouncedSearchTerm, roleFilter);
               }}
               disabled={!pagination.hasPreviousPage}
             >
@@ -454,7 +483,7 @@ export default function PermissionsClient() {
               onClick={() => {
                 const newPage = pagination.page + 1;
                 setPagination(prev => ({ ...prev, page: newPage }));
-                fetchUsersWithRoles(newPage, pagination.limit);
+                fetchUsersWithRoles(newPage, pagination.limit, debouncedSearchTerm, roleFilter);
               }}
               disabled={!pagination.hasNextPage}
             >

@@ -9,6 +9,7 @@ export interface UserProfile extends Omit<User, 'passwordHash'> {
     id: string;
   };
 }
+export type RoleFilter = Roles | 'ALL_ROLES' | '';
 export class UserService {
   async updateProfilePicture(userId: string, profileUrl: string) {
     return await prisma.user.update({
@@ -80,19 +81,30 @@ export class UserService {
    * Get all users with their roles for permission management
    * Only accessible by SUPER_USER
    */
-  async getUsersWithRoles(page = 1, limit = 10, searchTerm: string = '') {
+  async getUsersWithRoles(
+    page = 1,
+    limit = 10,
+    searchTerm: string = '',
+    roleFilter: RoleFilter = 'ALL_ROLES'
+  ) {
     try {
       const skip = (page - 1) * limit;
-      const searchConditions = searchTerm
-        ? {
-            OR: [
-              { firstName: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
-              { lastName: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
-              { username: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
-              { email: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
-            ],
-          }
-        : {};
+      const searchConditions = {
+        ...(searchTerm
+          ? {
+              OR: [
+                { firstName: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+                { lastName: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+                { username: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+                { email: { contains: searchTerm, mode: Prisma.QueryMode.insensitive } },
+              ],
+            }
+          : {}),
+        ...(roleFilter &&
+          roleFilter !== 'ALL_ROLES' && {
+            role: { name: roleFilter as Roles },
+          }),
+      };
       const [users, totalCount] = await Promise.all([
         prisma.user.findMany({
           skip,
