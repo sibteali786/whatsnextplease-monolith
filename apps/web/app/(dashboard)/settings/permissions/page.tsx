@@ -20,12 +20,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Shield, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Users, Shield, Settings, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface UserWithRole {
   id: string;
@@ -89,12 +90,30 @@ export default function PermissionsClient() {
     hasPreviousPage: false,
   });
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Trigger search when debounced term changes
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm.trim()) return;
+    setPagination(prev => ({ ...prev, page: 1 }));
+    fetchUsersWithRoles(1, pagination.limit, debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
+
   // Fetch users with roles
   const fetchUsersWithRoles = useCallback(
-    async (page = pagination.page, limit = pagination.limit) => {
+    async (page = pagination.page, limit = pagination.limit, search = debouncedSearchTerm) => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles?page=${page}&limit=${limit}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`,
           {
             headers: {
               Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
@@ -121,7 +140,7 @@ export default function PermissionsClient() {
         });
       }
     },
-    [toast, pagination.page, pagination.limit]
+    [toast, pagination.page, pagination.limit, debouncedSearchTerm]
   );
 
   // Manual refresh handler
@@ -263,7 +282,16 @@ export default function PermissionsClient() {
           </p>
         </CardContent>
       </Card>
-
+      {/* Search Bar */}
+      <div className="relative w-full max-w-sm">
+        <Input
+          placeholder="Search users by name, username, or email..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      </div>
       {/* Users Table */}
       <Card>
         <CardContent className="p-0">
