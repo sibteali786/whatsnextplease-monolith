@@ -1,7 +1,7 @@
 import { FileUploadError, NotFoundError, UpdateProfileSchema } from '@wnp/types';
 import { BadRequestError, UpdateProfilePictureSchema } from '@wnp/types';
 import { NextFunction, Response } from 'express';
-import { UserService } from '../services/user.service';
+import { RoleFilter, UserService } from '../services/user.service';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { S3BucketService } from '../services/s3Service';
@@ -229,7 +229,8 @@ export class UserController {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 100); // Cap at 100
     const searchTerm = (req.query.search as string) || '';
-    const result = await this.userService.getUsersWithRoles(page, limit, searchTerm);
+    const roleFilter = (req.query.role as RoleFilter) || '';
+    const result = await this.userService.getUsersWithRoles(page, limit, searchTerm, roleFilter);
 
     if (result.success) {
       res.status(200).json(result);
