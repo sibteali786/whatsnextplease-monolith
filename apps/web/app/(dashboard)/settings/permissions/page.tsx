@@ -20,8 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Shield, Settings, ChevronRight, ChevronLeft, Search } from 'lucide-react';
-import { LoadingOverlay } from '@/components/LoadingOverlay';
+import { Users, Settings, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
@@ -77,7 +76,7 @@ const formatRoleName = (roleName: string) => {
 export default function PermissionsClient() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -117,6 +116,7 @@ export default function PermissionsClient() {
       search = debouncedSearchTerm,
       role = roleFilter
     ) => {
+      setTableLoading(true);
       try {
         const params = new URLSearchParams({
           page: page.toString(),
@@ -150,6 +150,8 @@ export default function PermissionsClient() {
           description: `Failed to load users: ${error instanceof Error ? error.message : 'Unknown error'}`,
           variant: 'destructive',
         });
+      } finally {
+        setTableLoading(false);
       }
     },
     [toast, pagination.page, pagination.limit, debouncedSearchTerm, roleFilter]
@@ -243,40 +245,32 @@ export default function PermissionsClient() {
   // Initialize data
   useEffect(() => {
     const initializeData = async () => {
-      setLoading(true);
+      // Remove setLoading(true/false)
       await Promise.all([fetchUsersWithRoles(), fetchAvailableRoles()]);
-      setLoading(false);
     };
-
     initializeData();
   }, [fetchUsersWithRoles, fetchAvailableRoles]);
-
-  if (loading) {
-    return <LoadingOverlay />;
-  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Shield className="h-6 w-6" />
-          <h1 className="text-2xl font-semibold">User Permissions</h1>
-        </div>
-        <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-3">
+        {tableLoading ? (
+          <Skeleton className="h-6 w-20" />
+        ) : (
           <Badge variant="secondary" className="flex items-center space-x-1">
             <Users className="h-3 w-3" />
             <span>{users.length} users</span>
           </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing || updatingUserId !== null}
-          >
-            {refreshing ? 'Refreshing...' : 'Refresh All'}
-          </Button>
-        </div>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={refreshing || updatingUserId !== null || tableLoading}
+        >
+          {refreshing ? 'Refreshing...' : 'Refresh All'}
+        </Button>
       </div>
 
       {/* Description */}
@@ -334,7 +328,7 @@ export default function PermissionsClient() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {refreshing
+              {tableLoading || refreshing
                 ? // Show skeleton rows during refresh
                   Array.from({ length: users.length || 3 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
