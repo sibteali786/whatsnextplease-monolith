@@ -52,7 +52,7 @@ async function main() {
             },
           },
         },
-        include: { assignedTo: true, status: true },
+        include: { assignedTo: true, status: true, priority: true },
         skip: batch * batchSize,
         take: batchSize,
       });
@@ -89,7 +89,11 @@ async function main() {
               NotificationType.TASK_MODIFIED,
               `Task "${task.title}" is now overdue`,
               task.assignedToId,
-              { taskId: task.id, status: TaskStatusEnum.OVERDUE }
+              {
+                taskId: task.id,
+                status: TaskStatusEnum.OVERDUE,
+                priority: task.priority?.priorityName,
+              }
             );
             notificationsCreated++;
             console.log(`Notified assignee ${task.assignedTo?.firstName} about task ${task.id}`);
@@ -106,7 +110,11 @@ async function main() {
               NotificationType.TASK_MODIFIED,
               `Task "${task.title}" assigned to ${task.assignedTo?.firstName || 'someone'} is now overdue`,
               supervisor.id,
-              { taskId: task.id, status: TaskStatusEnum.OVERDUE }
+              {
+                taskId: task.id,
+                status: TaskStatusEnum.OVERDUE,
+                priority: task.priority?.priorityName,
+              }
             );
             notificationsCreated++;
             console.log(`Notified supervisor ${supervisor.firstName} about task ${task.id}`);

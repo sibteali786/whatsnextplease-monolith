@@ -261,6 +261,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
                 name: user?.name,
                 username: user?.username,
                 avatarUrl: user?.avatarUrl,
+                priorityLevel: response?.task?.priorityName,
               },
             });
           } catch (error) {
