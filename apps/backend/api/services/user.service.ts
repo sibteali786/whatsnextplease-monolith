@@ -130,7 +130,6 @@ export class UserService {
         }),
         prisma.user.count({ where: searchConditions }),
       ]);
-      console.log('Users', users);
       const totalPages = Math.ceil(totalCount / limit);
       return {
         success: true,
