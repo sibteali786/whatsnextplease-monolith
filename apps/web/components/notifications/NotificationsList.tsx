@@ -30,7 +30,29 @@ interface NotificationsListProps {
 }
 
 function formatDistance(date1: Date, date2: Date, options: { addSuffix: boolean }): string {
-  return dateFnsFormatDistance(date1, date2, options);
+  try {
+    // Ensure both dates are valid Date objects
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+
+    // Check if dates are valid
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+      return 'just now';
+    }
+
+    // Calculate the difference in milliseconds
+    const diffInMs = Math.abs(d2.getTime() - d1.getTime());
+
+    // If the difference is less than 10 seconds, show "just now"
+    if (diffInMs < 10000) {
+      return 'just now';
+    }
+
+    return dateFnsFormatDistance(d1, d2, options);
+  } catch (error) {
+    console.warn('Error formatting date distance:', error);
+    return 'just now';
+  }
 }
 
 export default function NotificationsList({
