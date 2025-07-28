@@ -1,4 +1,5 @@
-// app/settings/layout.tsx
+// apps/web/app/(dashboard)/settings/layout.tsx - Updated version
+
 'use client';
 import React from 'react';
 import {
@@ -12,7 +13,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { User2, Bell, CreditCard, List } from 'lucide-react';
+import { User2, Bell, CreditCard, List, Shield } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { LinkButton } from '@/components/ui/LinkButton';
 
@@ -21,6 +22,7 @@ const menuItems = [
   { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
   { icon: CreditCard, label: 'Billing', href: '/settings/billing' },
   { icon: List, label: 'Picklist', href: '/settings/picklists' },
+  { icon: Shield, label: 'Permissions', href: '/settings/permissions' }, // New permissions menu item
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
