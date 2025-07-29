@@ -69,7 +69,7 @@ const TopBar = () => {
         </TooltipProvider>
         <ModeToggle />
         <div className="flex flex-col items-center">
-          <NotificationBell userId={user.id} unreadCount={unreadCount} />
+          <NotificationBell unreadCount={unreadCount} />
         </div>
         <div className="ml-auto flex items-center gap-2">
           <NavUser user={user} />

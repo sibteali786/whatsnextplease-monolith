@@ -1,50 +1,66 @@
 'use client';
+import { State } from '@/components/DataState';
+import NotificationsList from '@/components/notifications/NotificationsList';
+import { useNotifications } from '@/contexts/NotificationContext';
+import { Bell, Loader2, XCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { useCurrentUser } from '@/utils/authUtils';
-
-export default function MyNotifications() {
-  const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = useState(true);
-  const { user } = useCurrentUser();
+export default function Notifications() {
+  const { notifications, isLoading, error, markAsRead, markingRead, markAllAsRead } =
+    useNotifications();
   const searchParams = useSearchParams();
+
+  // Handle any query parameters for enhanced UX
   useEffect(() => {
-    const redirectToUserNotifications = async () => {
-      try {
-        if (user?.id) {
-          const params = searchParams.toString();
-          const redirectUrl = params
-            ? `/notifications/${user.id}?${params}`
-            : `/notifications/${user.id}`;
-          router.replace(redirectUrl);
-        } else {
-          // If no user found, redirect to login or home
-          router.replace('/login');
-        }
-      } catch (error) {
-        console.error('Error getting current user:', error);
-        // Fallback redirect
-        router.replace('/');
-      } finally {
-        setIsRedirecting(false);
-      }
-    };
+    const filter = searchParams.get('filter');
+    const taskId = searchParams.get('taskId');
 
-    redirectToUserNotifications();
-  }, [router]);
-
-  if (isRedirecting) {
+    if (filter || taskId) {
+      // You can implement filtering or highlighting logic here
+      console.log('Query params:', { filter, taskId });
+    }
+  }, [searchParams]);
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2 text-sm text-muted-foreground">
-          Redirecting to your notifications...
-        </span>
       </div>
     );
   }
 
-  return null;
+  if (error) {
+    return (
+      <State
+        variant={'destructive'}
+        icon={XCircle}
+        title="Failed to load notifications"
+        description={error.message || 'Please try again later'}
+        ctaText="Retry"
+        onCtaClick={() => window.location.reload()}
+      />
+    );
+  }
+
+  if (!notifications.length) {
+    return (
+      <State
+        icon={Bell}
+        variant={'info'}
+        title="No notifications"
+        description="When you receive notifications, they'll show up here"
+      />
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <NotificationsList
+        onMarkAllRead={markAllAsRead}
+        notifications={notifications}
+        markAsRead={markAsRead}
+        markingRead={markingRead}
+      />
+    </div>
+  );
 }

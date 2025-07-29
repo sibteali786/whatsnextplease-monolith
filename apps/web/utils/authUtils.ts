@@ -28,7 +28,7 @@ export const getCurrentUserClient = async (): Promise<CurrentUserResponse> => {
         error: data.error || `Request failed with status ${response.status}`,
       };
     }
-
+	console.log('Current User Data:', data.user);
     return data;
   } catch (error) {
     console.error('Error fetching current user:', error);

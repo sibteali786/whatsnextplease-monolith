@@ -18,6 +18,7 @@ import { GetNotificationInputParams } from '@wnp/types';
 import { BadRequestError } from '@wnp/types';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { NotificationPayload } from '../services/notificationDelivery.service';
+import { env } from '../config/environment';
 
 export class NotificationController {
   constructor(
@@ -31,7 +32,27 @@ export class NotificationController {
     _next: NextFunction
   ): Promise<void> => {
     const userId = req.params.userId;
+
+    // Set proper SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Headers': 'Cache-Control',
+    });
+
+    // Send initial connection confirmation
+    res.write('data: {"type":"connected","message":"SSE connection established"}\n\n');
+
     sseManager.addClient(userId, res);
+
+    // Handle client disconnect
+    req.on('close', () => {
+      console.log(`SSE client disconnected: ${userId}`);
+      sseManager.removeClient(userId);
+    });
   };
 
   private handleCreate = async (

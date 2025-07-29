@@ -10,14 +10,46 @@ import { skillRoutes } from './routes/skill.routes';
 import { taskAgentRoutes } from './routes/taskAgent.routes';
 import { entityRoutes } from './routes/entity.routes';
 import { fileRoutes } from './routes/file.routes';
+import { env } from './config/environment';
 
 export async function createServer() {
   const app = express();
 
   // middlewares
-  app.use(cors());
+  app.use(
+    cors({
+      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      allowedHeaders: [
+        'Origin',
+        'X-Requested-With',
+        'Content-Type',
+        'Accept',
+        'Authorization',
+        'Cache-Control',
+        'X-Requested-With',
+      ],
+      exposedHeaders: [
+        'Cache-Control',
+        'Content-Language',
+        'Content-Type',
+        'Expires',
+        'Last-Modified',
+        'Pragma',
+      ],
+    })
+  );
   app.use(express.json());
-
+  app.use('/notifications/subscribe', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, X-Requested-With'
+    );
+    next();
+  });
   // Routes
   app.use('/notifications', notificationRoutes);
   app.use('/user', userRoutes);
