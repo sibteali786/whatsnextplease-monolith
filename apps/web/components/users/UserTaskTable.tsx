@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { CustomTooltip } from '../CustomTooltip';
+import { useRouter } from 'next/navigation';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -53,6 +54,7 @@ interface UserTasksTableProps {
   taskIds: string[] | null;
   role: Roles;
   fetchTasks?: () => Promise<void>; // Optional callback to refresh tasks
+  showAsModal?: boolean;
 }
 
 export function UserTasksTable({
@@ -69,6 +71,7 @@ export function UserTasksTable({
   taskIds,
   role,
   fetchTasks,
+  showAsModal = false,
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -84,7 +87,7 @@ export function UserTasksTable({
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [localData, setLocalData] = useState<TaskTable[]>(data);
-
+  const router = useRouter();
   // Update local data when prop data changes
   useEffect(() => {
     setLocalData(data);
@@ -163,7 +166,16 @@ export function UserTasksTable({
   });
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
-
+  const handleRowClick = (task: TaskTable) => {
+    if (showAsModal) {
+      // Modal behavior for contexts like dashboard quick view
+      setSelectedTask(task);
+      setOpenDetailsDialog(true);
+    } else {
+      // Page navigation for main task listings
+      router.push(`/taskOfferings/${task.id}`);
+    }
+  };
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -199,10 +211,7 @@ export function UserTasksTable({
                   delayDuration={100}
                 >
                   <TableRow
-                    onClick={() => {
-                      setSelectedTask(row.original);
-                      setOpenDetailsDialog(true);
-                    }}
+                    onClick={() => handleRowClick(row.original)}
                     className="cursor-pointer hover:bg-muted/50"
                   >
                     {row.getVisibleCells().map(cell => (
@@ -243,11 +252,13 @@ export function UserTasksTable({
       </div>
 
       {/* Modals and Dialogs */}
-      <TaskDetailsModal
-        taskId={selectedTask?.id ?? ''}
-        open={openDetailsDialog}
-        setOpen={setOpenDetailsDialog}
-      />
+      {showAsModal && (
+        <TaskDetailsModal
+          taskId={selectedTask?.id ?? ''}
+          open={openDetailsDialog}
+          setOpen={setOpenDetailsDialog}
+        />
+      )}
 
       {taskToEdit && (
         <EditTaskDialog

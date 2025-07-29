@@ -186,6 +186,7 @@ export const TaskSuperVisorList = ({
       taskIds={taskIds ?? []}
       role={role}
       fetchTasks={fetchTasks}
+      showAsModal={false}
     />
   );
 

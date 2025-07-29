@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { UserTasksTable } from "../users/UserTaskTable";
-import { getTasksByClientId } from "@/db/repositories/clients/getTasksByClientId";
-import { getTaskIdsByClientId } from "@/utils/clientActions";
-import { SearchNFilter } from "../common/SearchNFilter";
-import { Roles } from "@prisma/client";
-import { TaskTable } from "@/utils/validationSchemas";
+import { useEffect, useState } from 'react';
+import { UserTasksTable } from '../users/UserTaskTable';
+import { getTasksByClientId } from '@/db/repositories/clients/getTasksByClientId';
+import { getTaskIdsByClientId } from '@/utils/clientActions';
+import { SearchNFilter } from '../common/SearchNFilter';
+import { Roles } from '@prisma/client';
+import { TaskTable } from '@/utils/validationSchemas';
 
 export default function ClientHistoryList({ clientId }: { clientId: string }) {
   const [data, setData] = useState<TaskTable[]>([]);
@@ -16,7 +16,7 @@ export default function ClientHistoryList({ clientId }: { clientId: string }) {
   const [pageSize, setPageSize] = useState<number>(10);
   const [pageIndex, setPageIndex] = useState(0);
   const [taskIds, setTaskIds] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -24,10 +24,8 @@ export default function ClientHistoryList({ clientId }: { clientId: string }) {
       const { taskIds } = await getTaskIdsByClientId(clientId);
 
       if (response.success && response.tasks) {
-        console.log(response.tasks, "\n", taskIds);
-        const filteredTasks = response.tasks.filter(
-          (task) => task.status.statusName === "COMPLETED",
-        );
+        console.log(response.tasks, '\n', taskIds);
+        const filteredTasks = response.tasks.filter(task => task.status.statusName === 'COMPLETED');
         setData(filteredTasks);
         if (response.totalCount) {
           setTotalCount(response.totalCount);
@@ -35,7 +33,7 @@ export default function ClientHistoryList({ clientId }: { clientId: string }) {
         setTaskIds(taskIds ?? []);
       }
     } catch (error) {
-      console.error("Failed to fetch tasks:", error);
+      console.error('Failed to fetch tasks:', error);
     }
     setLoading(false);
   };
@@ -46,7 +44,7 @@ export default function ClientHistoryList({ clientId }: { clientId: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <SearchNFilter onSearch={(term) => setSearchTerm(term)} />
+      <SearchNFilter onSearch={term => setSearchTerm(term)} />
       <UserTasksTable
         data={data}
         pageSize={pageSize}
@@ -60,6 +58,7 @@ export default function ClientHistoryList({ clientId }: { clientId: string }) {
         setPageSize={setPageSize}
         taskIds={taskIds}
         role={Roles.CLIENT}
+        showAsModal={true}
       />
     </div>
   );

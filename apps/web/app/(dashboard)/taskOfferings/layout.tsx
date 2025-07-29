@@ -1,8 +1,14 @@
-import { DynamicBreadcrumb } from "@/components/skills/DynamicBreadcrumb";
-import { ReactNode } from "react";
-const TaskAgentLayout = async ({ children }: { children: ReactNode }) => {
+import { DynamicBreadcrumb } from '@/components/skills/DynamicBreadcrumb';
+import { ReactNode } from 'react';
+
+interface TaskAgentLayoutProps {
+  children: ReactNode;
+  modal: ReactNode; // Parallel route slot
+}
+
+const TaskAgentLayout = async ({ children, modal }: TaskAgentLayoutProps) => {
   const breadcrumbLinks = [
-    { label: "Task Offerings" },
+    { label: 'Task Offerings' },
     // ...(selectedCategory ? [{ label: selectedCategory.categoryName }] : []),
   ];
 
@@ -11,6 +17,8 @@ const TaskAgentLayout = async ({ children }: { children: ReactNode }) => {
       <DynamicBreadcrumb links={breadcrumbLinks} />
       {/* Content */}
       {children}
+      {/* Modal slot for parallel routes */}
+      {modal}
     </div>
   );
 };

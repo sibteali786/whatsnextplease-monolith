@@ -154,6 +154,7 @@ export const UserTasks = ({
           setPageSize={setPageSize}
           taskIds={taskIDs}
           fetchTasks={fetchTasks}
+          showAsModal={false}
         />
       )}
     </div>
