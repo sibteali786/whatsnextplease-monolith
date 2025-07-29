@@ -41,7 +41,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const maxRetries = 10; // Maximum retry attempts
+  const maxRetries = 3; // Maximum retry attempts
 
   const { toast } = useToast();
 
