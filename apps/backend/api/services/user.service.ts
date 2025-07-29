@@ -280,4 +280,30 @@ export class UserService {
       };
     }
   }
+
+  /**
+   * Get current logged-in user profile
+   * Used for getting user info without passing userId in URL
+   */
+  async getCurrentUserProfile(userId: string): Promise<UserProfile | null> {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        role: {
+          select: {
+            name: true,
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (user) {
+      const { passwordHash, roleId, ...rest } = user;
+      return rest as UserProfile;
+    }
+    return null;
+  }
 }

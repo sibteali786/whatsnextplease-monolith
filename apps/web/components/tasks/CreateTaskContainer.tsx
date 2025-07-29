@@ -252,6 +252,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
               clientId: null,
               userId: data.assignedToId,
               data: {
+                type: NotificationType.TASK_ASSIGNED,
                 taskId: response?.task?.id,
                 details: {
                   status: response?.task?.statusName,

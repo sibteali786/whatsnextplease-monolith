@@ -3,10 +3,24 @@ import { State } from '@/components/DataState';
 import NotificationsList from '@/components/notifications/NotificationsList';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Bell, Loader2, XCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function Notifications() {
   const { notifications, isLoading, error, markAsRead, markingRead, markAllAsRead } =
     useNotifications();
+  const searchParams = useSearchParams();
+
+  // Handle any query parameters for enhanced UX
+  useEffect(() => {
+    const filter = searchParams.get('filter');
+    const taskId = searchParams.get('taskId');
+
+    if (filter || taskId) {
+      // You can implement filtering or highlighting logic here
+      console.log('Query params:', { filter, taskId });
+    }
+  }, [searchParams]);
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
