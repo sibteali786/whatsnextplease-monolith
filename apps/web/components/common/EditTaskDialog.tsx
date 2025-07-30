@@ -122,7 +122,9 @@ export default function EditTaskDialog({
   const { toast } = useToast();
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
-  const [skills, setSkills] = useState<{ id: string; name: string }[]>([]);
+  const [skills, setSkills] = useState<
+    { id: string; name: string; skillCategory: { categoryName: string } }[]
+  >([]);
   // manage loading state for each file
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
   const form = useForm<EditTaskFormValues>({
@@ -162,6 +164,29 @@ export default function EditTaskDialog({
         icon: <CircleX size={40} />,
       });
     }
+  };
+  const groupSkillsByCategory = (
+    skills: { id: string; name: string; skillCategory: { categoryName: string } }[]
+  ) => {
+    const grouped = skills.reduce(
+      (acc, skill) => {
+        const categoryName = skill.skillCategory.categoryName;
+        if (!acc[categoryName]) {
+          acc[categoryName] = [];
+        }
+        acc[categoryName].push({
+          label: skill.name,
+          value: skill.name,
+        });
+        return acc;
+      },
+      {} as Record<string, { label: string; value: string }[]>
+    );
+
+    return Object.entries(grouped).map(([category, items]) => ({
+      category,
+      items,
+    }));
   };
   const fetchUsers = async () => {
     try {
@@ -407,10 +432,7 @@ export default function EditTaskDialog({
                   <FormLabel>Skills</FormLabel>
                   <FormControl>
                     <MultiSelect
-                      options={skills.map(skill => ({
-                        value: skill.name,
-                        label: skill.name,
-                      }))}
+                      options={groupSkillsByCategory(skills)}
                       onValueChange={field.onChange}
                       defaultValue={field.value || []}
                       placeholder="Select Skills"

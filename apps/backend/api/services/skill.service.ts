@@ -8,7 +8,23 @@ export class SkillService {
         id: true,
         name: true,
         description: true,
+        skillCategory: {
+          select: {
+            id: true,
+            categoryName: true,
+          },
+        },
       },
+      orderBy: [
+        {
+          skillCategory: {
+            categoryName: 'asc',
+          },
+        },
+        {
+          name: 'asc',
+        },
+      ],
     });
   }
 

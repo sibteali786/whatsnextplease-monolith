@@ -52,6 +52,29 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   taskCategories,
 }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
+  const groupSkillsByCategory = (
+    skills: { id: string; name: string; skillCategory?: { categoryName: string } }[]
+  ) => {
+    const grouped = skills.reduce(
+      (acc, skill) => {
+        const categoryName = skill.skillCategory?.categoryName || 'Other';
+        if (!acc[categoryName]) {
+          acc[categoryName] = [];
+        }
+        acc[categoryName].push({
+          label: skill.name,
+          value: skill.name,
+        });
+        return acc;
+      },
+      {} as Record<string, { label: string; value: string }[]>
+    );
+
+    return Object.entries(grouped).map(([category, items]) => ({
+      category,
+      items,
+    }));
+  };
 
   return (
     <Form {...form}>
@@ -89,14 +112,11 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
           control={form.control}
           name="skills"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>Skills</FormLabel>
               <FormControl>
                 <MultiSelect
-                  options={skills.map(skill => ({
-                    value: skill.name,
-                    label: skill.name,
-                  }))}
+                  options={groupSkillsByCategory(skills)}
                   onValueChange={field.onChange}
                   defaultValue={field.value || []}
                   placeholder="Select Skills"
