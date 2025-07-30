@@ -21,10 +21,12 @@ export const UserTasks = ({
   userId,
   listOfFilter,
   role,
+  onTaskUpdate,
 }: {
   userId: string;
   listOfFilter?: DurationEnumList;
   role: Roles;
+  onTaskUpdate?: () => Promise<void>;
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
@@ -155,6 +157,7 @@ export const UserTasks = ({
           taskIds={taskIDs}
           fetchTasks={fetchTasks}
           showAsModal={false}
+          onTaskUpdate={onTaskUpdate}
         />
       )}
     </div>

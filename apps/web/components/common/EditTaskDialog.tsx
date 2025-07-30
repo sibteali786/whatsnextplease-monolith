@@ -102,7 +102,8 @@ interface EditTaskDialogProps {
   task: TaskTable;
   role: Roles;
   taskCategories: { id: string; categoryName: string }[];
-  fetchTasks?: () => Promise<void>; // Add this prop
+  fetchTasks?: () => Promise<void>;
+  onTaskUpdate?: () => Promise<void>;
 }
 
 export default function EditTaskDialog({
@@ -112,6 +113,7 @@ export default function EditTaskDialog({
   role,
   taskCategories,
   fetchTasks,
+  onTaskUpdate,
 }: EditTaskDialogProps) {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
@@ -303,6 +305,10 @@ export default function EditTaskDialog({
         onOpenChange(false);
         if (fetchTasks) {
           await fetchTasks(); // Refresh tasks if fetchTasks is provided
+        }
+
+        if (onTaskUpdate) {
+          await onTaskUpdate();
         }
       } else {
         toast({

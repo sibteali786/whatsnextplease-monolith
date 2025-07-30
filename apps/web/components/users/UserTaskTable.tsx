@@ -57,6 +57,7 @@ interface UserTasksTableProps {
   role: Roles;
   fetchTasks?: () => Promise<void>; // Optional callback to refresh tasks
   showAsModal?: boolean;
+  onTaskUpdate?: () => Promise<void>;
 }
 
 export function UserTasksTable({
@@ -74,6 +75,7 @@ export function UserTasksTable({
   role,
   fetchTasks,
   showAsModal = false,
+  onTaskUpdate,
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -291,6 +293,7 @@ export function UserTasksTable({
           role={role}
           taskCategories={taskCategories}
           fetchTasks={fetchTasks}
+          onTaskUpdate={onTaskUpdate}
         />
       )}
 
