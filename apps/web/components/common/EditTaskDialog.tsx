@@ -30,6 +30,7 @@ import {
   transformEnumValue,
   trimWhitespace,
   formatOriginalEstimate,
+  getCookie,
 } from '@/utils/utils';
 import {
   Select,
@@ -48,6 +49,8 @@ import { FileSchemaType, TaskFile, TaskTable, UserAssigneeSchema } from '@/utils
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { FileAttachmentsList } from '../files/FileAttachmentList';
 import { fileAPI } from '@/utils/fileAPI'; // Import the API client
+import { COOKIE_NAME } from '@/utils/constant';
+import { MultiSelect } from '../ui/multi-select';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -57,6 +60,7 @@ const editTaskSchema = z.object({
   statusName: z.nativeEnum(TaskStatusEnum),
   taskCategoryName: z.string().min(1, 'Task Category is required'),
   assignedToId: z.string().optional(),
+  skills: z.array(z.string()).nonempty('Please select at least one skill'),
   timeForTask: z
     .string()
     .min(1, 'Time for Task is required')
@@ -118,6 +122,7 @@ export default function EditTaskDialog({
   const { toast } = useToast();
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
+  const [skills, setSkills] = useState<{ id: string; name: string }[]>([]);
   // manage loading state for each file
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
   const form = useForm<EditTaskFormValues>({
@@ -128,13 +133,36 @@ export default function EditTaskDialog({
       priorityName: TaskPriorityEnum.NORMAL,
       statusName: TaskStatusEnum.NEW,
       taskCategoryName: '',
+      skills: [],
       timeForTask: '1d',
       overTime: '0',
       dueDate: new Date(),
     },
     mode: 'onSubmit',
   });
+  const fetchSkills = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
+      if (response.ok) {
+        const skillsData = await response.json();
+        setSkills(skillsData);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to fetch skills',
+        description: 'Unable to load skills for editing',
+        icon: <CircleX size={40} />,
+      });
+    }
+  };
   const fetchUsers = async () => {
     try {
       const response = await usersList(role ?? Roles.TASK_SUPERVISOR);
@@ -170,6 +198,7 @@ export default function EditTaskDialog({
         statusName: task.status.statusName,
         taskCategoryName: task.taskCategory.categoryName,
         assignedToId: task?.assignedTo?.id || '',
+        skills: task.taskSkills || [],
         timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
         overTime:
           task.overTime && Number(task.overTime) > 0
@@ -183,6 +212,7 @@ export default function EditTaskDialog({
       }
     }
     fetchUsers();
+    fetchSkills();
   }, [task, open, form]);
 
   const [, startTransition] = useTransition();
@@ -290,8 +320,7 @@ export default function EditTaskDialog({
         dueDate: trimmedData.dueDate ? trimmedData.dueDate : null,
         timeForTask: totalHours.toString(),
         overTime: overTimeDecimal,
-        // Include skills if needed and available:
-        skills: task.taskSkills ?? [],
+        skills: trimmedData.skills,
       };
 
       const response = await updateTaskById(formattedData);
@@ -370,7 +399,28 @@ export default function EditTaskDialog({
                 </FormItem>
               )}
             />
-
+            <FormField
+              control={form.control}
+              name="skills"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Skills</FormLabel>
+                  <FormControl>
+                    <MultiSelect
+                      options={skills.map(skill => ({
+                        value: skill.name,
+                        label: skill.name,
+                      }))}
+                      onValueChange={field.onChange}
+                      defaultValue={field.value || []}
+                      placeholder="Select Skills"
+                      maxCount={5}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="taskCategoryName"
