@@ -57,9 +57,14 @@ export const createTaskSchema = z.object({
 interface CreateTaskContainerProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  fetchTasks?: () => Promise<void>;
 }
 
-export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, setOpen }) => {
+export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
+  open,
+  setOpen,
+  fetchTasks,
+}) => {
   const [skills, setSkills] = useState<{ id: string; name: string }[]>([]);
   const { createdTask } = useCreatedTask();
   const [user, setUser] = useState<UserState>();
@@ -243,6 +248,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({ open, 
           icon: <CheckCircle size={40} />,
         });
         setOpen(false);
+        if (fetchTasks) {
+          await fetchTasks();
+        }
         // notify relevant user
         if (data.assignedToId) {
           try {

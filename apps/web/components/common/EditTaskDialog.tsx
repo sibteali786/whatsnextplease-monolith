@@ -102,6 +102,7 @@ interface EditTaskDialogProps {
   task: TaskTable;
   role: Roles;
   taskCategories: { id: string; categoryName: string }[];
+  fetchTasks?: () => Promise<void>; // Add this prop
 }
 
 export default function EditTaskDialog({
@@ -110,6 +111,7 @@ export default function EditTaskDialog({
   task,
   role,
   taskCategories,
+  fetchTasks,
 }: EditTaskDialogProps) {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
@@ -299,6 +301,9 @@ export default function EditTaskDialog({
           icon: <CheckCircle size={40} />,
         });
         onOpenChange(false);
+        if (fetchTasks) {
+          await fetchTasks(); // Refresh tasks if fetchTasks is provided
+        }
       } else {
         toast({
           title: 'Failed to update task',

@@ -290,6 +290,7 @@ export function UserTasksTable({
           task={taskToEdit}
           role={role}
           taskCategories={taskCategories}
+          fetchTasks={fetchTasks}
         />
       )}
 
