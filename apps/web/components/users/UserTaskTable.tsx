@@ -39,6 +39,8 @@ import {
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { CustomTooltip } from '../CustomTooltip';
 import { useRouter } from 'next/navigation';
+import { getCookie } from '@/utils/utils';
+import { COOKIE_NAME } from '@/utils/constant';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -75,6 +77,7 @@ export function UserTasksTable({
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
+  const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
   const { setSelectedTask, selectedTask } = useSelectedTask();
   const { toast } = useToast();
 
@@ -176,6 +179,26 @@ export function UserTasksTable({
       router.push(`/taskOfferings/${task.id}`);
     }
   };
+  const fetchTaskCategories = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const categoriesData = await response.json();
+        setTaskCategories(categoriesData);
+      }
+    } catch (error) {
+      console.error('Error fetching task categories:', error);
+    }
+  };
+  useEffect(() => {
+    fetchTaskCategories();
+  }, []);
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -266,6 +289,7 @@ export function UserTasksTable({
           onOpenChange={setIsEditDialogOpen}
           task={taskToEdit}
           role={role}
+          taskCategories={taskCategories}
         />
       )}
 

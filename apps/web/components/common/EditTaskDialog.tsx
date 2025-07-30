@@ -101,9 +101,16 @@ interface EditTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   task: TaskTable;
   role: Roles;
+  taskCategories: { id: string; categoryName: string }[];
 }
 
-export default function EditTaskDialog({ open, onOpenChange, task, role }: EditTaskDialogProps) {
+export default function EditTaskDialog({
+  open,
+  onOpenChange,
+  task,
+  role,
+  taskCategories,
+}: EditTaskDialogProps) {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
@@ -359,7 +366,28 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
                 <FormItem>
                   <FormLabel>Task Category</FormLabel>
                   <FormControl>
-                    <Input placeholder="Task Category" {...field} />
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={taskCategories.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {taskCategories.length > 0 ? (
+                          taskCategories.map(category => (
+                            <SelectItem key={category.id} value={category.categoryName}>
+                              {category.categoryName}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>
+                            No categories available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
