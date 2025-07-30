@@ -1,10 +1,12 @@
-// app/skills/page.tsx
+// components/users/UserSkillsList.tsx
+'use client';
 
+import { useEffect, useState } from 'react';
 import { DynamicIcon } from '@/utils/Icon';
-import { getSkills } from '@/utils/skillTools';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { getUserSkills } from '@/utils/userTools';
+import { fetchAllSkills, fetchUserSkills } from '@/actions/skillsActions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Map skill names to corresponding icons
 const skillIconMap: Record<string, string> = {
@@ -30,12 +32,94 @@ const skillIconMap: Record<string, string> = {
   'Business Development': 'Briefcase',
 };
 
-export default async function UserSkillsList({ userId }: { userId: string }) {
-  const allSkills = await getSkills();
-  const { success, skills: userSkills, error } = await getUserSkills(userId);
+interface Skill {
+  id: string;
+  name: string;
+  description: string | null;
+  skillCategory: {
+    categoryName: string;
+  };
+}
 
-  if (!success || userSkills === undefined) {
-    return <div>Error loading skills: {error}</div>;
+interface UserSkill {
+  id: string;
+  name: string;
+  description: string | null;
+  categoryName: string;
+}
+
+export default function UserSkillsList({ userId }: { userId: string }) {
+  const [allSkills, setAllSkills] = useState<Skill[]>([]);
+  const [userSkills, setUserSkills] = useState<UserSkill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSkillsData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Fetch both all skills and user skills in parallel
+        const [allSkillsResponse, userSkillsResponse] = await Promise.all([
+          fetchAllSkills(),
+          fetchUserSkills(userId),
+        ]);
+
+        if (!allSkillsResponse.success) {
+          throw new Error(allSkillsResponse.error || 'Failed to fetch all skills');
+        }
+
+        if (!userSkillsResponse.success) {
+          throw new Error(userSkillsResponse.error || 'Failed to fetch user skills');
+        }
+
+        setAllSkills(allSkillsResponse.skills);
+        setUserSkills(userSkillsResponse.skills || []);
+      } catch (error) {
+        console.error('Error loading skills data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load skills');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSkillsData();
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold mb-4">Skills</h1>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <Card key={index} className="p-4">
+              <CardHeader className="flex flex-col items-center">
+                <Skeleton className="h-10 w-10 mb-2 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-semibold mb-4">Skills</h1>
+        <div className="text-center text-destructive">
+          <p>Error loading skills: {error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Convert userSkills to a set for easier lookups
