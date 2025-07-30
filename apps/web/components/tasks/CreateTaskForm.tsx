@@ -208,11 +208,17 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               <FormItem>
                 <FormLabel>Assigned Task Agent</FormLabel>
                 <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={value => field.onChange(value === 'none' ? '' : value)}
+                    value={field.value || 'none'}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Assignee" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">No Assignee</span>
+                      </SelectItem>
                       {users.map(user => (
                         <SelectItem key={user.id} value={user.id}>
                           <div className="flex items-center">

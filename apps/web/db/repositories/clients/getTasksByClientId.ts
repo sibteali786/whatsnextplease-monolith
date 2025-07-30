@@ -1,20 +1,20 @@
 // app/actions/getTasksByClientId.ts
 
-"use server";
-import prisma from "@/db/db";
-import "server-only";
-import logger from "@/utils/logger";
-import { handleError } from "@/utils/errorHandler";
+'use server';
+import prisma from '@/db/db';
+import 'server-only';
+import logger from '@/utils/logger';
+import { handleError } from '@/utils/errorHandler';
 import {
   GetTasksByClientIdResponse,
   GetTasksByClientIdResponseSchema,
   InputParamsSchema,
-} from "@/utils/validationSchemas";
+} from '@/utils/validationSchemas';
 
 export const getTasksByClientId = async (
   clientId: string,
   cursor: string | null,
-  pageSize: number = 10,
+  pageSize: number = 10
 ): Promise<GetTasksByClientIdResponse> => {
   try {
     // Validate input parameters
@@ -46,6 +46,7 @@ export const getTasksByClientId = async (
         },
         assignedTo: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             avatarUrl: true,
@@ -93,8 +94,8 @@ export const getTasksByClientId = async (
       where: { createdByClientId: clientId },
     });
     // manipulate taskSkills shape into array of strings
-    const tasksMod = tasks.map((task) => {
-      const taskSkills = task.taskSkills.map((skill) => skill.skill.name);
+    const tasksMod = tasks.map(task => {
+      const taskSkills = task.taskSkills.map(skill => skill.skill.name);
       return {
         ...task,
         taskSkills: taskSkills,
@@ -109,16 +110,13 @@ export const getTasksByClientId = async (
     };
     // parse the decimal values to strings for frontend
     const accommodatedResponse = JSON.parse(
-      JSON.stringify(GetTasksByClientIdResponseSchema.parse(responseData)),
+      JSON.stringify(GetTasksByClientIdResponseSchema.parse(responseData))
     );
     // Validate response data against schema
 
     return accommodatedResponse;
   } catch (error) {
-    logger.error({ error }, "Error in getTasksByClientId");
-    return handleError(
-      error,
-      "getTasksByClientId",
-    ) as GetTasksByClientIdResponse;
+    logger.error({ error }, 'Error in getTasksByClientId');
+    return handleError(error, 'getTasksByClientId') as GetTasksByClientIdResponse;
   }
 };

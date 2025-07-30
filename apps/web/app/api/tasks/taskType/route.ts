@@ -72,15 +72,15 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        ...(type !== 'unassigned' && {
-          assignedTo: {
-            select: {
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-            },
+
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
           },
-        }),
+        },
         taskFiles: {
           select: {
             file: {
@@ -124,6 +124,7 @@ export async function GET(request: NextRequest) {
         ...task,
         assignedTo: task.assignedTo
           ? {
+              id: task.assignedTo.id,
               firstName: task.assignedTo.firstName,
               lastName: task.assignedTo.lastName,
               avatarUrl: task.assignedTo.avatarUrl,

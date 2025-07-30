@@ -60,7 +60,7 @@ export const getTasksByUserId = async (
           select: { categoryName: true },
         },
         assignedTo: {
-          select: { firstName: true, lastName: true, avatarUrl: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
         dueDate: true,
         timeForTask: true,

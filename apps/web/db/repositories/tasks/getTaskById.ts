@@ -1,12 +1,12 @@
-"use server";
-import prisma from "@/db/db";
-import logger from "@/utils/logger";
-import { handleError } from "@/utils/errorHandler";
+'use server';
+import prisma from '@/db/db';
+import logger from '@/utils/logger';
+import { handleError } from '@/utils/errorHandler';
 import {
   GetTaskByIdParamsSchema,
   GetTaskByIdResponse,
   GetTaskByIdResponseSchema,
-} from "@/utils/validationSchemas";
+} from '@/utils/validationSchemas';
 
 export const getTaskById = async (taskId: string) => {
   try {
@@ -39,6 +39,7 @@ export const getTaskById = async (taskId: string) => {
         overTime: true,
         assignedTo: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             avatarUrl: true,
@@ -75,7 +76,7 @@ export const getTaskById = async (taskId: string) => {
       return GetTaskByIdResponseSchema.parse({
         success: false,
         task: null,
-        message: "Task not found",
+        message: 'Task not found',
       });
     }
     // Prepare the response data
@@ -83,17 +84,17 @@ export const getTaskById = async (taskId: string) => {
       success: true,
       task: {
         ...task,
-        taskSkills: task.taskSkills.map((task) => task.skill.name),
+        taskSkills: task.taskSkills.map(task => task.skill.name),
       },
     };
 
     // parse the decimal values to strings for frontend
     const accommodatedResponse = JSON.parse(
-      JSON.stringify(GetTaskByIdResponseSchema.parse(responseData)),
+      JSON.stringify(GetTaskByIdResponseSchema.parse(responseData))
     );
     return accommodatedResponse;
   } catch (error) {
-    logger.error({ error }, "Error in getTaskById");
-    return handleError(error, "getTaskById") as GetTaskByIdResponse;
+    logger.error({ error }, 'Error in getTaskById');
+    return handleError(error, 'getTaskById') as GetTaskByIdResponse;
   }
 };

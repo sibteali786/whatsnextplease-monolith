@@ -65,6 +65,7 @@ export const getTasksListByPriority = async (
         },
         assignedTo: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             avatarUrl: true,

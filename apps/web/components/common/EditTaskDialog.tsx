@@ -165,6 +165,7 @@ export default function EditTaskDialog({
         priorityName: task.priority.priorityName,
         statusName: task.status.statusName,
         taskCategoryName: task.taskCategory.categoryName,
+        assignedToId: task?.assignedTo?.id || '',
         timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
         overTime:
           task.overTime && Number(task.overTime) > 0
@@ -450,11 +451,17 @@ export default function EditTaskDialog({
                 <FormItem>
                   <FormLabel>Assigned Task Agent</FormLabel>
                   <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select
+                      onValueChange={value => field.onChange(value === 'none' ? '' : value)}
+                      value={field.value || 'none'}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Assignee" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">No Assignee</span>
+                        </SelectItem>
                         {users.map(user => (
                           <SelectItem key={user.id} value={user.id}>
                             <div className="flex items-center">
@@ -564,7 +571,7 @@ export default function EditTaskDialog({
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit">Save</Button>
