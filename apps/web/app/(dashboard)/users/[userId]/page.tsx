@@ -71,17 +71,17 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
       {taskStats && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card className="bg-primary text-white">
+            <Card className="bg-blue-500 text-white">
               <CardHeader>
-                <CardTitle className="text-xl text-center">Assigned Tasks</CardTitle>
+                <CardTitle className="text-xl text-center">New</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-5xl font-bold text-center">
-                  {taskStats.assignedTasksCount === 0
+                  {taskStats.newTasksCount === 0
                     ? '0'
-                    : taskStats.assignedTasksCount < 10
-                      ? `0${taskStats.assignedTasksCount}`
-                      : taskStats.assignedTasksCount}
+                    : taskStats.newTasksCount < 10
+                      ? `0${taskStats.newTasksCount}`
+                      : taskStats.newTasksCount}
                 </p>
               </CardContent>
             </Card>
