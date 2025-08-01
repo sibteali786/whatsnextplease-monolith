@@ -5,7 +5,12 @@ import { Roles } from '@prisma/client';
 import { getDateFilter } from '@/utils/dateFilter';
 import { DurationEnum } from '@/types';
 import { TaskByUserIdResponse, TaskByUserIdSchema } from '@/utils/validationSchemas';
-import { canViewTasks, getTaskFilterCondition } from '@/utils/commonUtils/taskPermissions';
+import {
+  canViewTasks,
+  getGeneralTaskFilter,
+  getUserProfileTaskFilter,
+  USER_CREATED_TASKS_CONTEXT,
+} from '@/utils/commonUtils/taskPermissions';
 
 export const getTasksByUserId = async (
   userId: string,
@@ -13,7 +18,8 @@ export const getTasksByUserId = async (
   cursor: string | null,
   pageSize = 10,
   searchTerm = '',
-  duration: DurationEnum = DurationEnum.ALL
+  duration: DurationEnum = DurationEnum.ALL,
+  context: USER_CREATED_TASKS_CONTEXT = USER_CREATED_TASKS_CONTEXT.GENERAL
 ): Promise<TaskByUserIdResponse> => {
   try {
     // Check if the role has permission to view tasks
@@ -29,7 +35,10 @@ export const getTasksByUserId = async (
     }
 
     // Get the appropriate filter condition based on role
-    const whereCondition = getTaskFilterCondition(userId, role);
+    const whereCondition =
+      context === USER_CREATED_TASKS_CONTEXT.USER_PROFILE
+        ? getUserProfileTaskFilter(userId)
+        : getGeneralTaskFilter(userId, role);
     const dateFilter = getDateFilter(duration);
 
     const tasks = await prisma.task.findMany({

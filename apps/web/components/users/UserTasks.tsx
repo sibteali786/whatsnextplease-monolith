@@ -16,17 +16,20 @@ import { CreateTaskContainer } from '../tasks/CreateTaskContainer';
 import { TaskTable } from '@/utils/validationSchemas';
 import { State } from '../DataState';
 import { CallToAction } from '../CallToAction';
+import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 
 export const UserTasks = ({
   userId,
   listOfFilter,
   role,
   onTaskUpdate,
+  context = USER_CREATED_TASKS_CONTEXT.GENERAL,
 }: {
   userId: string;
   listOfFilter?: DurationEnumList;
   role: Roles;
   onTaskUpdate?: () => Promise<void>;
+  context: USER_CREATED_TASKS_CONTEXT;
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
@@ -81,7 +84,15 @@ export const UserTasks = ({
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const response = await getTasksByUserId(userId, role, cursor, pageSize, searchTerm, duration);
+      const response = await getTasksByUserId(
+        userId,
+        role,
+        cursor,
+        pageSize,
+        searchTerm,
+        duration,
+        context
+      );
       const { taskIds, success } = await getTaskIdsByUserId(userId, searchTerm, duration, role);
 
       if (response.success && success) {
