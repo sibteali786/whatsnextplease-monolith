@@ -28,24 +28,12 @@ export const canBeAssignedTasks = (role: Roles): boolean => {
 
 // Function to determine the filter condition based on role
 export const getTaskFilterCondition = (userId: string, role: Roles) => {
-  // Task Agents and Supervisors see tasks assigned to them
-  if (role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR) {
-    return { assignedToId: userId };
+  // Check if the role has permission to view tasks first
+  if (!canViewTasks(role)) {
+    return {}; // This will return no results
   }
 
-  // Clients see tasks they created
-  if (role === Roles.CLIENT) {
-    return { createdByClientId: userId };
-  }
-
-  // Super Users can see all tasks, but we'll filter by assigned or created
-  // This could be customized further if needed
-  if (role === Roles.SUPER_USER) {
-    return {
-      OR: [{ assignedToId: userId }, { createdByUserId: userId }],
-    };
-  }
-
-  // Default empty filter (should not reach here if validation is done properly)
-  return {};
+  // For user profile context, everyone should see tasks assigned to that specific user
+  // The role parameter is used for permission checking, not for determining what to show
+  return { assignedToId: userId };
 };
