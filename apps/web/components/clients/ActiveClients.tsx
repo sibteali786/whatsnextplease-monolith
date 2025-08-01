@@ -1,10 +1,13 @@
-import Link from "next/link";
-import { ActiveClientsChart } from "../chart/ActiveClientChart";
-import { LabelValue } from "../LabelValue";
-import { Card, CardContent, CardFooter } from "../ui/card";
-import { Button } from "../ui/button";
-import { ClientType } from "@/types";
-import { CountLabel } from "../common/CountLabel";
+'use client';
+import Link from 'next/link';
+import { ActiveClientsChart } from '../chart/ActiveClientChart';
+import { LabelValue } from '../LabelValue';
+import { Card, CardContent, CardFooter } from '../ui/card';
+import { Button } from '../ui/button';
+import { ClientType } from '@/types';
+import { CountLabel } from '../common/CountLabel';
+import { useRouter } from 'next/navigation';
+import { useClientStore } from '@/store/useClientStore';
 
 interface ActiveClientsProps {
   error?: string;
@@ -19,6 +22,17 @@ export const ActiveClients: React.FC<ActiveClientsProps> = ({
   count,
   clients,
 }) => {
+  const router = useRouter();
+  const { setSelectedClient } = useClientStore();
+  const handleLinkClick = (client: ClientType) => {
+    // This function can be used to handle any additional logic when a client link is clicked
+    setSelectedClient({
+      id: client.id,
+      username: client.contactName,
+    });
+    // You can also set the selected client in a global state or context if needed
+    router.push(`/clients/${client.id}`);
+  };
   return (
     <Card className="p-6 rounded-2xl shadow-m">
       <div className="p-2 flex flex-row justify-between">
@@ -28,8 +42,8 @@ export const ActiveClients: React.FC<ActiveClientsProps> = ({
           </div>
         ) : (
           <CountLabel
-            lineHeight={"normal"}
-            label={"Active Clients"}
+            lineHeight={'normal'}
+            label={'Active Clients'}
             count={count}
             listOpacity={70}
             countSize="text-8xl"
@@ -39,7 +53,7 @@ export const ActiveClients: React.FC<ActiveClientsProps> = ({
           <ActiveClientsChart />
           <div className="flex w-full items-center justify-center gap-2 text-sm text-muted-foreground">
             <span className="text-primary text-base font-semibold">15%</span>
-            increase from last month{" "}
+            increase from last month{' '}
           </div>
         </div>
       </div>
@@ -50,7 +64,7 @@ export const ActiveClients: React.FC<ActiveClientsProps> = ({
           </div>
         ) : (
           <ul className="mt-4 space-y-2">
-            {clients.map((client) => (
+            {clients.map(client => (
               <li
                 key={client.id}
                 className="flex justify-between items-center py-2 border-b last:border-0"
@@ -65,11 +79,9 @@ export const ActiveClients: React.FC<ActiveClientsProps> = ({
                     value={client.contactName}
                   />
                 </div>
-                <Link
-                  href={`/clients/${client.id}`} // Adjust the link based on your routing structure
-                >
-                  <Button variant={"link"}>View Details</Button>
-                </Link>
+                <Button variant="link" onClick={() => handleLinkClick(client)}>
+                  View Details
+                </Button>
               </li>
             ))}
           </ul>
