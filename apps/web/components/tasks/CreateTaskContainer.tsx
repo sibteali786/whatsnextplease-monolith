@@ -73,17 +73,45 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [canAssignTasks, setCanAssignTasks] = useState(false);
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
+  const [, setFormWasCancelled] = useState(false);
+  const [lastSubmissionWasSuccessful, setLastSubmissionWasSuccessful] = useState(false);
+  const [isFirstOpen, setIsFirstOpen] = useState(true); // Track if this is the first time opening
   const router = useRouter();
+
+  const getDefaultValues = () => ({
+    title: '',
+    description: '',
+    skills: [],
+    statusName: TaskStatusEnum.NEW,
+    priorityName: TaskPriorityEnum.NORMAL,
+    taskCategoryName: taskCategories.length > 0 ? taskCategories[0]?.categoryName || '' : '',
+    assignedToId: '',
+    timeForTask: '1d',
+    dueDate: undefined,
+  });
 
   const form = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema),
     mode: 'onSubmit',
-    defaultValues: {
-      taskCategoryName: 'General Tasks',
-      statusName: TaskStatusEnum.NEW,
-      priorityName: TaskPriorityEnum.NORMAL,
-    },
+    defaultValues: getDefaultValues(),
   });
+
+  // Reset form logic based on state
+  useEffect(() => {
+    if (open) {
+      // Reset form if:
+      // 1. This is the first time opening, OR
+      // 2. Last submission was successful (clean slate for next task)
+      // Do NOT reset if form was cancelled (preserve user's work)
+      if (isFirstOpen || lastSubmissionWasSuccessful) {
+        form.reset(getDefaultValues());
+        setLastSubmissionWasSuccessful(false); // Reset flag after using it
+        setIsFirstOpen(false); // No longer first open
+      }
+      // Reset the cancelled flag when opening (for fresh state tracking)
+      setFormWasCancelled(false);
+    }
+  }, [open, form, taskCategories, lastSubmissionWasSuccessful, isFirstOpen]);
 
   // Fetch skills dynamically
   useEffect(() => {
@@ -121,6 +149,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
         const skillsData = await skillsResponse.json();
         const categoriesData = await categoriesResponse.json();
+
         if (skillsData.length === 0) {
           toast({
             variant: 'destructive',
@@ -199,9 +228,8 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   }, []);
 
   const handleModalCloseRequest = () => {
-    // Called when user tries to close the modal (opens confirmation alert)
-    // Here we rely on the ModalWithConfirmation to handle showing the alert
-    // We do nothing special here because ModalWithConfirmation will show the alert itself.
+    // Mark as cancelled to preserve form values
+    setFormWasCancelled(true);
   };
 
   const confirmClose = async () => {
@@ -215,6 +243,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         icon: <CheckCircle size={40} />,
       });
       setOpen(false);
+      // Keep form values for next time (don't reset formWasCancelled)
     } else {
       toast({
         title: 'Failed to delete the draft task',
@@ -223,6 +252,18 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         icon: <CircleX size={40} />,
       });
     }
+  };
+
+  const handleResetForm = () => {
+    form.reset(getDefaultValues());
+    setFormWasCancelled(false); // Clear cancel state
+    setLastSubmissionWasSuccessful(false); // Clear success state
+    setIsFirstOpen(true); // Reset to first open state
+    toast({
+      title: 'Form Reset',
+      description: 'All form fields have been cleared.',
+      variant: 'default',
+    });
   };
 
   const onSubmit = async (data: z.infer<typeof createTaskSchema>) => {
@@ -239,6 +280,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         deuDate: trimmedData.dueDate.toISOString(),
         timeForTask: totalHours.toString(),
       };
+
       const response = await updateTaskById(formattedData);
       if (response.success) {
         toast({
@@ -247,10 +289,16 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           variant: 'success',
           icon: <CheckCircle size={40} />,
         });
+
+        // Mark submission as successful
+        setLastSubmissionWasSuccessful(true);
+        setFormWasCancelled(false);
         setOpen(false);
+
         if (fetchTasks) {
           await fetchTasks();
         }
+
         // notify relevant user
         if (data.assignedToId) {
           try {
@@ -329,6 +377,19 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     }
   };
 
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = () => {
+    const values = form.getValues();
+    return (
+      values.title.trim() !== '' ||
+      values.description.trim() !== '' ||
+      values.skills.length > 0 ||
+      values.assignedToId !== '' ||
+      values.timeForTask !== '1d' ||
+      values.dueDate !== undefined
+    );
+  };
+
   return (
     <>
       <ModalWithConfirmation
@@ -338,6 +399,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         onConfirmClose={confirmClose}
         onSubmit={form.handleSubmit(onSubmit)}
         submitButtonLabel="Create Task"
+        // Add reset button functionality
+        showResetButton={hasUnsavedChanges()}
+        onReset={handleResetForm}
       >
         <CreateTaskForm
           form={form}
