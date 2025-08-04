@@ -133,7 +133,8 @@ export default function EditTaskDialog({
   const canAssignTasks = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
   const canEditStatus = role !== Roles.CLIENT;
   const canEditOverTime = role !== Roles.CLIENT;
-  const canEditPriority = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
+  const canEditPriority =
+    role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR || role === Roles.TASK_AGENT;
   const canEditCategory = role !== Roles.CLIENT;
 
   const form = useForm<EditTaskFormValues>({
