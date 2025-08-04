@@ -186,6 +186,7 @@ export const TaskSuperVisorList = ({
       taskIds={taskIds ?? []}
       role={role}
       fetchTasks={fetchTasks}
+      showAsModal={false}
     />
   );
 
@@ -264,7 +265,7 @@ export const TaskSuperVisorList = ({
         >
           <Plus className="h-5 w-5" /> Create New Task
         </Button>
-        <CreateTaskContainer open={open} setOpen={setOpen} />
+        <CreateTaskContainer open={open} setOpen={setOpen} fetchTasks={fetchTasks} />
       </div>
 
       <Tabs

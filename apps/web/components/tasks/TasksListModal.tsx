@@ -121,6 +121,7 @@ export default function TasksListModal({ open, setOpen, priority }: TasksListMod
                 role={Roles.SUPER_USER}
                 taskIds={taskIds}
                 fetchTasks={fetchTasks}
+                showAsModal={true}
               />
             )}
           </div>

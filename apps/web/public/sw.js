@@ -21,7 +21,7 @@ function onPushContent(event) {
   if (!event.data) {
     return;
   }
-  const { title, body } = JSON.parse(event.data.text());
+  const { title, body, data } = JSON.parse(event.data.text());
   const options = {
     body: body,
     icon: '/lightLogo.svg',
@@ -39,7 +39,9 @@ function onPushContent(event) {
       },
     ],
     data: {
-      url: self.location.origin,
+      url: data?.url || self.location.origin, // Use contextual URL from payload
+      type: data?.type,
+      taskId: data?.taskId,
     },
   };
   event.waitUntil(handleShowNotification(title, options));

@@ -1,34 +1,66 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client';
+
+import { useEffect, useState } from 'react';
 import { DynamicTabs, Tab } from '@/components/clients/ClientTabs';
 import { DetailsCard } from '@/components/common/DetailsCard';
 import UserFileList from '@/components/users/UserFileList';
 import UserSkillsList from '@/components/users/UserSkillsList';
 import UserTaskList from '@/components/users/UserTaskList';
-import { getUserById } from '@/utils/userTools';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getTaskAgentStatsById } from '@/utils/taskAgentActions';
+import { fetchUserData, fetchTaskStats } from '@/actions/userActions'; // Import the skeleton
+import { UserProfileSkeleton } from '@/components/common/LoadingStates';
 
-const UserProfile = async ({ params }: { params: { userId: string } }) => {
-  const { user, message } = await getUserById(params.userId);
+const UserProfile = ({ params }: { params: { userId: string } }) => {
+  const [user, setUser] = useState<any>(null);
+  const [taskStats, setTaskStats] = useState<any>(null);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch task agent stats
-  let taskStats = null;
-  let isAvailable = false;
-
-  // Only fetch task agent statistics if the user exists
-  if (user) {
-    const taskAgentResponse = await getTaskAgentStatsById(params.userId);
-    if (taskAgentResponse.success && taskAgentResponse.taskAgent) {
-      taskStats = taskAgentResponse.taskAgent;
-      isAvailable = taskStats.assignedTasksCount === 0 && taskStats.inProgressTasksCount === 0;
+  // Function to refresh task statistics
+  const refreshTaskStats = async () => {
+    try {
+      const { taskStats: stats, success } = await fetchTaskStats(params.userId);
+      if (success && stats) {
+        setTaskStats(stats);
+        setIsAvailable(stats.newTasksCount === 0 && stats.inProgressTasksCount === 0);
+      }
+    } catch (error) {
+      console.error('Error refreshing task stats:', error);
     }
-  }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    const loadUserData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { user: userData, success, message } = await fetchUserData(params.userId);
+        if (success && userData) {
+          setUser(userData);
+          await refreshTaskStats();
+        } else {
+          setError(message || 'Failed to load user data');
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        setError('An unexpected error occurred while loading user data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [params.userId]);
 
   const userTabs: Tab[] = [
     {
       tabName: 'Tasks',
       tabValue: 'tasks',
-      tabContent: <UserTaskList userId={params.userId} />,
+      tabContent: <UserTaskList userId={params.userId} onTaskUpdate={refreshTaskStats} />,
     },
     {
       tabName: 'Schedule',
@@ -47,6 +79,29 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
     },
   ];
 
+  // Show skeleton loading
+  if (loading) {
+    return <UserProfileSkeleton />;
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-destructive mb-2">Error Loading User</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-7">
       {user ? (
@@ -64,24 +119,24 @@ const UserProfile = async ({ params }: { params: { userId: string } }) => {
           rightFields={[{ label: 'Address 1', value: user.address }]}
         />
       ) : (
-        <p className="text-red-500">Error: {message}</p>
+        <p className="text-red-500">Error loading user data</p>
       )}
 
-      {/* Task Statistics Cards - Show for Task Agents and Task Supervisors */}
+      {/* Task Statistics Cards */}
       {taskStats && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card className="bg-primary text-white">
+            <Card className="bg-blue-500 text-white">
               <CardHeader>
-                <CardTitle className="text-xl text-center">Assigned Tasks</CardTitle>
+                <CardTitle className="text-xl text-center">New</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-5xl font-bold text-center">
-                  {taskStats.assignedTasksCount === 0
+                  {taskStats.newTasksCount === 0
                     ? '0'
-                    : taskStats.assignedTasksCount < 10
-                      ? `0${taskStats.assignedTasksCount}`
-                      : taskStats.assignedTasksCount}
+                    : taskStats.newTasksCount < 10
+                      ? `0${taskStats.newTasksCount}`
+                      : taskStats.newTasksCount}
                 </p>
               </CardContent>
             </Card>

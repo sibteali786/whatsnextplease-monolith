@@ -7,7 +7,7 @@ export interface TaskAgentWithCounts {
   firstName: string;
   lastName: string;
   designation: string | null;
-  assignedTasksCount: number;
+  newTasksCount: number;
   inProgressTasksCount: number;
   completedTasksCount: number;
   overdueTasksCount: number;
@@ -201,11 +201,11 @@ export class TaskAgentService {
       ]);
 
       // Convert group by results to a map for easier lookup
-      const [assignedTasks, inProgressTasks, completedTasks, overdueTasks] = taskCountsByStatus;
+      const [newTasks, inProgressTasks, completedTasks, overdueTasks] = taskCountsByStatus;
 
       // Create lookup maps
-      const assignedTasksMap = new Map(
-        assignedTasks.map(item => [
+      const newTasksMap = new Map(
+        newTasks.map(item => [
           item.assignedToId,
           typeof item._count === 'object' ? (item._count.id ?? 0) : 0,
         ])
@@ -234,7 +234,7 @@ export class TaskAgentService {
 
       // Build the task agents with counts
       let taskAgentsWithCounts = userDetails.map(user => {
-        const assignedTasksCount = assignedTasksMap.get(user.id) || 0;
+        const newTasksCount = newTasksMap.get(user.id) || 0;
         const inProgressTasksCount = inProgressTasksMap.get(user.id) || 0;
         const completedTasksCount = completedTasksMap.get(user.id) || 0;
         const overdueTasksCount = overdueTasksMap.get(user.id) || 0;
@@ -244,7 +244,7 @@ export class TaskAgentService {
           firstName: user.firstName,
           lastName: user.lastName,
           designation: user.designation,
-          assignedTasksCount,
+          newTasksCount,
           inProgressTasksCount,
           completedTasksCount,
           overdueTasksCount,
@@ -254,11 +254,11 @@ export class TaskAgentService {
       // Apply the available/working filter
       if (filterStatus === 'available') {
         taskAgentsWithCounts = taskAgentsWithCounts.filter(
-          agent => agent.assignedTasksCount === 0 && agent.inProgressTasksCount === 0
+          agent => agent.newTasksCount === 0 && agent.inProgressTasksCount === 0
         );
       } else if (filterStatus === 'working') {
         taskAgentsWithCounts = taskAgentsWithCounts.filter(
-          agent => agent.assignedTasksCount > 0 || agent.inProgressTasksCount > 0
+          agent => agent.newTasksCount > 0 || agent.inProgressTasksCount > 0
         );
       }
 
@@ -334,7 +334,7 @@ export class TaskAgentService {
         }),
       ]);
 
-      const [assignedTasksCount, inProgressTasksCount, completedTasksCount, overdueTasksCount] =
+      const [newTasksCount, inProgressTasksCount, completedTasksCount, overdueTasksCount] =
         taskCounts;
 
       return {
@@ -342,7 +342,7 @@ export class TaskAgentService {
         firstName: user.firstName,
         lastName: user.lastName,
         designation: user.designation,
-        assignedTasksCount,
+        newTasksCount,
         inProgressTasksCount,
         completedTasksCount,
         overdueTasksCount,

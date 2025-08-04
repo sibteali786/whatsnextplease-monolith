@@ -1,15 +1,13 @@
-import { handleError } from "@/utils/errorHandler";
-import prisma from "@/db/db";
+import { handleError } from '@/utils/errorHandler';
+import prisma from '@/db/db';
 import {
   SearchTasksResponse,
   SearchTasksResponseSchema,
   SearchTasksSchema,
-} from "@/utils/validationSchemas";
+} from '@/utils/validationSchemas';
 
 // Function to search tasks
-export const searchTasks = async (
-  searchTerm: string,
-): Promise<SearchTasksResponse> => {
+export const searchTasks = async (searchTerm: string): Promise<SearchTasksResponse> => {
   // TODO: decide if searching by description is needed or not
   try {
     // Validate input
@@ -19,7 +17,7 @@ export const searchTasks = async (
     const tasks = await prisma.task.findMany({
       where: {
         OR: [
-          { title: { contains: searchTerm, mode: "insensitive" } },
+          { title: { contains: searchTerm, mode: 'insensitive' } },
           //   { description: { contains: searchTerm, mode: "insensitive" } },
         ],
       },
@@ -39,6 +37,7 @@ export const searchTasks = async (
         },
         assignedTo: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             avatarUrl: true,
@@ -58,6 +57,6 @@ export const searchTasks = async (
     return validatedResponse;
   } catch (error) {
     // Handle and return errors
-    return handleError(error, "searchTasks") as SearchTasksResponse;
+    return handleError(error, 'searchTasks') as SearchTasksResponse;
   }
 };

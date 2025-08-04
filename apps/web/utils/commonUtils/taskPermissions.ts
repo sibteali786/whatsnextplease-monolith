@@ -11,7 +11,12 @@ export const TASK_VIEWER_ROLES = [
 
 export const TASK_CREATOR_ROLES = [Roles.CLIENT, Roles.TASK_SUPERVISOR, Roles.SUPER_USER] as const;
 
-export const TASK_ASSIGNEE_ROLES = [Roles.TASK_AGENT, Roles.TASK_SUPERVISOR] as const;
+export const TASK_ASSIGNEE_ROLES = [Roles.TASK_AGENT] as const;
+
+export enum USER_CREATED_TASKS_CONTEXT {
+  USER_PROFILE = 'user-profile',
+  GENERAL = 'general',
+}
 
 // Helper functions to check role permissions
 export const canViewTasks = (role: Roles): boolean => {
@@ -26,26 +31,38 @@ export const canBeAssignedTasks = (role: Roles): boolean => {
   return TASK_ASSIGNEE_ROLES.includes(role as any);
 };
 
-// Function to determine the filter condition based on role
-export const getTaskFilterCondition = (userId: string, role: Roles) => {
+// Context-specific filter functions
+export const getUserProfileTaskFilter = (profileUserId: string) => {
+  // For user profiles - always show tasks assigned to the profile user
+  return { assignedToId: profileUserId };
+};
+
+export const getGeneralTaskFilter = (currentUserId: string, currentUserRole: Roles) => {
+  // For general contexts (dashboards, task lists) - role-based filtering
+
   // Task Agents and Supervisors see tasks assigned to them
-  if (role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR) {
-    return { assignedToId: userId };
+  if (currentUserRole === Roles.TASK_AGENT || currentUserRole === Roles.TASK_SUPERVISOR) {
+    return { assignedToId: currentUserId };
   }
 
   // Clients see tasks they created
-  if (role === Roles.CLIENT) {
-    return { createdByClientId: userId };
+  if (currentUserRole === Roles.CLIENT) {
+    return { createdByClientId: currentUserId };
   }
 
-  // Super Users can see all tasks, but we'll filter by assigned or created
-  // This could be customized further if needed
-  if (role === Roles.SUPER_USER) {
-    return {
-      OR: [{ assignedToId: userId }, { createdByUserId: userId }],
-    };
+  // Super Users can see all tasks or apply custom logic
+  if (currentUserRole === Roles.SUPER_USER) {
+    return {}; // See all tasks, or add custom logic here
   }
 
-  // Default empty filter (should not reach here if validation is done properly)
-  return {};
+  // Default - no tasks
+  return { id: 'never-match' };
+};
+
+// Backward compatibility - deprecated, use context-specific functions above
+export const getTaskFilterCondition = (userId: string, role: Roles) => {
+  console.warn(
+    'getTaskFilterCondition is deprecated. Use getUserProfileTaskFilter or getGeneralTaskFilter instead.'
+  );
+  return getGeneralTaskFilter(userId, role);
 };

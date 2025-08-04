@@ -30,6 +30,7 @@ import {
   transformEnumValue,
   trimWhitespace,
   formatOriginalEstimate,
+  getCookie,
 } from '@/utils/utils';
 import {
   Select,
@@ -38,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CalendarIcon, CheckCircle, CircleX } from 'lucide-react';
+import { CalendarIcon, CheckCircle, CircleX, Info } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -47,7 +48,11 @@ import { usersList } from '@/db/repositories/users/usersList';
 import { FileSchemaType, TaskFile, TaskTable, UserAssigneeSchema } from '@/utils/validationSchemas';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { FileAttachmentsList } from '../files/FileAttachmentList';
-import { fileAPI } from '@/utils/fileAPI'; // Import the API client
+import { fileAPI } from '@/utils/fileAPI';
+import { COOKIE_NAME } from '@/utils/constant';
+import { MultiSelect } from '../ui/multi-select';
+import { Badge } from '@/components/ui/badge';
+import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -57,6 +62,7 @@ const editTaskSchema = z.object({
   statusName: z.nativeEnum(TaskStatusEnum),
   taskCategoryName: z.string().min(1, 'Task Category is required'),
   assignedToId: z.string().optional(),
+  skills: z.array(z.string()).nonempty('Please select at least one skill'),
   timeForTask: z
     .string()
     .min(1, 'Time for Task is required')
@@ -101,14 +107,35 @@ interface EditTaskDialogProps {
   onOpenChange: (open: boolean) => void;
   task: TaskTable;
   role: Roles;
+  taskCategories: { id: string; categoryName: string }[];
+  fetchTasks?: () => Promise<void>;
+  onTaskUpdate?: () => Promise<void>;
 }
 
-export default function EditTaskDialog({ open, onOpenChange, task, role }: EditTaskDialogProps) {
+export default function EditTaskDialog({
+  open,
+  onOpenChange,
+  task,
+  role,
+  taskCategories,
+  fetchTasks,
+  onTaskUpdate,
+}: EditTaskDialogProps) {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
-  // manage loading state for each file
+  const [skills, setSkills] = useState<
+    { id: string; name: string; skillCategory: { categoryName: string } }[]
+  >([]);
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
+
+  // Permission checks based on role
+  const canAssignTasks = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
+  const canEditStatus = role !== Roles.CLIENT;
+  const canEditOverTime = role !== Roles.CLIENT;
+  const canEditPriority = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
+  const canEditCategory = role !== Roles.CLIENT;
+
   const form = useForm<EditTaskFormValues>({
     resolver: zodResolver(editTaskSchema),
     defaultValues: {
@@ -117,6 +144,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
       priorityName: TaskPriorityEnum.NORMAL,
       statusName: TaskStatusEnum.NEW,
       taskCategoryName: '',
+      skills: [],
       timeForTask: '1d',
       overTime: '0',
       dueDate: new Date(),
@@ -124,7 +152,58 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
     mode: 'onSubmit',
   });
 
+  const fetchSkills = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const skillsData = await response.json();
+        setSkills(skillsData);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to fetch skills',
+        description: 'Unable to load skills for editing',
+        icon: <CircleX size={40} />,
+      });
+    }
+  };
+
+  const groupSkillsByCategory = (
+    skills: { id: string; name: string; skillCategory: { categoryName: string } }[]
+  ) => {
+    const grouped = skills.reduce(
+      (acc, skill) => {
+        const categoryName = skill.skillCategory.categoryName;
+        if (!acc[categoryName]) {
+          acc[categoryName] = [];
+        }
+        acc[categoryName].push({
+          label: skill.name,
+          value: skill.name,
+        });
+        return acc;
+      },
+      {} as Record<string, { label: string; value: string }[]>
+    );
+
+    return Object.entries(grouped).map(([category, items]) => ({
+      category,
+      items,
+    }));
+  };
+
   const fetchUsers = async () => {
+    if (!canAssignTasks) {
+      return;
+    }
     try {
       const response = await usersList(role ?? Roles.TASK_SUPERVISOR);
       if (response.success) {
@@ -158,6 +237,8 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
         priorityName: task.priority.priorityName,
         statusName: task.status.statusName,
         taskCategoryName: task.taskCategory.categoryName,
+        assignedToId: task?.assignedTo?.id || '',
+        skills: task.taskSkills || [],
         timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
         overTime:
           task.overTime && Number(task.overTime) > 0
@@ -171,6 +252,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
       }
     }
     fetchUsers();
+    fetchSkills();
   }, [task, open, form]);
 
   const [, startTransition] = useTransition();
@@ -278,8 +360,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
         dueDate: trimmedData.dueDate ? trimmedData.dueDate : null,
         timeForTask: totalHours.toString(),
         overTime: overTimeDecimal,
-        // Include skills if needed and available:
-        skills: task.taskSkills ?? [],
+        skills: trimmedData.skills,
       };
 
       const response = await updateTaskById(formattedData);
@@ -291,6 +372,13 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
           icon: <CheckCircle size={40} />,
         });
         onOpenChange(false);
+        if (fetchTasks) {
+          await fetchTasks(); // Refresh tasks if fetchTasks is provided
+        }
+
+        if (onTaskUpdate) {
+          await onTaskUpdate();
+        }
       } else {
         toast({
           title: 'Failed to update task',
@@ -324,6 +412,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4 max-h-[70vh] overflow-auto px-6"
           >
+            {/* Title - Always editable */}
             <FormField
               control={form.control}
               name="title"
@@ -338,6 +427,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
               )}
             />
 
+            {/* Description - Always editable */}
             <FormField
               control={form.control}
               name="description"
@@ -352,107 +442,255 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
               )}
             />
 
+            {/* Skills - Always editable (with warning for clients) */}
             <FormField
               control={form.control}
-              name="taskCategoryName"
+              name="skills"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Task Category</FormLabel>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Skills</FormLabel>
                   <FormControl>
-                    <Input placeholder="Task Category" {...field} />
+                    <MultiSelect
+                      options={groupSkillsByCategory(skills)}
+                      onValueChange={field.onChange}
+                      defaultValue={field.value || []}
+                      placeholder="Select Skills"
+                      maxCount={5}
+                    />
                   </FormControl>
+                  {role === Roles.CLIENT && (
+                    <div className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-2">
+                      <Info className="h-3 w-3 inline mr-1" />
+                      Please ensure you select the correct skills. Task Supervisors may adjust if
+                      needed.
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="priorityName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(TaskPriorityEnum).map(value => (
-                          <SelectItem key={value} value={value}>
-                            {transformEnumValue(value)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Task Category - Conditional editing */}
+            {canEditCategory ? (
+              <FormField
+                control={form.control}
+                name="taskCategoryName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task Category</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={taskCategories.length === 0}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {taskCategories.length > 0 ? (
+                            taskCategories.map(category => (
+                              <SelectItem key={category.id} value={category.categoryName}>
+                                {category.categoryName}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-categories" disabled>
+                              No categories available
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormItem>
+                <FormLabel>Task Category</FormLabel>
+                <div className="border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      Category: <strong>{task.taskCategory.categoryName}</strong>
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Task category cannot be changed after creation.
+                  </p>
+                </div>
+              </FormItem>
+            )}
 
-            <FormField
-              control={form.control}
-              name="statusName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.values(TaskStatusEnum).map(value => (
-                          <SelectItem key={value} value={value}>
-                            {transformEnumValue(value)}
+            {/* Priority - Conditional editing */}
+            {canEditPriority ? (
+              <FormField
+                control={form.control}
+                name="priorityName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(TaskPriorityEnum).map(value => (
+                            <SelectItem key={value} value={value}>
+                              {transformEnumValue(value)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormItem>
+                <FormLabel>Priority</FormLabel>
+                <div className="border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <Badge className={taskPriorityColors[task.priority.priorityName]}>
+                      {transformEnumValue(task.priority.priorityName)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Task priority is managed by Task Supervisors.
+                  </p>
+                </div>
+              </FormItem>
+            )}
+
+            {/* Status - Conditional editing */}
+            {canEditStatus ? (
+              <FormField
+                control={form.control}
+                name="statusName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(TaskStatusEnum).map(value => (
+                            <SelectItem key={value} value={value}>
+                              {transformEnumValue(value)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <div className="border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <Badge className={taskStatusColors[task.status.statusName]}>
+                      {transformEnumValue(task.status.statusName)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Task status is updated by the assigned Task Agent.
+                  </p>
+                </div>
+              </FormItem>
+            )}
+
+            {/* Assignment - Conditional editing */}
+            {canAssignTasks ? (
+              <FormField
+                control={form.control}
+                name="assignedToId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assigned Task Agent</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={value => field.onChange(value === 'none' ? '' : value)}
+                        value={field.value || 'none'}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Assignee" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">
+                            <span className="text-muted-foreground">No Assignee</span>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="assignedToId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assigned Task Agent</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Assignee" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map(user => (
-                          <SelectItem key={user.id} value={user.id}>
-                            <div className="flex items-center">
-                              <Avatar className="h-8 w-8 rounded-lg">
-                                <AvatarImage
-                                  src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                  alt={user.firstName ?? 'avatar'}
-                                  className="rounded-full"
-                                />
-                                <AvatarFallback className="rounded-full">
-                                  {user.firstName
-                                    ? user.firstName.substring(0, 2).toUpperCase()
-                                    : 'CN'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              <div className="flex items-center">
+                                <Avatar className="h-8 w-8 rounded-lg">
+                                  <AvatarImage
+                                    src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                    alt={user.firstName ?? 'avatar'}
+                                    className="rounded-full"
+                                  />
+                                  <AvatarFallback className="rounded-full">
+                                    {user.firstName
+                                      ? user.firstName.substring(0, 2).toUpperCase()
+                                      : 'CN'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormItem>
+                <FormLabel>Assigned Task Agent</FormLabel>
+                <div className="border rounded-md p-4 w-full bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    {task.assignedTo ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarImage
+                            src={task.assignedTo.avatarUrl || 'https://github.com/shadcn.png'}
+                            alt={task.assignedTo.firstName ?? 'avatar'}
+                            className="rounded-full"
+                          />
+                          <AvatarFallback className="rounded-full">
+                            {task.assignedTo.firstName
+                              ? task.assignedTo.firstName.substring(0, 2).toUpperCase()
+                              : 'CN'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">
+                          Assigned to:{' '}
+                          <strong>{`${task.assignedTo.firstName} ${task.assignedTo.lastName}`}</strong>
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Not yet assigned. Task Supervisors will assign this task.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </FormItem>
+            )}
+
+            {/* Original Estimate - Always editable */}
             <FormField
               control={form.control}
               name="timeForTask"
@@ -467,25 +705,45 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
               )}
             />
 
-            {/* OverTime Field */}
-            <FormField
-              control={form.control}
-              name="overTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>OverTime (optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      placeholder="e.g. 1h 30m or leave empty if none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* OverTime - Conditional editing */}
+            {canEditOverTime ? (
+              <FormField
+                control={form.control}
+                name="overTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>OverTime (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="e.g. 1h 30m or leave empty if none"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <FormItem>
+                <FormLabel>OverTime</FormLabel>
+                <div className="border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {task.overTime && Number(task.overTime) > 0
+                        ? `${formatOriginalEstimate(Number(task.overTime))} of overtime logged`
+                        : 'No overtime logged'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Overtime is tracked by the Task Agent during work.
+                  </p>
+                </div>
+              </FormItem>
+            )}
 
+            {/* Due Date - Always editable */}
             <FormField
               control={form.control}
               name="dueDate"
@@ -525,6 +783,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
                 </FormItem>
               )}
             />
+
             {/* Show Task Attachments if any */}
             {files && files.length > 0 && (
               <FileAttachmentsList
@@ -536,7 +795,7 @@ export default function EditTaskDialog({ open, onOpenChange, task, role }: EditT
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit">Save</Button>

@@ -16,14 +16,23 @@ import { Roles } from '@prisma/client';
 import { CallToAction } from '@/components/CallToAction';
 import { PlusCircle, ClipboardList } from 'lucide-react';
 import { LinkButton } from '@/components/ui/LinkButton';
+import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
+import { DurationEnum } from '@/types';
 
 const RecentTasksPage = async () => {
   const user = await getCurrentUser();
   if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
-  const { tasks } = await getTasksByUserId(user.id, Roles.CLIENT, null, 5);
-
+  const { tasks } = await getTasksByUserId(
+    user.id,
+    Roles.CLIENT,
+    null,
+    5,
+    '', // searchTerm (empty)
+    DurationEnum.ALL, // duration (default)
+    USER_CREATED_TASKS_CONTEXT.GENERAL // context (correct position)
+  );
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3">

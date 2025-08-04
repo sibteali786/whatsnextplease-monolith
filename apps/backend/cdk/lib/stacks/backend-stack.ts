@@ -62,6 +62,12 @@ export class WnpBackendStack extends cdk.Stack {
       `database-url-${props.stage}` // actual secret name
     );
 
+    const nextPublicAppUrlSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'NextPublicAppUrlSecret',
+      `next-public-app-url-${props.stage}` // actual secret name
+    );
+
     // Skip Fargate service creation in first deployment as it looks for empty ECR repository
     if (process.env.SKIP_FARGATE !== 'true') {
       // Create a task definition
@@ -79,6 +85,7 @@ export class WnpBackendStack extends cdk.Stack {
         },
         secrets: {
           DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
+          NEXT_PUBLIC_APP_URL: ecs.Secret.fromSecretsManager(nextPublicAppUrlSecret),
         },
         logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'wnp-backend' }),
       });

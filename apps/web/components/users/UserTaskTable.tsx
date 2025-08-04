@@ -38,6 +38,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { CustomTooltip } from '../CustomTooltip';
+import { useRouter } from 'next/navigation';
+import { getCookie } from '@/utils/utils';
+import { COOKIE_NAME } from '@/utils/constant';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -53,6 +56,8 @@ interface UserTasksTableProps {
   taskIds: string[] | null;
   role: Roles;
   fetchTasks?: () => Promise<void>; // Optional callback to refresh tasks
+  showAsModal?: boolean;
+  onTaskUpdate?: () => Promise<void>;
 }
 
 export function UserTasksTable({
@@ -69,9 +74,12 @@ export function UserTasksTable({
   taskIds,
   role,
   fetchTasks,
+  showAsModal = false,
+  onTaskUpdate,
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState({});
+  const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
   const { setSelectedTask, selectedTask } = useSelectedTask();
   const { toast } = useToast();
 
@@ -84,7 +92,7 @@ export function UserTasksTable({
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [localData, setLocalData] = useState<TaskTable[]>(data);
-
+  const router = useRouter();
   // Update local data when prop data changes
   useEffect(() => {
     setLocalData(data);
@@ -163,7 +171,36 @@ export function UserTasksTable({
   });
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
+  const handleRowClick = (task: TaskTable) => {
+    if (showAsModal) {
+      // Modal behavior for contexts like dashboard quick view
+      setSelectedTask(task);
+      setOpenDetailsDialog(true);
+    } else {
+      // Page navigation for main task listings
+      router.push(`/taskOfferings/${task.id}`);
+    }
+  };
+  const fetchTaskCategories = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
+      if (response.ok) {
+        const categoriesData = await response.json();
+        setTaskCategories(categoriesData);
+      }
+    } catch (error) {
+      console.error('Error fetching task categories:', error);
+    }
+  };
+  useEffect(() => {
+    fetchTaskCategories();
+  }, []);
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border">
@@ -199,10 +236,7 @@ export function UserTasksTable({
                   delayDuration={100}
                 >
                   <TableRow
-                    onClick={() => {
-                      setSelectedTask(row.original);
-                      setOpenDetailsDialog(true);
-                    }}
+                    onClick={() => handleRowClick(row.original)}
                     className="cursor-pointer hover:bg-muted/50"
                   >
                     {row.getVisibleCells().map(cell => (
@@ -243,11 +277,13 @@ export function UserTasksTable({
       </div>
 
       {/* Modals and Dialogs */}
-      <TaskDetailsModal
-        taskId={selectedTask?.id ?? ''}
-        open={openDetailsDialog}
-        setOpen={setOpenDetailsDialog}
-      />
+      {showAsModal && (
+        <TaskDetailsModal
+          taskId={selectedTask?.id ?? ''}
+          open={openDetailsDialog}
+          setOpen={setOpenDetailsDialog}
+        />
+      )}
 
       {taskToEdit && (
         <EditTaskDialog
@@ -255,6 +291,9 @@ export function UserTasksTable({
           onOpenChange={setIsEditDialogOpen}
           task={taskToEdit}
           role={role}
+          taskCategories={taskCategories}
+          fetchTasks={fetchTasks}
+          onTaskUpdate={onTaskUpdate}
         />
       )}
 

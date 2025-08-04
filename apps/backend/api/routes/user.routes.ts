@@ -39,6 +39,7 @@ router.delete(
   requireRole([Roles.SUPER_USER, Roles.TASK_SUPERVISOR]),
   controller.deleteUser
 );
+router.get('/me', verifyToken, controller.getCurrentUser);
 
 /**
  * PUT /users/:userId/role

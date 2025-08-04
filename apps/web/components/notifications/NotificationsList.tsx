@@ -18,8 +18,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { NotificationStatus } from '@prisma/client';
+import { NotificationStatus, TaskPriorityEnum } from '@prisma/client';
 import { ConnectionStatusIndicator } from './NotificatonIndicator';
+import { taskPriorityColors } from '@/utils/commonClasses';
 
 interface NotificationsListProps {
   notifications: NotificationList[];
@@ -29,7 +30,29 @@ interface NotificationsListProps {
 }
 
 function formatDistance(date1: Date, date2: Date, options: { addSuffix: boolean }): string {
-  return dateFnsFormatDistance(date1, date2, options);
+  try {
+    // Ensure both dates are valid Date objects
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+
+    // Check if dates are valid
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+      return 'just now';
+    }
+
+    // Calculate the difference in milliseconds
+    const diffInMs = Math.abs(d2.getTime() - d1.getTime());
+
+    // If the difference is less than 10 seconds, show "just now"
+    if (diffInMs < 10000) {
+      return 'just now';
+    }
+
+    return dateFnsFormatDistance(d1, d2, options);
+  } catch (error) {
+    console.warn('Error formatting date distance:', error);
+    return 'just now';
+  }
 }
 
 export default function NotificationsList({
@@ -49,31 +72,62 @@ export default function NotificationsList({
           key={item.id}
           className="group flex items-center gap-4 py-4 px-6 mb-2 rounded-lg transition-all duration-200 hover:bg-muted/50 relative"
         >
-          {/* Unread indicator */}
+          {/* Priority indicator bar (left side) */}
+          {item.data?.details?.priority && (
+            <div
+              className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${
+                taskPriorityColors[item.data.details.priority as TaskPriorityEnum]?.split(' ')[0] ||
+                'bg-gray-400'
+              }`}
+            />
+          )}
+          {/* Unread indicator - moved slightly to the right */}
           {item.status === NotificationStatus.UNREAD && (
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
           )}
 
-          {/* Avatar with improved sizing */}
+          {/* Avatar with priority border */}
           <div className="shrink-0">
-            <Avatar className="h-10 w-10">
-              {item.data?.avatarUrl ? (
-                <AvatarImage
-                  src={item.data.avatarUrl}
-                  alt={item.data?.name || 'User'}
-                  className="object-cover"
-                />
-              ) : (
-                <AvatarFallback className="bg-primary-foreground text-primary">
-                  {item.data?.name?.charAt(0).toUpperCase() || 'U'}
-                </AvatarFallback>
-              )}
-            </Avatar>
+            <div
+              className={`p-0.5 rounded-full ${
+                item.data?.details?.priority
+                  ? taskPriorityColors[item.data.details.priority as TaskPriorityEnum]?.split(
+                      ' '
+                    )[0] || 'bg-gray-400'
+                  : 'bg-transparent'
+              }`}
+            >
+              <Avatar className="h-10 w-10">
+                {item.data?.avatarUrl ? (
+                  <AvatarImage
+                    src={item.data.avatarUrl}
+                    alt={item.data?.name || 'User'}
+                    className="object-cover"
+                  />
+                ) : (
+                  <AvatarFallback className="bg-primary-foreground text-primary">
+                    {item.data?.name?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+            </div>
           </div>
 
-          {/* Content with better structure */}
+          {/* Content with priority badge */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium leading-none mb-1">{item.message}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm font-medium leading-none">{item.message}</p>
+              {item.data?.details?.priority && (
+                <span
+                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    taskPriorityColors[item.data.details.priority as TaskPriorityEnum] ||
+                    'bg-gray-500 text-white'
+                  }`}
+                >
+                  {item.data.details.priority.replace('_', ' ')}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               {formatDistance(new Date(item.createdAt), new Date(), {
                 addSuffix: true,

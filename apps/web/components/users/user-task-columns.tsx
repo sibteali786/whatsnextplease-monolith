@@ -217,7 +217,12 @@ export const generateUserTaskColumns = (
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(task.id)}>
+              <DropdownMenuItem
+                onClick={e => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(task.id);
+                }}
+              >
                 Copy Task ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />

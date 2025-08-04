@@ -1,4 +1,4 @@
-import { FileUploadError, NotFoundError, UpdateProfileSchema } from '@wnp/types';
+import { FileUploadError, NotFoundError, UnauthorizedError, UpdateProfileSchema } from '@wnp/types';
 import { BadRequestError, UpdateProfilePictureSchema } from '@wnp/types';
 import { NextFunction, Response } from 'express';
 import { RoleFilter, UserService } from '../services/user.service';
@@ -304,7 +304,25 @@ export class UserController {
       });
     }
   });
+  handleGetCurrentUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
 
+    if (!userId) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
+    const user = await this.userService.getCurrentUserProfile(userId);
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'Current user profile retrieved successfully',
+    });
+  };
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
@@ -312,4 +330,5 @@ export class UserController {
   getUsersWithRoles = asyncHandler(this.getUsersWithRolesHandler);
   updateUserRole = asyncHandler(this.updateUserRoleHandler);
   getAvailableRoles = asyncHandler(this.getAvailableRolesHandler);
+  getCurrentUser = asyncHandler(this.handleGetCurrentUser);
 }

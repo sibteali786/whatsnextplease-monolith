@@ -266,6 +266,7 @@ export const TaskSchema = z.object({
   }),
   assignedTo: z
     .object({
+      id: z.string(),
       firstName: z.string(),
       lastName: z.string(),
       avatarUrl: z.string().nullable(),

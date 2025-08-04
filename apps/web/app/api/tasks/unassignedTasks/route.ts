@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import prisma from "@/db/db";
+import { NextResponse } from 'next/server';
+import prisma from '@/db/db';
 import {
   getUnassignedTasksInputSchema,
   getUnassignedTasksOutputSchema,
-} from "@/utils/validationSchemas";
+} from '@/utils/validationSchemas';
 // Input Schema for Query Parameters
 
 export async function GET(request: Request) {
@@ -12,8 +12,8 @@ export async function GET(request: Request) {
   try {
     // Validate input query parameters
     const queryParams = getUnassignedTasksInputSchema.parse({
-      pageSize: searchParams.get("pageSize"),
-      cursor: searchParams.get("cursor"),
+      pageSize: searchParams.get('pageSize'),
+      cursor: searchParams.get('cursor'),
     });
 
     const { pageSize = 10, cursor } = queryParams;
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
         priority: { select: { priorityName: true } },
         status: { select: { statusName: true } },
         assignedTo: {
-          select: { firstName: true, lastName: true, avatarUrl: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
         taskCategory: {
           select: {
@@ -61,8 +61,8 @@ export async function GET(request: Request) {
       where: { assignedToId: null },
     });
     // reformat
-    const formattedTasks = tasks.map((task) => {
-      const skills = task.taskSkills.map((ts) => ts.skill.name);
+    const formattedTasks = tasks.map(task => {
+      const skills = task.taskSkills.map(ts => ts.skill.name);
       return {
         ...task,
         taskSkills: skills,
@@ -77,15 +77,14 @@ export async function GET(request: Request) {
     };
 
     // Validate output response
-    const validatedResponse =
-      getUnassignedTasksOutputSchema.parse(responseData);
+    const validatedResponse = getUnassignedTasksOutputSchema.parse(responseData);
 
     return NextResponse.json(validatedResponse);
   } catch (error) {
-    console.error("Error fetching unassigned tasks:", error);
+    console.error('Error fetching unassigned tasks:', error);
     return NextResponse.json(
-      { success: false, message: "An error occurred while fetching tasks." },
-      { status: 500 },
+      { success: false, message: 'An error occurred while fetching tasks.' },
+      { status: 500 }
     );
   }
 }
