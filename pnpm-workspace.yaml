@@ -2,4 +2,3 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'apps/web/cdk'
-  - 'apps/backend/cdk'

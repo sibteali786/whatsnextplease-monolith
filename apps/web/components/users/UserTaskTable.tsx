@@ -1,3 +1,4 @@
+// components/users/UserTasksTable.tsx (Updated with Batch Operations)
 'use client';
 
 import {
@@ -41,6 +42,9 @@ import { CustomTooltip } from '../CustomTooltip';
 import { useRouter } from 'next/navigation';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
+import { BatchOperationsDropdown } from '@/components/tasks/BatchOperationsDropdown';
+import { batchUpdateTasks, batchDeleteTasks, BatchUpdateRequest } from '@/utils/taskApi';
+import { UserDropdownMenuContent } from '../tasks/BatchUpdateDialog';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -55,7 +59,7 @@ interface UserTasksTableProps {
   setPageSize: (pageSize: number) => void;
   taskIds: string[] | null;
   role: Roles;
-  fetchTasks?: () => Promise<void>; // Optional callback to refresh tasks
+  fetchTasks?: () => Promise<void>;
   showAsModal?: boolean;
   onTaskUpdate?: () => Promise<void>;
 }
@@ -78,8 +82,9 @@ export function UserTasksTable({
   onTaskUpdate,
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [rowSelection, setRowSelection] = useState({});
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
+  const [users, setUsers] = useState<UserDropdownMenuContent[]>([]);
   const { setSelectedTask, selectedTask } = useSelectedTask();
   const { toast } = useToast();
 
@@ -92,11 +97,22 @@ export function UserTasksTable({
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [localData, setLocalData] = useState<TaskTable[]>(data);
+
+  // Batch operations state
+  const [isBatchLoading, setIsBatchLoading] = useState(false);
+
   const router = useRouter();
+
   // Update local data when prop data changes
   useEffect(() => {
     setLocalData(data);
   }, [data]);
+
+  // Get selected tasks
+  const selectedTaskIndices = Object.keys(rowSelection).filter(key => rowSelection[key]);
+  const selectedTasks = selectedTaskIndices
+    .map(index => localData[parseInt(index)])
+    .filter((task): task is TaskTable => task !== undefined);
 
   const handleDeleteTask = async (taskId: string) => {
     setTaskToDelete(taskId);
@@ -148,6 +164,88 @@ export function UserTasksTable({
     }
   };
 
+  // Batch operations handlers
+  const handleBatchUpdate = async (updates: BatchUpdateRequest) => {
+    setIsBatchLoading(true);
+    try {
+      const response = await batchUpdateTasks(updates);
+
+      if (response.success) {
+        toast({
+          title: 'Tasks updated successfully',
+          description: response.message,
+          variant: 'success',
+          icon: <CheckCircle className="h-4 w-4" />,
+        });
+
+        // Clear selection
+        setRowSelection({});
+
+        // Refresh data
+        if (fetchTasks) {
+          await fetchTasks();
+        }
+        if (onTaskUpdate) {
+          await onTaskUpdate();
+        }
+      }
+    } catch (error) {
+      console.error('Batch update failed:', error);
+      toast({
+        title: 'Failed to update tasks',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive',
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+    } finally {
+      setIsBatchLoading(false);
+    }
+  };
+
+  const handleBatchDelete = async (taskIds: string[]) => {
+    setIsBatchLoading(true);
+    try {
+      const response = await batchDeleteTasks(taskIds);
+
+      if (response.success) {
+        toast({
+          title: 'Tasks deleted successfully',
+          description: response.message,
+          variant: 'success',
+          icon: <CheckCircle className="h-4 w-4" />,
+        });
+
+        // Clear selection
+        setRowSelection({});
+
+        // Optimistically update local data
+        setLocalData(prev => prev.filter(task => !taskIds.includes(task.id)));
+
+        // Refresh data
+        if (fetchTasks) {
+          await fetchTasks();
+        }
+        if (onTaskUpdate) {
+          await onTaskUpdate();
+        }
+      }
+    } catch (error) {
+      console.error('Batch delete failed:', error);
+      toast({
+        title: 'Failed to delete tasks',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: 'destructive',
+        icon: <AlertCircle className="h-4 w-4" />,
+      });
+    } finally {
+      setIsBatchLoading(false);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setRowSelection({});
+  };
+
   const userTaskColumns = generateUserTaskColumns(
     showDescription,
     task => {
@@ -171,6 +269,7 @@ export function UserTasksTable({
   });
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
+
   const handleRowClick = (task: TaskTable) => {
     if (showAsModal) {
       // Modal behavior for contexts like dashboard quick view
@@ -181,6 +280,7 @@ export function UserTasksTable({
       router.push(`/taskOfferings/${task.id}`);
     }
   };
+
   const fetchTaskCategories = async () => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
@@ -198,11 +298,78 @@ export function UserTasksTable({
       console.error('Error fetching task categories:', error);
     }
   };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskAgents/list`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          // Fetch workload for each user
+          const usersWithWorkload = await Promise.all(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            result.users.map(async (user: any) => {
+              try {
+                const workloadResponse = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL}/taskAgents/${user.id}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+                      'Content-Type': 'application/json',
+                    },
+                  }
+                );
+
+                if (workloadResponse.ok) {
+                  const workloadData = await workloadResponse.json();
+                  return {
+                    ...user,
+                    currentTasksCount:
+                      (workloadData.newTasksCount || 0) + (workloadData.inProgressTasksCount || 0),
+                  };
+                }
+                return { ...user, currentTasksCount: 0 };
+              } catch (error) {
+                console.error(`Error fetching workload for user ${user.id}:`, error);
+                return { ...user, currentTasksCount: 0 };
+              }
+            })
+          );
+          setUsers(usersWithWorkload);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
   useEffect(() => {
     fetchTaskCategories();
+    fetchUsers();
   }, []);
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Batch Operations Bar */}
+      {selectedTasks.length > 0 && (
+        <BatchOperationsDropdown
+          selectedTasks={selectedTasks}
+          onBatchUpdate={handleBatchUpdate}
+          onBatchDelete={handleBatchDelete}
+          onClearSelection={handleClearSelection}
+          role={role}
+          taskCategories={taskCategories}
+          users={users}
+          isLoading={isBatchLoading}
+        />
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -237,7 +404,9 @@ export function UserTasksTable({
                 >
                   <TableRow
                     onClick={() => handleRowClick(row.original)}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className={`cursor-pointer hover:bg-muted/50 ${
+                      row.getIsSelected() ? 'bg-muted/50' : ''
+                    }`}
                   >
                     {row.getVisibleCells().map(cell => (
                       <TableCell key={cell.id}>
@@ -257,6 +426,7 @@ export function UserTasksTable({
           </TableBody>
         </Table>
       </div>
+
       <div className="flex flex-row justify-between items-center my-2">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
@@ -264,7 +434,7 @@ export function UserTasksTable({
         </div>
         {/* Pagination */}
         <Pagination
-          loading={loading}
+          loading={loading || isBatchLoading}
           pageSize={pageSize}
           setPageSize={setPageSize}
           cursor={cursor}

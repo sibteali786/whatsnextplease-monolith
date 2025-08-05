@@ -215,7 +215,13 @@ export const SkillCategoryStateSchema = z.object({
   id: z.string(),
   categoryName: z.string(),
 });
-
+export enum DurationEnum {
+  TODAY = 'TODAY',
+  THIS_WEEK = 'THIS_WEEK',
+  THIS_MONTH = 'THIS_MONTH',
+  THIS_YEAR = 'THIS_YEAR',
+  ALL = 'ALL',
+}
 export type SkillCategoryState = z.infer<typeof SkillCategoryStateSchema>;
 export * from './errors';
 export * from './logger';

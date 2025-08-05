@@ -17,7 +17,12 @@ const authMiddleware = [
     Roles.TERRITORY_MANAGER,
   ]),
 ];
-
+/**
+ * @route GET /taskAgent/list
+ * @desc Get simple list of task agents (for dropdowns/assignment)
+ * @access Private (admin roles only)
+ */
+router.get('/list', authMiddleware, controller.getTaskAgentList);
 // Get all task agent IDs (for pagination)
 router.get('/ids', authMiddleware, controller.getTaskAgentIds);
 

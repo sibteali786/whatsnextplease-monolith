@@ -24,8 +24,47 @@ export interface TaskAgentIdsResponse {
   ids: string[];
   totalCount: number;
 }
-
+export interface TaskAgentListResponse {
+  success: boolean;
+  users: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  }>;
+}
 export class TaskAgentService {
+  /**
+   * Get simple list of task agents (for dropdowns/assignment)
+   */
+  async getTaskAgentList(): Promise<TaskAgentListResponse> {
+    try {
+      const taskAgents = await prisma.user.findMany({
+        where: {
+          role: {
+            name: Roles.TASK_AGENT,
+          },
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+        },
+        orderBy: {
+          firstName: 'asc',
+        },
+      });
+
+      return {
+        success: true,
+        users: taskAgents,
+      };
+    } catch (error) {
+      logger.error({ error }, 'Error fetching task agent list');
+      throw new Error('Failed to retrieve task agent list');
+    }
+  }
   /**
    * Get all task agent IDs for pagination
    */
