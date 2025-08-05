@@ -309,8 +309,40 @@ export function UserTasksTable({
       });
 
       if (response.ok) {
-        const usersData = await response.json();
-        setUsers(usersData.users);
+        const result = await response.json();
+        if (result.success) {
+          // Fetch workload for each user
+          const usersWithWorkload = await Promise.all(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            result.users.map(async (user: any) => {
+              try {
+                const workloadResponse = await fetch(
+                  `${process.env.NEXT_PUBLIC_API_URL}/taskAgents/${user.id}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+                      'Content-Type': 'application/json',
+                    },
+                  }
+                );
+
+                if (workloadResponse.ok) {
+                  const workloadData = await workloadResponse.json();
+                  return {
+                    ...user,
+                    currentTasksCount:
+                      (workloadData.newTasksCount || 0) + (workloadData.inProgressTasksCount || 0),
+                  };
+                }
+                return { ...user, currentTasksCount: 0 };
+              } catch (error) {
+                console.error(`Error fetching workload for user ${user.id}:`, error);
+                return { ...user, currentTasksCount: 0 };
+              }
+            })
+          );
+          setUsers(usersWithWorkload);
+        }
       }
     } catch (error) {
       console.error('Error fetching users:', error);

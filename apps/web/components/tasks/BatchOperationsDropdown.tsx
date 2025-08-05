@@ -100,6 +100,17 @@ export function BatchOperationsDropdown({
     return null;
   }
 
+  const getAssignmentMenuText = () => {
+    const assigned = selectedTasks.filter(task => task.assignedTo);
+    const unassigned = selectedTasks.filter(task => !task.assignedTo);
+
+    if (unassigned.length === selectedTasks.length) return 'Assign Tasks';
+    if (assigned.length === selectedTasks.length) {
+      const uniqueAssignees = new Set(assigned.map(task => task.assignedTo?.id));
+      return uniqueAssignees.size === 1 ? 'Change Assignment' : 'Reassign Tasks';
+    }
+    return 'Manage Assignment';
+  };
   return (
     <>
       <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
@@ -147,12 +158,12 @@ export function BatchOperationsDropdown({
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <Users className="mr-2 h-4 w-4" />
-                      Assign Tasks
+                      {getAssignmentMenuText()}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
                       <DropdownMenuItem onClick={() => handleBatchOperation('assignee')}>
                         <Users className="mr-2 h-4 w-4" />
-                        Assign to User
+                        {getAssignmentMenuText()}
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
