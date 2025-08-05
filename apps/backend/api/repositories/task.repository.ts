@@ -205,13 +205,56 @@ export class TaskRepository {
   async batchUpdateTasks(taskIds: string[], updateData: BatchUpdateData) {
     return this.prisma.$transaction(async tx => {
       const updatedTasks = await Promise.all(
-        taskIds.map(taskId =>
-          tx.task.update({
+        taskIds.map(taskId => {
+          // Build the update data with proper Prisma relation syntax
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const prismaUpdateData: any = {};
+
+          // Handle status update
+          if (updateData.statusId) {
+            prismaUpdateData.status = {
+              connect: { id: updateData.statusId },
+            };
+          }
+
+          // Handle priority update
+          if (updateData.priorityId) {
+            prismaUpdateData.priority = {
+              connect: { id: updateData.priorityId },
+            };
+          }
+
+          // Handle assignee update
+          if (updateData.assignedToId !== undefined) {
+            if (updateData.assignedToId) {
+              prismaUpdateData.assignedTo = {
+                connect: { id: updateData.assignedToId },
+              };
+            } else {
+              prismaUpdateData.assignedTo = {
+                disconnect: true,
+              };
+            }
+          }
+
+          // Handle category update
+          if (updateData.categoryId) {
+            prismaUpdateData.taskCategory = {
+              connect: { id: updateData.categoryId },
+            };
+          }
+
+          // Handle due date update
+          if (updateData.dueDate !== undefined) {
+            prismaUpdateData.dueDate = updateData.dueDate;
+          }
+
+          return tx.task.update({
             where: { id: taskId },
-            data: updateData,
+            data: prismaUpdateData,
             select: { id: true, title: true },
-          })
-        )
+          });
+        })
       );
 
       return updatedTasks;

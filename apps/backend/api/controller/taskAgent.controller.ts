@@ -2,9 +2,22 @@ import { NextFunction, Request, Response } from 'express';
 import { TaskAgentService } from '../services/taskAgent.service';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError } from '@wnp/types';
+import { logger } from '../utils/logger';
 
 export class TaskAgentController {
   constructor(private readonly taskAgentService: TaskAgentService = new TaskAgentService()) {}
+  /**
+   * Handler to get simple list of task agents (for dropdowns)
+   */
+  private handleGetTaskAgentList = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const taskAgentList = await this.taskAgentService.getTaskAgentList();
+      logger.info('Fetched task agent list', { count: taskAgentList.users });
+      res.status(200).json(taskAgentList);
+    } catch (error) {
+      next(error);
+    }
+  };
   /**
    * Handler to get task agent IDs for pagination
    */
@@ -72,4 +85,5 @@ export class TaskAgentController {
   getTaskAgentIds = asyncHandler(this.handleGetTaskAgentIds);
   getTaskAgents = asyncHandler(this.handleGetTaskAgents);
   getTaskAgentById = asyncHandler(this.handleGetTaskAgentById);
+  getTaskAgentList = asyncHandler(this.handleGetTaskAgentList);
 }

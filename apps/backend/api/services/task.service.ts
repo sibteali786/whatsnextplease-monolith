@@ -1,7 +1,8 @@
 // apps/backend/api/services/task.service.ts
 import { Roles, TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@wnp/types';
-import { canViewTasks, getTaskFilterCondition } from './../utils/tasks/taskPermissions';
+import { canViewTasks, getTaskFilterCondition } from '../utils/tasks/taskPermissions';
+import { getDateFilter } from '../utils/dateFilter';
 import { DurationEnum } from '@wnp/types';
 import {
   TaskRepository,
@@ -9,7 +10,6 @@ import {
   TaskQueryOptions,
   BatchUpdateData,
 } from '../repositories/task.repository';
-import { getDateFilter } from '../utils/dateFilter';
 
 export interface BatchUpdateRequest {
   taskIds: string[];
@@ -301,15 +301,14 @@ export class TaskService {
     if (role && !canViewTasks(role)) {
       throw new ForbiddenError(`Role ${role} is not authorized to view task statistics.`);
     }
-    if (role) {
-      const whereCondition = userId ? getTaskFilterCondition(userId, role) : {};
-      const statistics = await this.taskRepository.getTaskStatistics(whereCondition);
 
-      return {
-        success: true,
-        statistics,
-      };
-    }
+    const whereCondition = userId && role ? getTaskFilterCondition(userId, role) : {};
+    const statistics = await this.taskRepository.getTaskStatistics(whereCondition);
+
+    return {
+      success: true,
+      statistics,
+    };
   }
 
   /**
