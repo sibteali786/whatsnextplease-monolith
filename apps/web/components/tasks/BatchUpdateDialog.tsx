@@ -61,7 +61,17 @@ export function BatchUpdateDialog({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!selectedValue && !selectedDate && updateType !== 'dueDate') return;
+    // For assignee updates, allow empty/none values (unassignment)
+    // For other update types, require a value or date
+    if (updateType === 'assignee') {
+      // For assignee, we allow any value including 'none' or empty
+      // The validation will be handled in the switch statement below
+    } else if (updateType === 'dueDate') {
+      // For due date, we allow selectedDate to be undefined (clearing the date)
+    } else if (!selectedValue) {
+      // For other types, require a selected value
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -374,7 +384,17 @@ export function BatchUpdateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading || (!selectedValue && !selectedDate)}>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              isLoading ||
+              (updateType === 'assignee'
+                ? false // Always allow submission for assignee updates
+                : updateType === 'dueDate'
+                  ? false // Always allow submission for due date updates
+                  : !selectedValue) // For other types, require selectedValue
+            }
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Update Tasks
           </Button>
