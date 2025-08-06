@@ -58,6 +58,13 @@ function formatDistance(date1: Date, date2: Date, options: { addSuffix: boolean 
 
 // Helper function to get badge styling based on field type and value
 const getBadgeStyle = (field: string, value: string) => {
+  // if alue is not in Enum form then we transform it to ENUm form like In Progress to IN_PROGRESS
+  if (!Object.values(TaskStatusEnum).includes(value as TaskStatusEnum)) {
+    value = value.toUpperCase().replace(/ /g, '_');
+  }
+  if (!Object.values(TaskPriorityEnum).includes(value as TaskPriorityEnum)) {
+    value = value.toUpperCase().replace(/ /g, '_');
+  }
   switch (field) {
     case 'status':
       return taskStatusColors[value as TaskStatusEnum] || 'bg-gray-500 text-white';
