@@ -274,6 +274,50 @@ export class TaskController {
     }
   };
 
+  /**
+   * Update a single field of a task
+   */
+  private handleUpdateTaskField = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { taskId } = req.params;
+      const { field, value } = req.body;
+
+      if (!taskId) {
+        throw new BadRequestError('Task ID is required');
+      }
+
+      if (!field || !value) {
+        throw new BadRequestError('Field and value are required');
+      }
+
+      // Validate field type
+      const allowedFields = ['status', 'priority', 'taskCategory'];
+      if (!allowedFields.includes(field)) {
+        throw new BadRequestError(`Invalid field. Allowed fields: ${allowedFields.join(', ')}`);
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.updateTaskField(
+        taskId,
+        field,
+        value,
+        req.user.id,
+        req.user.role
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // Publicly exposed route handlers
   getTasks = asyncHandler(this.handleGetTasks);
   getTaskById = asyncHandler(this.handleGetTaskById);
@@ -283,4 +327,5 @@ export class TaskController {
   batchDeleteTasks = asyncHandler(this.handleBatchDeleteTasks);
   getUnassignedTasks = asyncHandler(this.handleGetUnassignedTasks);
   getTasksCount = asyncHandler(this.handleGetTasksCount);
+  updateTaskField = asyncHandler(this.handleUpdateTaskField);
 }
