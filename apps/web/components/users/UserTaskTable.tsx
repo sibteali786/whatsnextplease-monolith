@@ -256,7 +256,8 @@ export function UserTasksTable({
       if (fetchTasks) await fetchTasks();
       if (onTaskUpdate) await onTaskUpdate();
     },
-    taskCategories
+    taskCategories,
+    role
   );
 
   const table = useReactTable({

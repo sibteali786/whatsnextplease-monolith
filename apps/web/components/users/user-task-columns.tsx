@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
 import { z } from 'zod';
@@ -32,8 +32,13 @@ export const generateUserTaskColumns = (
   onEditTask?: (task: TaskTable) => void,
   deleteTask?: (taskId: string) => void,
   onTaskUpdate?: () => Promise<void>,
-  taskCategories?: { id: string; categoryName: string }[]
+  taskCategories?: { id: string; categoryName: string }[],
+  role?: Roles
 ): ColumnDef<TaskTable>[] => {
+  const canEditStatus = role !== Roles.CLIENT;
+  const canEditPriority =
+    role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR || role === Roles.TASK_AGENT;
+  const canEditCategory = role !== Roles.CLIENT;
   return [
     {
       id: 'select',
@@ -74,7 +79,13 @@ export const generateUserTaskColumns = (
       cell: ({ row }) => {
         const category: { categoryName: string; id: string } = row.getValue('taskCategory');
         const task = row.original;
-
+        if (!canEditCategory) {
+          return (
+            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 py-1 px-3 text-nowrap">
+              {category?.categoryName}
+            </Badge>
+          );
+        }
         // This will need to be passed as a prop to generateUserTaskColumns
         const categoryOptions =
           taskCategories?.map(cat => ({
@@ -142,7 +153,15 @@ export const generateUserTaskColumns = (
       cell: ({ row }) => {
         const priority: { priorityName: TaskPriorityEnum } = row.getValue('priority');
         const task = row.original;
-
+        if (!canEditPriority) {
+          return (
+            <Badge
+              className={`${taskPriorityColors[priority?.priorityName]} py-1 px-3 text-nowrap`}
+            >
+              {transformEnumValue(priority?.priorityName)}
+            </Badge>
+          );
+        }
         const priorityOptions = Object.values(TaskPriorityEnum).map(value => ({
           value,
           label: transformEnumValue(value),
@@ -194,7 +213,13 @@ export const generateUserTaskColumns = (
       cell: ({ row }) => {
         const status: { statusName: TaskStatusEnum } = row.getValue('status');
         const task = row.original;
-
+        if (!canEditStatus) {
+          return (
+            <Badge className={`${taskStatusColors[status?.statusName]} py-1 px-3 text-nowrap`}>
+              {transformEnumValue(status?.statusName)}
+            </Badge>
+          );
+        }
         const statusOptions = Object.values(TaskStatusEnum).map(value => ({
           value,
           label: transformEnumValue(value),
