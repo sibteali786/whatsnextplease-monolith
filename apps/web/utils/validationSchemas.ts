@@ -278,6 +278,9 @@ export const TaskSchema = z.object({
   dueDate: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
+  createdByUserId: z.string().nullable().optional(),
+  createdByClientId: z.string().nullable().optional(),
+  assignedToId: z.string().nullable().optional(),
   taskFiles: z.array(TaskFileSchema).optional().nullable(),
 });
 export type Task = z.infer<typeof TaskSchema>;

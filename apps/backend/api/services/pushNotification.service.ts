@@ -30,7 +30,7 @@ export class PushNotificationService {
       case NotificationType.TASK_OVERDUE:
         // If we have taskId, could navigate to specific task
         return data?.taskId
-          ? `${baseUrl}/taskOfferings?taskId=${data.taskId}`
+          ? `${baseUrl}/taskOfferings/${data.taskId}`
           : `${baseUrl}/taskOfferings`;
 
       case NotificationType.MESSAGE_RECEIVED:

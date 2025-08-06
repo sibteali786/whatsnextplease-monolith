@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TaskTable } from '@/utils/validationSchemas';
 import { InlineDropdown } from '../common/InlineDropdown';
 import { updateTaskField } from '@/utils/tasks/taskInlineUpdates';
+import { TaskNotificationService } from '@/utils/notifications/taskNotifications';
 
 type TaskAssignees = {
   firstName: string;
@@ -96,11 +97,31 @@ export const generateUserTaskColumns = (
 
         const handleCategoryUpdate = async (newCategoryId: string) => {
           try {
+            const oldCategoryName = category?.categoryName;
+            const newCategory = taskCategories?.find(cat => cat.id === newCategoryId);
+
             await updateTaskField({
               taskId: task.id,
               field: 'taskCategory',
               value: newCategoryId,
             });
+            // Send notification
+            if (newCategory && oldCategoryName !== newCategory.categoryName) {
+              await TaskNotificationService.sendTaskUpdateNotifications({
+                taskId: task.id,
+                taskTitle: task.title,
+                createdByUserId: task.createdByUserId || undefined,
+                createdByClientId: task.createdByClientId ?? undefined,
+                assignedToId: task?.assignedToId || undefined,
+                changes: {
+                  field: 'taskCategory',
+                  oldValue: oldCategoryName,
+                  newValue: newCategory.categoryName,
+                },
+              });
+            }
+
+            console.log('Notification Sent for category update');
 
             if (onTaskUpdate) {
               await onTaskUpdate();
@@ -170,18 +191,34 @@ export const generateUserTaskColumns = (
 
         const handlePriorityUpdate = async (newPriority: TaskPriorityEnum) => {
           try {
+            const oldPriority = priority?.priorityName;
+
             await updateTaskField({
               taskId: task.id,
               field: 'priority',
               value: newPriority,
             });
 
-            // Trigger refetch if callback provided
+            // Send notification
+            if (oldPriority !== newPriority) {
+              await TaskNotificationService.sendTaskUpdateNotifications({
+                taskId: task.id,
+                taskTitle: task.title,
+                createdByUserId: task?.createdByUserId || undefined,
+                createdByClientId: task?.createdByClientId || undefined,
+                assignedToId: task?.assignedToId || undefined,
+                changes: {
+                  field: 'priority',
+                  oldValue: oldPriority,
+                  newValue: newPriority,
+                },
+              });
+            }
+
             if (onTaskUpdate) {
               await onTaskUpdate();
             }
           } catch (error) {
-            // Handle error with toast
             console.error('Failed to update priority:', error);
           }
         };
@@ -228,11 +265,29 @@ export const generateUserTaskColumns = (
 
         const handleStatusUpdate = async (newStatus: TaskStatusEnum) => {
           try {
+            const oldStatus = status?.statusName;
+
             await updateTaskField({
               taskId: task.id,
               field: 'status',
               value: newStatus,
             });
+
+            // Send notification
+            if (oldStatus !== newStatus) {
+              await TaskNotificationService.sendTaskUpdateNotifications({
+                taskId: task.id,
+                taskTitle: task.title,
+                createdByUserId: task?.createdByUserId || undefined,
+                createdByClientId: task?.createdByClientId || undefined,
+                assignedToId: task?.assignedToId || undefined,
+                changes: {
+                  field: 'status',
+                  oldValue: oldStatus,
+                  newValue: newStatus,
+                },
+              });
+            }
 
             if (onTaskUpdate) {
               await onTaskUpdate();
