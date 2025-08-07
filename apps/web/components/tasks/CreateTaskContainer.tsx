@@ -3,9 +3,9 @@
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Roles, TaskPriorityEnum, TaskStatusEnum, NotificationType } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle, CircleX, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, CircleX } from 'lucide-react';
 import { getCookie, parseOriginalEstimate, trimWhitespace } from '@/utils/utils';
 import { updateTaskById } from '@/db/repositories/tasks/updateTaskbyId';
 import { deleteTaskById } from '@/db/repositories/tasks/deleteTaskById';
@@ -16,7 +16,6 @@ import ModalWithConfirmation from '../common/ModalWithConfirmation';
 import { UserAssigneeSchema } from '@/utils/validationSchemas';
 import { usersList } from '@/db/repositories/users/usersList';
 import { getCurrentUser, UserState } from '@/utils/user';
-import { createNotification } from '@/db/repositories/notifications/notifications';
 import { Button } from '../ui/button';
 import { COOKIE_NAME } from '@/utils/constant';
 import { useRouter } from 'next/navigation';
@@ -67,7 +66,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 }) => {
   const [skills, setSkills] = useState<{ id: string; name: string }[]>([]);
   const { createdTask } = useCreatedTask();
-  const [user, setUser] = useState<UserState>();
+  const [, setUser] = useState<UserState>();
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
@@ -297,39 +296,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
         if (fetchTasks) {
           await fetchTasks();
-        }
-
-        // notify relevant user
-        if (data.assignedToId) {
-          try {
-            await createNotification({
-              type: NotificationType.TASK_ASSIGNED,
-              message: `Task ${response?.task?.title} has been created by ${user?.name}`,
-              clientId: null,
-              userId: data.assignedToId,
-              data: {
-                type: NotificationType.TASK_ASSIGNED,
-                taskId: response?.task?.id,
-                details: {
-                  status: response?.task?.statusName,
-                  priority: response?.task?.priorityName,
-                  category: response?.task?.taskCategoryName,
-                },
-                name: user?.name,
-                username: user?.username,
-                avatarUrl: user?.avatarUrl,
-                priorityLevel: response?.task?.priorityName,
-              },
-            });
-          } catch (error) {
-            toast({
-              title: 'Notification Failed',
-              description:
-                error instanceof Error ? error.message : 'Failed to notify assigned user',
-              variant: 'destructive',
-              icon: <XCircle size={40} />,
-            });
-          }
         }
       } else {
         // Improved error handling with specific messages and actions

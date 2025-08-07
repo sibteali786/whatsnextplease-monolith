@@ -95,6 +95,34 @@ const formatFieldName = (field: string) => {
 const TaskUpdateContent = ({ notification }: { notification: NotificationList }) => {
   const { details } = notification.data || {};
 
+  // Handle TASK_CREATED and TASK_ASSIGNED notifications
+  if (
+    notification.type === NotificationType.TASK_CREATED ||
+    notification.type === NotificationType.TASK_ASSIGNED
+  ) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium leading-none">{notification.message}</p>
+        {details && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {details.priority && (
+              <Badge className={getBadgeStyle('priority', details.priority)}>
+                {details.priority}
+              </Badge>
+            )}
+            {details.status && (
+              <Badge className={getBadgeStyle('status', details.status)}>{details.status}</Badge>
+            )}
+            {details.category && (
+              <Badge className="bg-blue-100 text-blue-800 text-xs">{details.category}</Badge>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Handle TASK_MODIFIED notifications with old → new visualization
   if (!details || notification.type !== NotificationType.TASK_MODIFIED) {
     return (
       <div className="flex items-center gap-2 mb-1">
@@ -110,8 +138,7 @@ const TaskUpdateContent = ({ notification }: { notification: NotificationList })
 
   const { field, oldValue, newValue } = details;
 
-  // Extract task name and user name from the message
-  // Message format: 'Task "TaskName" was updated by UserName: FieldName changed from "OldValue" to "NewValue"'
+  // Extract task name and user name from the message for TASK_MODIFIED
   const extractTaskAndUser = (message: string) => {
     const taskMatch = message.match(/Task "([^"]+)"/);
     const userMatch = message.match(/was updated by ([^:]+):/);
@@ -126,13 +153,11 @@ const TaskUpdateContent = ({ notification }: { notification: NotificationList })
 
   return (
     <div className="space-y-2">
-      {/* Main message */}
       <p className="text-sm font-medium leading-none">
         Task <span className="font-semibold text-purple-300">{taskName}</span> was updated by{' '}
         {userName}
       </p>
 
-      {/* Change visualization */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-muted-foreground">{formatFieldName(field)}:</span>
         <div className="flex items-center gap-2">
