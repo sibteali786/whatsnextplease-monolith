@@ -28,6 +28,7 @@ type TaskAssignees = {
   lastName: string;
   avatarUrl: string | null;
 };
+
 export const generateUserTaskColumns = (
   showDescription = false,
   onEditTask?: (task: TaskTable) => void,
@@ -40,6 +41,7 @@ export const generateUserTaskColumns = (
   const canEditPriority =
     role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR || role === Roles.TASK_AGENT;
   const canEditCategory = role !== Roles.CLIENT;
+
   return [
     {
       id: 'select',
@@ -80,6 +82,7 @@ export const generateUserTaskColumns = (
       cell: ({ row }) => {
         const category: { categoryName: string; id: string } = row.getValue('taskCategory');
         const task = row.original;
+
         if (!canEditCategory) {
           return (
             <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 py-1 px-3 text-nowrap">
@@ -87,7 +90,7 @@ export const generateUserTaskColumns = (
             </Badge>
           );
         }
-        // This will need to be passed as a prop to generateUserTaskColumns
+
         const categoryOptions =
           taskCategories?.map(cat => ({
             value: cat.id,
@@ -105,23 +108,22 @@ export const generateUserTaskColumns = (
               field: 'taskCategory',
               value: newCategoryId,
             });
-            // Send notification
+
+            // Send notification using the new helper method for single field updates
             if (newCategory && oldCategoryName !== newCategory.categoryName) {
-              await TaskNotificationService.sendTaskUpdateNotifications({
-                taskId: task.id,
-                taskTitle: task.title,
-                createdByUserId: task.createdByUserId || undefined,
-                createdByClientId: task.createdByClientId ?? undefined,
-                assignedToId: task?.assignedToId || undefined,
-                changes: {
-                  field: 'taskCategory',
-                  oldValue: oldCategoryName,
-                  newValue: newCategory.categoryName,
-                },
-              });
+              await TaskNotificationService.sendSingleFieldUpdate(
+                task.id,
+                task.title,
+                'taskCategory',
+                oldCategoryName,
+                newCategory.categoryName,
+                task.createdByUserId || undefined,
+                task.createdByClientId || undefined,
+                task.assignedToId || undefined
+              );
             }
 
-            console.log('Notification Sent for category update');
+            console.log('Notification sent for category update');
 
             if (onTaskUpdate) {
               await onTaskUpdate();
@@ -174,6 +176,7 @@ export const generateUserTaskColumns = (
       cell: ({ row }) => {
         const priority: { priorityName: TaskPriorityEnum } = row.getValue('priority');
         const task = row.original;
+
         if (!canEditPriority) {
           return (
             <Badge
@@ -183,6 +186,7 @@ export const generateUserTaskColumns = (
             </Badge>
           );
         }
+
         const priorityOptions = Object.values(TaskPriorityEnum).map(value => ({
           value,
           label: transformEnumValue(value),
@@ -199,20 +203,18 @@ export const generateUserTaskColumns = (
               value: newPriority,
             });
 
-            // Send notification
+            // Send notification using the new helper method for single field updates
             if (oldPriority !== newPriority) {
-              await TaskNotificationService.sendTaskUpdateNotifications({
-                taskId: task.id,
-                taskTitle: task.title,
-                createdByUserId: task?.createdByUserId || undefined,
-                createdByClientId: task?.createdByClientId || undefined,
-                assignedToId: task?.assignedToId || undefined,
-                changes: {
-                  field: 'priority',
-                  oldValue: oldPriority,
-                  newValue: newPriority,
-                },
-              });
+              await TaskNotificationService.sendSingleFieldUpdate(
+                task.id,
+                task.title,
+                'priority',
+                oldPriority,
+                newPriority,
+                task.createdByUserId || undefined,
+                task.createdByClientId || undefined,
+                task.assignedToId || undefined
+              );
             }
 
             if (onTaskUpdate) {
@@ -250,6 +252,7 @@ export const generateUserTaskColumns = (
       cell: ({ row }) => {
         const status: { statusName: TaskStatusEnum } = row.getValue('status');
         const task = row.original;
+
         if (!canEditStatus) {
           return (
             <Badge className={`${taskStatusColors[status?.statusName]} py-1 px-3 text-nowrap`}>
@@ -257,6 +260,7 @@ export const generateUserTaskColumns = (
             </Badge>
           );
         }
+
         const statusOptions = Object.values(TaskStatusEnum).map(value => ({
           value,
           label: transformEnumValue(value),
@@ -273,20 +277,18 @@ export const generateUserTaskColumns = (
               value: newStatus,
             });
 
-            // Send notification
+            // Send notification using the new helper method for single field updates
             if (oldStatus !== newStatus) {
-              await TaskNotificationService.sendTaskUpdateNotifications({
-                taskId: task.id,
-                taskTitle: task.title,
-                createdByUserId: task?.createdByUserId || undefined,
-                createdByClientId: task?.createdByClientId || undefined,
-                assignedToId: task?.assignedToId || undefined,
-                changes: {
-                  field: 'status',
-                  oldValue: oldStatus,
-                  newValue: newStatus,
-                },
-              });
+              await TaskNotificationService.sendSingleFieldUpdate(
+                task.id,
+                task.title,
+                'status',
+                oldStatus,
+                newStatus,
+                task.createdByUserId || undefined,
+                task.createdByClientId || undefined,
+                task.assignedToId || undefined
+              );
             }
 
             if (onTaskUpdate) {

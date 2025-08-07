@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import * as React from 'react';
@@ -92,6 +93,7 @@ const formatFieldName = (field: string) => {
 };
 
 // Component to render task update notification content
+// Component to render task update notification content
 const TaskUpdateContent = ({ notification }: { notification: NotificationList }) => {
   const { details } = notification.data || {};
 
@@ -122,23 +124,87 @@ const TaskUpdateContent = ({ notification }: { notification: NotificationList })
     );
   }
 
-  // Handle TASK_MODIFIED notifications with old → new visualization
-  if (!details || notification.type !== NotificationType.TASK_MODIFIED) {
+  // Handle TASK_MODIFIED notifications with new batched structure
+  if (notification.type !== NotificationType.TASK_MODIFIED || !details) {
     return (
       <div className="flex items-center gap-2 mb-1">
         <p className="text-sm font-medium leading-none">{notification.message}</p>
-        {notification.data?.details?.priority && (
-          <Badge className={getBadgeStyle('priority', notification.data.details.priority)}>
-            {notification.data.details.priority.replace('_', ' ')}
-          </Badge>
-        )}
       </div>
     );
   }
 
+  // NEW: Handle batched changes structure
+  if (details.changesCount && details.changes && Array.isArray(details.changes)) {
+    // This is a batched notification with multiple changes
+    const { changesSummary } = details;
+
+    // Extract task name and user name from the message
+    const extractTaskAndUser = (message: string) => {
+      const taskMatch = message.match(/Task "([^"]+)"/);
+      const userMatch = message.match(/was updated by ([^:]+):/);
+
+      return {
+        taskName: taskMatch ? taskMatch[1] : 'Unknown',
+        userName: userMatch && userMatch[1] ? userMatch[1].trim() : 'Unknown User',
+      };
+    };
+
+    const { taskName, userName } = extractTaskAndUser(notification.message);
+
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium leading-none">
+          Task{' '}
+          <span className="font-semibold text-purple-500 dark:text-purple-300">{taskName}</span> was
+          updated by{' '}
+          <span className="font-bold text-green-700 dark:text-green-300">{userName}</span>
+        </p>
+
+        {/* Summary of all changes */}
+        <div className="text-sm text-muted-foreground">
+          <span className="font-medium">{details.changesCount} changes:</span> {changesSummary}
+        </div>
+
+        {/* Show individual critical changes as badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {details.changes
+            .filter((change: any) => ['status', 'priority', 'assignedTo'].includes(change.field))
+            .map((change: any, index: number) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {formatFieldName(change.field)}:
+                </span>
+                <div className="flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${getBadgeStyle(change.field, change.oldValue)} opacity-70`}
+                  >
+                    {change.oldValue}
+                  </Badge>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <Badge className={`text-xs ${getBadgeStyle(change.field, change.newValue)}`}>
+                    {change.newValue}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
+  // LEGACY: Handle old single-field change structure (for backward compatibility)
   const { field, oldValue, newValue } = details;
 
-  // Extract task name and user name from the message for TASK_MODIFIED
+  if (!field) {
+    return (
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-sm font-medium leading-none">{notification.message}</p>
+      </div>
+    );
+  }
+
+  // Extract task name and user name from the message for single-field changes
   const extractTaskAndUser = (message: string) => {
     const taskMatch = message.match(/Task "([^"]+)"/);
     const userMatch = message.match(/was updated by ([^:]+):/);

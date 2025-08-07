@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // utils/notifications/taskNotifications.server.ts
 'use server';
 
 import { NotificationType } from '@prisma/client';
 import { createNotification } from '@/db/repositories/notifications/notifications';
 import { getCurrentUser } from '@/utils/user';
+import { TaskChange } from './taskNotifications';
 
 interface TaskUpdateNotificationData {
   taskId: string;
@@ -11,11 +13,7 @@ interface TaskUpdateNotificationData {
   createdByUserId?: string;
   createdByClientId?: string;
   assignedToId?: string;
-  changes: {
-    field: 'status' | 'priority' | 'taskCategory';
-    oldValue: string;
-    newValue: string;
-  };
+  changes: TaskChange[]; // Now accepts multiple changes
 }
 
 interface TaskCreationNotificationData {
@@ -27,26 +25,13 @@ interface TaskCreationNotificationData {
   category: string;
 }
 
-// Helper functions (not exported, so they can be regular functions)
+// Helper functions
 async function getCurrentUserInfo() {
   try {
     return await getCurrentUser();
   } catch (error) {
     console.error('Failed to get current user:', error);
     return null;
-  }
-}
-
-function getChangeDescription(field: string, oldValue: string, newValue: string): string {
-  switch (field) {
-    case 'status':
-      return `Status changed from "${oldValue}" to "${newValue}"`;
-    case 'priority':
-      return `Priority changed from "${oldValue}" to "${newValue}"`;
-    case 'taskCategory':
-      return `Category changed from "${oldValue}" to "${newValue}"`;
-    default:
-      return `${field} updated`;
   }
 }
 
@@ -57,7 +42,79 @@ function transformEnumValue(value: string): string {
     .join(' ');
 }
 
-// Exported async functions (these are allowed in 'use server' files)
+function formatChangeDescription(change: TaskChange): string {
+  const { field, displayOldValue, displayNewValue, oldValue, newValue } = change;
+
+  const oldVal = displayOldValue || oldValue;
+  const newVal = displayNewValue || newValue;
+
+  switch (field) {
+    case 'status':
+      return `Status: ${oldVal} → ${newVal}`;
+    case 'priority':
+      return `Priority: ${oldVal} → ${newVal}`;
+    case 'taskCategory':
+      return `Category: ${oldVal} → ${newVal}`;
+    case 'assignedTo':
+      return `Assignee: ${oldVal} → ${newVal}`;
+    case 'title':
+      return `Title: "${oldVal}" → "${newVal}"`;
+    case 'description':
+      return `Description updated`;
+    case 'dueDate':
+      return `Due date: ${oldVal} → ${newVal}`;
+    case 'timeForTask':
+      return `Time estimate: ${oldVal} → ${newVal}`;
+    case 'overTime':
+      return `Overtime: ${oldVal} → ${newVal}`;
+    case 'skills':
+      return `Skills updated`;
+    default:
+      return `${field} updated`;
+  }
+}
+
+function createChangesSummary(changes: TaskChange[]): string {
+  if (changes.length === 1 && changes[0]) {
+    return formatChangeDescription(changes[0]);
+  }
+
+  // Group critical vs non-critical changes
+  const criticalFields = ['status', 'priority', 'assignedTo'];
+  const criticalChanges = changes.filter(c => criticalFields.includes(c.field));
+  const otherChanges = changes.filter(c => !criticalFields.includes(c.field));
+
+  const parts: string[] = [];
+
+  if (criticalChanges.length > 0) {
+    parts.push(criticalChanges.map(formatChangeDescription).join(', '));
+  }
+
+  if (otherChanges.length > 0) {
+    if (otherChanges.length === 1 && otherChanges[0]) {
+      parts.push(formatChangeDescription(otherChanges[0]));
+    } else {
+      const fieldNames = otherChanges.map(c => {
+        switch (c.field) {
+          case 'timeForTask':
+            return 'time estimate';
+          case 'taskCategory':
+            return 'category';
+          case 'dueDate':
+            return 'due date';
+          default:
+            return c.field;
+        }
+      });
+      parts.push(`${fieldNames.join(', ')} updated`);
+    }
+  }
+
+  return parts.join(' • ');
+}
+
+// EXPORTED FUNCTIONS
+
 export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationData) {
   console.log('SERVER: Sending task update notifications with data:', data);
   try {
@@ -70,29 +127,26 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
 
     const { taskId, taskTitle, createdByUserId, createdByClientId, assignedToId, changes } = data;
 
-    // Transform enum values for better readability
-    const oldValueDisplay =
-      changes.field === 'status' || changes.field === 'priority'
-        ? transformEnumValue(changes.oldValue)
-        : changes.oldValue;
+    if (changes.length === 0) {
+      console.log('No changes to notify about');
+      return;
+    }
 
-    const newValueDisplay =
-      changes.field === 'status' || changes.field === 'priority'
-        ? transformEnumValue(changes.newValue)
-        : changes.newValue;
-
-    const changeDescription = getChangeDescription(changes.field, oldValueDisplay, newValueDisplay);
-    const baseMessage = `Task "${taskTitle}" was updated by ${currentUser.name}`;
+    const changesSummary = createChangesSummary(changes);
+    const baseMessage = `Task "${taskTitle}" was updated by ${currentUser.name}: ${changesSummary}`;
 
     // Notification data for push notifications
     const notificationData = {
       type: NotificationType.TASK_MODIFIED,
       taskId,
       details: {
-        field: changes.field,
-        oldValue: oldValueDisplay,
-        newValue: newValueDisplay,
-        changeDescription,
+        changesCount: changes.length,
+        changesSummary,
+        changes: changes.map(c => ({
+          field: c.field,
+          oldValue: c.displayOldValue || c.oldValue,
+          newValue: c.displayNewValue || c.newValue,
+        })),
       },
       name: currentUser.name,
       username: currentUser.username,
@@ -108,7 +162,7 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
       notifications.push(
         createNotification({
           type: NotificationType.TASK_MODIFIED,
-          message: `${baseMessage}: ${changeDescription}`,
+          message: baseMessage,
           clientId: null,
           userId: createdByUserId,
           data: notificationData,
@@ -121,7 +175,7 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
       notifications.push(
         createNotification({
           type: NotificationType.TASK_MODIFIED,
-          message: `${baseMessage}: ${changeDescription}`,
+          message: baseMessage,
           clientId: createdByClientId,
           userId: null,
           data: notificationData,
@@ -135,7 +189,7 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
       notifications.push(
         createNotification({
           type: NotificationType.TASK_MODIFIED,
-          message: `${baseMessage}: ${changeDescription}`,
+          message: baseMessage,
           clientId: null,
           userId: assignedToId,
           data: notificationData,
@@ -143,14 +197,13 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
       );
     }
 
-    console.log(`Sending ${notifications.length} notifications`);
+    console.log(`Sending ${notifications.length} notifications for ${changes.length} changes`);
 
     // Send all notifications
     await Promise.allSettled(notifications);
     console.log('All notifications sent successfully');
   } catch (error) {
     console.error('Failed to send task update notifications:', error);
-    // Don't throw error to avoid breaking the main update flow
   }
 }
 
@@ -206,6 +259,5 @@ export async function sendTaskCreationNotifications(data: TaskCreationNotificati
     await Promise.allSettled(notifications);
   } catch (error) {
     console.error('Failed to send task creation notifications:', error);
-    // Don't throw error to avoid breaking the main creation flow
   }
 }

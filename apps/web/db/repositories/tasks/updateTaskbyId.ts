@@ -13,11 +13,28 @@ import { revalidateTag } from 'next/cache';
 import { createNotification } from '@/db/repositories/notifications/notifications';
 import { getCurrentUser } from '@/utils/user';
 import { sendTaskUpdateNotifications } from '@/utils/notifications/taskNotification.server';
+import { TaskChange } from '@/utils/notifications/taskNotifications';
 
-interface TaskFieldChange {
-  field: 'status' | 'priority' | 'taskCategory';
-  oldValue: string;
-  newValue: string;
+// Helper functions
+function transformEnumValue(value: string): string {
+  return value
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function formatTimeValue(hours: string): string {
+  const totalHours = parseFloat(hours);
+  if (totalHours < 24) {
+    return `${totalHours}h`;
+  }
+  const days = Math.floor(totalHours / 24);
+  const remainingHours = totalHours % 24;
+  return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+}
+
+function formatDateValue(dateString: string): string {
+  return new Date(dateString).toLocaleDateString();
 }
 
 export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTaskResponse> => {
@@ -44,12 +61,22 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       select: {
         id: true,
         title: true,
+        description: true,
+        dueDate: true,
+        timeForTask: true,
+        overTime: true,
         assignedToId: true,
         createdByUserId: true,
         createdByClientId: true,
         status: { select: { statusName: true } },
         priority: { select: { priorityName: true } },
         taskCategory: { select: { categoryName: true } },
+        // Get current skills for comparison
+        taskSkills: {
+          select: {
+            skill: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -85,6 +112,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
 
     // Validate assignedToId - only if user has permission to assign tasks
     let assignee = null;
+    let assigneeName = null;
 
     // Check if current user role is allowed to assign tasks
     const canAssignTasks =
@@ -102,18 +130,25 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         };
       }
 
-      assignee = await prisma.user.findFirst({
+      const assigneeData = await prisma.user.findFirst({
         where: { id: assignedToId },
-        select: { id: true },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
       });
 
-      if (!assignee) {
+      if (!assigneeData) {
         return {
           success: false,
           task: null,
           message: 'Assigned user not found in database.',
         };
       }
+
+      assignee = assigneeData;
+      assigneeName = `${assigneeData.firstName} ${assigneeData.lastName}`;
     } else if (assignedToId && !canAssignTasks) {
       // If user tries to assign but doesn't have permission, return error
       return {
@@ -121,6 +156,18 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         task: null,
         message: "You don't have permission to assign tasks to other users.",
       };
+    }
+
+    // Get original assignee name for comparison
+    let originalAssigneeName = 'Unassigned';
+    if (originalTask.assignedToId) {
+      const originalAssigneeData = await prisma.user.findFirst({
+        where: { id: originalTask.assignedToId },
+        select: { firstName: true, lastName: true },
+      });
+      if (originalAssigneeData) {
+        originalAssigneeName = `${originalAssigneeData.firstName} ${originalAssigneeData.lastName}`;
+      }
     }
 
     // Ensure all IDs are resolved
@@ -161,32 +208,131 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
 
     // Determine what changed BEFORE updating
     const isNewTask = !originalTask.title || originalTask.title === '';
-    const changes: TaskFieldChange[] = [];
+    const changes: TaskChange[] = [];
 
     // Check for field changes (only if not a new task)
     if (!isNewTask) {
+      // Status change
       if (statusName && originalTask.status.statusName !== statusName) {
         changes.push({
           field: 'status',
           oldValue: originalTask.status.statusName,
           newValue: statusName,
+          displayOldValue: transformEnumValue(originalTask.status.statusName),
+          displayNewValue: transformEnumValue(statusName),
         });
       }
 
+      // Priority change
       if (priorityName && originalTask.priority.priorityName !== priorityName) {
         changes.push({
           field: 'priority',
           oldValue: originalTask.priority.priorityName,
           newValue: priorityName,
+          displayOldValue: transformEnumValue(originalTask.priority.priorityName),
+          displayNewValue: transformEnumValue(priorityName),
         });
       }
 
+      // Category change
       if (taskCategoryName && originalTask.taskCategory.categoryName !== taskCategoryName) {
         changes.push({
           field: 'taskCategory',
           oldValue: originalTask.taskCategory.categoryName,
           newValue: taskCategoryName,
+          displayOldValue: originalTask.taskCategory.categoryName,
+          displayNewValue: taskCategoryName,
         });
+      }
+
+      // Title change
+      if (updateData.title && originalTask.title !== updateData.title) {
+        changes.push({
+          field: 'title',
+          oldValue: originalTask.title,
+          newValue: updateData.title,
+          displayOldValue: originalTask.title,
+          displayNewValue: updateData.title,
+        });
+      }
+
+      // Description change
+      if (updateData.description && originalTask.description !== updateData.description) {
+        changes.push({
+          field: 'description',
+          oldValue: originalTask.description,
+          newValue: updateData.description,
+          displayOldValue: 'Previous description',
+          displayNewValue: 'Updated description',
+        });
+      }
+
+      // Due date change
+      if (updateData.dueDate) {
+        const newDueDateStr = updateData.dueDate.toISOString().split('T')[0];
+        const oldDueDateStr = originalTask.dueDate
+          ? originalTask.dueDate.toISOString().split('T')[0]
+          : null;
+
+        if (oldDueDateStr !== newDueDateStr) {
+          changes.push({
+            field: 'dueDate',
+            oldValue: oldDueDateStr,
+            newValue: newDueDateStr,
+            displayOldValue: oldDueDateStr ? formatDateValue(oldDueDateStr) : 'Not set',
+            displayNewValue: newDueDateStr ? formatDateValue(newDueDateStr) : 'Not set',
+          });
+        }
+      }
+
+      // Time estimate change
+      if (params.timeForTask && originalTask.timeForTask.toString() !== params.timeForTask) {
+        changes.push({
+          field: 'timeForTask',
+          oldValue: originalTask.timeForTask.toString(),
+          newValue: params.timeForTask,
+          displayOldValue: formatTimeValue(originalTask.timeForTask.toString()),
+          displayNewValue: formatTimeValue(params.timeForTask),
+        });
+      }
+
+      // Overtime change
+      if (params.overTime && (originalTask.overTime?.toString() || '0') !== params.overTime) {
+        changes.push({
+          field: 'overTime',
+          oldValue: originalTask.overTime?.toString() || '0',
+          newValue: params.overTime,
+          displayOldValue: formatTimeValue(originalTask.overTime?.toString() || '0'),
+          displayNewValue: formatTimeValue(params.overTime),
+        });
+      }
+
+      // Assignment change
+      const newAssignedToId = assignee ? assignee.id : originalTask.assignedToId;
+      if (newAssignedToId !== originalTask.assignedToId) {
+        changes.push({
+          field: 'assignedTo',
+          oldValue: originalTask.assignedToId,
+          newValue: newAssignedToId,
+          displayOldValue: originalAssigneeName,
+          displayNewValue: assigneeName || 'Unassigned',
+        });
+      }
+
+      // Skills change
+      if (skills && skills.length > 0) {
+        const currentSkills = originalTask.taskSkills.map(ts => ts.skill.name).sort();
+        const newSkills = [...skills].sort();
+
+        if (JSON.stringify(currentSkills) !== JSON.stringify(newSkills)) {
+          changes.push({
+            field: 'skills',
+            oldValue: currentSkills.join(', '),
+            newValue: newSkills.join(', '),
+            displayOldValue: currentSkills.join(', ') || 'No skills',
+            displayNewValue: newSkills.join(', '),
+          });
+        }
       }
     }
 
@@ -195,7 +341,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       where: { id },
       data: {
         ...modUpdatedData,
-        assignedToId: assignee ? assignee.id : originalTask.assignedToId, // Keep original if no new assignee
+        assignedToId: assignee ? assignee.id : originalTask.assignedToId,
         statusId: status.id,
         priorityId: priority.id,
         taskCategoryId: category.id,
@@ -238,11 +384,35 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
 
     // Handle notifications
     if (isNewTask) {
-      // This is a new task creation
-      if (userRole === Roles.CLIENT) {
-        // Send to all Task Supervisors
+      // This is a new task creation - KEEP ALL EXISTING FUNCTIONALITY
+      let shouldNotifySupervisors = false;
+      let notificationMessage = '';
+
+      // Determine if we should send notifications based on creator role
+      switch (userRole) {
+        case Roles.CLIENT:
+          shouldNotifySupervisors = true;
+          notificationMessage = `New task "${updatedTask.title}" has been created by ${currentUser?.name} and needs assignment`;
+          break;
+
+        case Roles.TASK_AGENT:
+          shouldNotifySupervisors = true;
+          notificationMessage = `New task "${updatedTask.title}" has been created by ${currentUser?.name}`;
+          break;
+
+        case Roles.SUPER_USER:
+        case Roles.TASK_SUPERVISOR:
+          shouldNotifySupervisors = false;
+          notificationMessage = `New task "${updatedTask.title}" has been created by ${currentUser?.name}`;
+          break;
+
+        default:
+          shouldNotifySupervisors = false;
+      }
+      // Send to all Task Supervisors
+      if (shouldNotifySupervisors) {
         const taskSupervisors = await prisma.user.findMany({
-          where: { role: { name: Roles.TASK_SUPERVISOR } },
+          where: { role: { name: Roles.TASK_SUPERVISOR }, id: { not: currentUser?.id } },
           select: { id: true },
         });
 
@@ -250,7 +420,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           try {
             await createNotification({
               type: NotificationType.TASK_CREATED,
-              message: `New task "${updatedTask.title}" has been created by ${currentUser?.name} and needs assignment`,
+              message: notificationMessage,
               clientId: null,
               userId: supervisor.id,
               data: {
@@ -275,7 +445,6 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           }
         }
       }
-
       // If task was assigned during creation
       if (updatedTask.assignedToId && updatedTask.assignedToId !== currentUser?.id) {
         try {
@@ -303,21 +472,19 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         }
       }
     } else {
-      // This is a task update - send field change notifications
+      // This is a task update - NEW BATCHED APPROACH
       if (changes.length > 0) {
         try {
-          // Send notification for each field change
-          for (const change of changes) {
-            console.log('Task updated successfully:', change);
-            await sendTaskUpdateNotifications({
-              taskId: updatedTask.id,
-              taskTitle: updatedTask.title,
-              createdByUserId: originalTask.createdByUserId || undefined,
-              createdByClientId: originalTask.createdByClientId || undefined,
-              assignedToId: originalTask.assignedToId || undefined,
-              changes: change,
-            });
-          }
+          // Send one notification with all changes batched together
+          console.log(`Task updated with ${changes.length} changes:`, changes);
+          await sendTaskUpdateNotifications({
+            taskId: updatedTask.id,
+            taskTitle: updatedTask.title,
+            createdByUserId: originalTask.createdByUserId || undefined,
+            createdByClientId: originalTask.createdByClientId || undefined,
+            assignedToId: originalTask.assignedToId || undefined,
+            changes: changes, // Pass ALL changes as an array
+          });
         } catch (error) {
           logger.error(
             { error, taskId: updatedTask.id, changes },
@@ -326,7 +493,8 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         }
       }
 
-      // If assignment changed during update
+      // Separate assignment notification (if assignment changed)
+      // This handles NEW assignments separately from field updates
       if (originalTask.assignedToId !== updatedTask.assignedToId && updatedTask.assignedToId) {
         try {
           await createNotification({
