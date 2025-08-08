@@ -320,7 +320,7 @@ export default function PermissionsClient() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/50">
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Current Role</TableHead>
