@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(validatedResponse);
   } catch (error) {
-    logger.error("Error fetching users:", error);
+    logger.error(error, "Error fetching users:");
     return NextResponse.json(
       { success: false, message: "An error occurred while fetching users" },
       { status: 500 },
