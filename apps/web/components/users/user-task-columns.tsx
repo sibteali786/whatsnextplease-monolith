@@ -123,7 +123,6 @@ export const generateUserTaskColumns = (
               );
             }
 
-            console.log('Notification sent for category update');
 
             if (onTaskUpdate) {
               await onTaskUpdate();
