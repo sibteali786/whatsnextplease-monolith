@@ -487,7 +487,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       if (changes.length > 0) {
         try {
           // Send one notification with all changes batched together
-          console.log(`Task updated with ${changes.length} changes:`, changes);
+          logger.info({ changes }, `Task updated with ${changes.length} changes`);
           await sendTaskUpdateNotifications({
             taskId: updatedTask.id,
             taskTitle: updatedTask.title,
