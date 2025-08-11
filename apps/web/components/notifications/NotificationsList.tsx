@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import * as React from 'react';
@@ -7,9 +8,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { NotificationList } from '@wnp/types';
 import { formatDistance as dateFnsFormatDistance } from 'date-fns';
-import { MoreHorizontal, Loader2 } from 'lucide-react';
+import { MoreHorizontal, Loader2, ArrowRight } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { NotificationStatus, TaskPriorityEnum } from '@prisma/client';
+import {
+  NotificationStatus,
+  TaskPriorityEnum,
+  TaskStatusEnum,
+  NotificationType,
+} from '@prisma/client';
 import { ConnectionStatusIndicator } from './NotificatonIndicator';
-import { taskPriorityColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
 
 interface NotificationsListProps {
   notifications: NotificationList[];
@@ -31,19 +38,14 @@ interface NotificationsListProps {
 
 function formatDistance(date1: Date, date2: Date, options: { addSuffix: boolean }): string {
   try {
-    // Ensure both dates are valid Date objects
     const d1 = new Date(date1);
     const d2 = new Date(date2);
 
-    // Check if dates are valid
     if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
       return 'just now';
     }
 
-    // Calculate the difference in milliseconds
     const diffInMs = Math.abs(d2.getTime() - d1.getTime());
-
-    // If the difference is less than 10 seconds, show "just now"
     if (diffInMs < 10000) {
       return 'just now';
     }
@@ -54,6 +56,190 @@ function formatDistance(date1: Date, date2: Date, options: { addSuffix: boolean 
     return 'just now';
   }
 }
+
+// Helper function to get badge styling based on field type and value
+const getBadgeStyle = (field: string, value: string) => {
+  // if alue is not in Enum form then we transform it to ENUm form like In Progress to IN_PROGRESS
+  if (!Object.values(TaskStatusEnum).includes(value as TaskStatusEnum)) {
+    value = value.toUpperCase().replace(/ /g, '_');
+  }
+  if (!Object.values(TaskPriorityEnum).includes(value as TaskPriorityEnum)) {
+    value = value.toUpperCase().replace(/ /g, '_');
+  }
+  switch (field) {
+    case 'status':
+      return taskStatusColors[value as TaskStatusEnum] || 'bg-gray-500 text-white';
+    case 'priority':
+      return taskPriorityColors[value as TaskPriorityEnum] || 'bg-gray-500 text-white';
+    case 'taskCategory':
+      return 'bg-blue-100 text-blue-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+// Helper function to format field names for display
+const formatFieldName = (field: string) => {
+  switch (field) {
+    case 'taskCategory':
+      return 'Category';
+    case 'priority':
+      return 'Priority';
+    case 'status':
+      return 'Status';
+    default:
+      return field.charAt(0).toUpperCase() + field.slice(1);
+  }
+};
+
+// Component to render task update notification content
+// Component to render task update notification content
+const TaskUpdateContent = ({ notification }: { notification: NotificationList }) => {
+  const { details } = notification.data || {};
+
+  // Handle TASK_CREATED and TASK_ASSIGNED notifications
+  if (
+    notification.type === NotificationType.TASK_CREATED ||
+    notification.type === NotificationType.TASK_ASSIGNED
+  ) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-medium leading-none">{notification.message}</p>
+        {details && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {details.priority && (
+              <Badge className={getBadgeStyle('priority', details.priority)}>
+                {details.priority}
+              </Badge>
+            )}
+            {details.status && (
+              <Badge className={getBadgeStyle('status', details.status)}>{details.status}</Badge>
+            )}
+            {details.category && (
+              <Badge className="bg-blue-100 text-blue-800 text-xs">{details.category}</Badge>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Handle TASK_MODIFIED notifications with new batched structure
+  if (notification.type !== NotificationType.TASK_MODIFIED || !details) {
+    return (
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-sm font-medium leading-none">{notification.message}</p>
+      </div>
+    );
+  }
+
+  // NEW: Handle batched changes structure
+  if (details.changesCount && details.changes && Array.isArray(details.changes)) {
+    // This is a batched notification with multiple changes
+    const { changesSummary } = details;
+
+    // Extract task name and user name from the message
+    const extractTaskAndUser = (message: string) => {
+      const taskMatch = message.match(/Task "([^"]+)"/);
+      const userMatch = message.match(/was updated by ([^:]+):/);
+
+      return {
+        taskName: taskMatch ? taskMatch[1] : 'Unknown',
+        userName: userMatch && userMatch[1] ? userMatch[1].trim() : 'Unknown User',
+      };
+    };
+
+    const { taskName, userName } = extractTaskAndUser(notification.message);
+
+    return (
+      <div className="space-y-3">
+        <p className="text-sm font-medium leading-none">
+          Task{' '}
+          <span className="font-semibold text-purple-500 dark:text-purple-300">{taskName}</span> was
+          updated by{' '}
+          <span className="font-bold text-green-700 dark:text-green-300">{userName}</span>
+        </p>
+
+        {/* Summary of all changes */}
+        <div className="text-sm text-muted-foreground">
+          <span className="font-medium">{details.changesCount} changes:</span> {changesSummary}
+        </div>
+
+        {/* Show individual critical changes as badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {details.changes
+            .filter((change: any) => ['status', 'priority', 'assignedTo'].includes(change.field))
+            .map((change: any, index: number) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {formatFieldName(change.field)}:
+                </span>
+                <div className="flex items-center gap-1">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${getBadgeStyle(change.field, change.oldValue)} opacity-70`}
+                  >
+                    {change.oldValue}
+                  </Badge>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <Badge className={`text-xs ${getBadgeStyle(change.field, change.newValue)}`}>
+                    {change.newValue}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  }
+
+  // LEGACY: Handle old single-field change structure (for backward compatibility)
+  const { field, oldValue, newValue } = details;
+
+  if (!field) {
+    return (
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-sm font-medium leading-none">{notification.message}</p>
+      </div>
+    );
+  }
+
+  // Extract task name and user name from the message for single-field changes
+  const extractTaskAndUser = (message: string) => {
+    const taskMatch = message.match(/Task "([^"]+)"/);
+    const userMatch = message.match(/was updated by ([^:]+):/);
+
+    return {
+      taskName: taskMatch ? taskMatch[1] : 'Unknown',
+      userName: userMatch && userMatch[1] ? userMatch[1].trim() : 'Unknown User',
+    };
+  };
+
+  const { taskName, userName } = extractTaskAndUser(notification.message);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium leading-none">
+        Task <span className="font-semibold text-purple-300">{taskName}</span> was updated by{' '}
+        {userName}
+      </p>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">{formatFieldName(field)}:</span>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className={`text-xs ${getBadgeStyle(field, oldValue)} opacity-70`}
+          >
+            {oldValue}
+          </Badge>
+          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+          <Badge className={`text-xs ${getBadgeStyle(field, newValue)}`}>{newValue}</Badge>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function NotificationsList({
   notifications,
@@ -70,30 +256,29 @@ export default function NotificationsList({
       {items.map(item => (
         <div
           key={item.id}
-          className="group flex items-center gap-4 py-4 px-6 mb-2 rounded-lg transition-all duration-200 hover:bg-muted/50 relative"
+          className="group flex items-start gap-4 py-4 px-6 mb-2 rounded-lg transition-all duration-200 hover:bg-muted/50 relative"
         >
           {/* Priority indicator bar (left side) */}
           {item.data?.details?.priority && (
             <div
               className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${
-                taskPriorityColors[item.data.details.priority as TaskPriorityEnum]?.split(' ')[0] ||
-                'bg-gray-400'
+                getBadgeStyle('priority', item.data.details.priority).split(' ')[0] || 'bg-gray-400'
               }`}
             />
           )}
-          {/* Unread indicator - moved slightly to the right */}
+
+          {/* Unread indicator */}
           {item.status === NotificationStatus.UNREAD && (
             <div className="absolute left-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
           )}
 
-          {/* Avatar with priority border */}
-          <div className="shrink-0">
+          {/* Avatar */}
+          <div className="shrink-0 mt-1">
             <div
               className={`p-0.5 rounded-full ${
                 item.data?.details?.priority
-                  ? taskPriorityColors[item.data.details.priority as TaskPriorityEnum]?.split(
-                      ' '
-                    )[0] || 'bg-gray-400'
+                  ? getBadgeStyle('priority', item.data.details.priority).split(' ')[0] ||
+                    'bg-gray-400'
                   : 'bg-transparent'
               }`}
             >
@@ -113,22 +298,10 @@ export default function NotificationsList({
             </div>
           </div>
 
-          {/* Content with priority badge */}
+          {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-sm font-medium leading-none">{item.message}</p>
-              {item.data?.details?.priority && (
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    taskPriorityColors[item.data.details.priority as TaskPriorityEnum] ||
-                    'bg-gray-500 text-white'
-                  }`}
-                >
-                  {item.data.details.priority.replace('_', ' ')}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
+            <TaskUpdateContent notification={item} />
+            <p className="text-xs text-muted-foreground mt-2">
               {formatDistance(new Date(item.createdAt), new Date(), {
                 addSuffix: true,
               })}
@@ -136,7 +309,7 @@ export default function NotificationsList({
           </div>
 
           {/* Action buttons */}
-          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -146,6 +319,17 @@ export default function NotificationsList({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                {/* Add navigation to task if taskId exists */}
+                {item.data?.taskId && (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/taskOfferings/${item.data.taskId}`, '_blank')}
+                    >
+                      View Task
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={() => navigator.clipboard.writeText(item.id)}>
                   Copy ID
                 </DropdownMenuItem>

@@ -13,23 +13,35 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
 import { z } from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TaskTable } from '@/utils/validationSchemas';
+import { InlineDropdown } from '../common/InlineDropdown';
+import { updateTaskField } from '@/utils/tasks/taskInlineUpdates';
+import { TaskNotificationService } from '@/utils/notifications/taskNotifications';
 
 type TaskAssignees = {
   firstName: string;
   lastName: string;
   avatarUrl: string | null;
 };
+
 export const generateUserTaskColumns = (
   showDescription = false,
   onEditTask?: (task: TaskTable) => void,
-  deleteTask?: (taskId: string) => void
+  deleteTask?: (taskId: string) => void,
+  onTaskUpdate?: () => Promise<void>,
+  taskCategories?: { id: string; categoryName: string }[],
+  role?: Roles
 ): ColumnDef<TaskTable>[] => {
+  const canEditStatus = role !== Roles.CLIENT;
+  const canEditPriority =
+    role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR || role === Roles.TASK_AGENT;
+  const canEditCategory = role !== Roles.CLIENT;
+
   return [
     {
       id: 'select',
@@ -63,13 +75,74 @@ export const generateUserTaskColumns = (
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Task Details
+          Category
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
-        const category: { categoryName: string } = row.getValue('taskCategory');
-        return <p>{category.categoryName}</p>;
+        const category: { categoryName: string; id: string } = row.getValue('taskCategory');
+        const task = row.original;
+
+        if (!canEditCategory) {
+          return (
+            <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 py-1 px-3 text-nowrap">
+              {category?.categoryName}
+            </Badge>
+          );
+        }
+
+        const categoryOptions =
+          taskCategories?.map(cat => ({
+            value: cat.id,
+            label: cat.categoryName,
+            className: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+          })) || [];
+
+        const handleCategoryUpdate = async (newCategoryId: string) => {
+          try {
+            const oldCategoryName = category?.categoryName;
+            const newCategory = taskCategories?.find(cat => cat.id === newCategoryId);
+
+            await updateTaskField({
+              taskId: task.id,
+              field: 'taskCategory',
+              value: newCategoryId,
+            });
+
+            // Send notification using the new helper method for single field updates
+            if (newCategory && oldCategoryName !== newCategory.categoryName) {
+              await TaskNotificationService.sendSingleFieldUpdate(
+                task.id,
+                task.title,
+                'taskCategory',
+                oldCategoryName,
+                newCategory.categoryName,
+                task.createdByUserId || undefined,
+                task.createdByClientId || undefined,
+                task.assignedToId || undefined
+              );
+            }
+
+
+            if (onTaskUpdate) {
+              await onTaskUpdate();
+            }
+          } catch (error) {
+            console.error('Failed to update category:', error);
+          }
+        };
+
+        return (
+          <div onClick={e => e.stopPropagation()}>
+            <InlineDropdown
+              value={category?.id}
+              options={categoryOptions}
+              onSelect={handleCategoryUpdate}
+              displayValue={category?.categoryName}
+              currentClassName="bg-blue-100 text-blue-800 hover:bg-blue-200"
+            />
+          </div>
+        );
       },
     },
     ...(showDescription
@@ -101,10 +174,66 @@ export const generateUserTaskColumns = (
       ),
       cell: ({ row }) => {
         const priority: { priorityName: TaskPriorityEnum } = row.getValue('priority');
+        const task = row.original;
+
+        if (!canEditPriority) {
+          return (
+            <Badge
+              className={`${taskPriorityColors[priority?.priorityName]} py-1 px-3 text-nowrap`}
+            >
+              {transformEnumValue(priority?.priorityName)}
+            </Badge>
+          );
+        }
+
+        const priorityOptions = Object.values(TaskPriorityEnum).map(value => ({
+          value,
+          label: transformEnumValue(value),
+          className: taskPriorityColors[value],
+        }));
+
+        const handlePriorityUpdate = async (newPriority: TaskPriorityEnum) => {
+          try {
+            const oldPriority = priority?.priorityName;
+
+            await updateTaskField({
+              taskId: task.id,
+              field: 'priority',
+              value: newPriority,
+            });
+
+            // Send notification using the new helper method for single field updates
+            if (oldPriority !== newPriority) {
+              await TaskNotificationService.sendSingleFieldUpdate(
+                task.id,
+                task.title,
+                'priority',
+                oldPriority,
+                newPriority,
+                task.createdByUserId || undefined,
+                task.createdByClientId || undefined,
+                task.assignedToId || undefined
+              );
+            }
+
+            if (onTaskUpdate) {
+              await onTaskUpdate();
+            }
+          } catch (error) {
+            console.error('Failed to update priority:', error);
+          }
+        };
+
         return (
-          <Badge className={`${taskPriorityColors[priority?.priorityName]} py-2 px-4 text-nowrap`}>
-            {transformEnumValue(priority?.priorityName)}
-          </Badge>
+          <div onClick={e => e.stopPropagation()}>
+            <InlineDropdown
+              value={priority?.priorityName}
+              options={priorityOptions}
+              onSelect={handlePriorityUpdate}
+              displayValue={transformEnumValue(priority?.priorityName)}
+              currentClassName={taskPriorityColors[priority?.priorityName]}
+            />
+          </div>
         );
       },
     },
@@ -121,10 +250,64 @@ export const generateUserTaskColumns = (
       ),
       cell: ({ row }) => {
         const status: { statusName: TaskStatusEnum } = row.getValue('status');
+        const task = row.original;
+
+        if (!canEditStatus) {
+          return (
+            <Badge className={`${taskStatusColors[status?.statusName]} py-1 px-3 text-nowrap`}>
+              {transformEnumValue(status?.statusName)}
+            </Badge>
+          );
+        }
+
+        const statusOptions = Object.values(TaskStatusEnum).map(value => ({
+          value,
+          label: transformEnumValue(value),
+          className: taskStatusColors[value],
+        }));
+
+        const handleStatusUpdate = async (newStatus: TaskStatusEnum) => {
+          try {
+            const oldStatus = status?.statusName;
+
+            await updateTaskField({
+              taskId: task.id,
+              field: 'status',
+              value: newStatus,
+            });
+
+            // Send notification using the new helper method for single field updates
+            if (oldStatus !== newStatus) {
+              await TaskNotificationService.sendSingleFieldUpdate(
+                task.id,
+                task.title,
+                'status',
+                oldStatus,
+                newStatus,
+                task.createdByUserId || undefined,
+                task.createdByClientId || undefined,
+                task.assignedToId || undefined
+              );
+            }
+
+            if (onTaskUpdate) {
+              await onTaskUpdate();
+            }
+          } catch (error) {
+            console.error('Failed to update status:', error);
+          }
+        };
+
         return (
-          <Badge className={`${taskStatusColors[status?.statusName]} py-2 px-4 text-nowrap`}>
-            {transformEnumValue(status?.statusName)}
-          </Badge>
+          <div onClick={e => e.stopPropagation()}>
+            <InlineDropdown
+              value={status?.statusName}
+              options={statusOptions}
+              onSelect={handleStatusUpdate}
+              displayValue={transformEnumValue(status?.statusName)}
+              currentClassName={taskStatusColors[status?.statusName]}
+            />
+          </div>
         );
       },
     },

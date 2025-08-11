@@ -48,9 +48,6 @@ interface Role {
   description?: string;
 }
 
-// Maximum length for role description before truncation
-const ROLE_DESCRIPTION_MAX_LENGTH = 24;
-
 // Role color mapping for better UX
 const getRoleColor = (roleName: string) => {
   const colorMap: Record<string, string> = {
@@ -320,7 +317,7 @@ export default function PermissionsClient() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/50">
                 <TableHead>User</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Current Role</TableHead>
@@ -393,19 +390,19 @@ export default function PermissionsClient() {
                             onValueChange={newRoleId => updateUserRole(user.id, newRoleId)}
                             disabled={updatingUserId === user.id}
                           >
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-[80%]">
                               <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
                               {availableRoles.map(role => (
                                 <SelectItem key={role.id} value={role.id}>
-                                  <div className="flex flex-col items-start">
-                                    <span>{formatRoleName(role.name)}</span>
+                                  <div className="flex flex-col items-start w-full space-y-1">
+                                    <span className="font-medium text-sm">
+                                      {formatRoleName(role.name)}
+                                    </span>
                                     {role.description && (
-                                      <span className="text-xs text-muted-foreground text-left">
-                                        {role.description.length > ROLE_DESCRIPTION_MAX_LENGTH
-                                          ? `${role.description.slice(0, ROLE_DESCRIPTION_MAX_LENGTH)}...`
-                                          : role.description}
+                                      <span className="text-xs text-muted-foreground text-left leading-relaxed max-w-[250px]">
+                                        {role.description}
                                       </span>
                                     )}
                                   </div>

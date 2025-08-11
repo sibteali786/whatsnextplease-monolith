@@ -46,7 +46,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                         Settings
                       </SidebarGroupLabel>
                       <SidebarGroupContent>
-                        <SidebarMenu>
+                        <SidebarMenu className="flex flex-col items-start gap-2">
                           {menuItems.map(item => (
                             <SidebarMenuItem key={item.label}>
                               <SidebarMenuButton

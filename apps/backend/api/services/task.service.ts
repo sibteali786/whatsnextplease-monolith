@@ -40,6 +40,13 @@ export interface TaskQueryParams {
   categoryId?: string;
 }
 
+export interface UpdateTaskFieldRequest {
+  taskId: string;
+  field: 'status' | 'priority' | 'taskCategory';
+  value: string;
+  userId: string;
+  role: Roles;
+}
 export class TaskService {
   constructor(private readonly taskRepository: TaskRepository = new TaskRepository()) {}
 
@@ -346,6 +353,83 @@ export class TaskService {
       hasNextCursor: taskResult.hasNextCursor,
       nextCursor: taskResult.nextCursor,
       totalCount,
+    };
+  }
+
+  // Add this method to TaskService class
+  /**
+   * Update a single field of a task
+   */
+  async updateTaskField(
+    taskId: string,
+    field: 'status' | 'priority' | 'taskCategory',
+    value: string,
+    userId: string,
+    role: Roles
+  ) {
+    // Authorization check
+    if (!canViewTasks(role)) {
+      throw new ForbiddenError(`Role ${role} is not authorized to update tasks.`);
+    }
+
+    // Verify task exists
+    const existingTask = await this.taskRepository.findTaskById(taskId);
+    if (!existingTask) {
+      throw new NotFoundError('Task not found');
+    }
+
+    // Prepare update data based on field
+    const updateData: BatchUpdateData = {};
+
+    switch (field) {
+      case 'status': {
+        const statusRecord = await this.taskRepository.findTaskStatusByName(
+          value as TaskStatusEnum
+        );
+        if (!statusRecord) {
+          throw new BadRequestError('Invalid status value');
+        }
+        updateData.statusId = statusRecord.id;
+        break;
+      }
+
+      case 'priority': {
+        const priorityRecord = await this.taskRepository.findTaskPriorityByName(
+          value as TaskPriorityEnum
+        );
+        if (!priorityRecord) {
+          throw new BadRequestError('Invalid priority value');
+        }
+        updateData.priorityId = priorityRecord.id;
+        break;
+      }
+
+      case 'taskCategory': {
+        const categoryRecord = await this.taskRepository.findTaskCategoryById(value);
+        if (!categoryRecord) {
+          throw new BadRequestError('Invalid category ID');
+        }
+        updateData.categoryId = value;
+        break;
+      }
+
+      default:
+        throw new BadRequestError('Invalid field');
+    }
+
+    // Perform update
+    await this.taskRepository.batchUpdateTasks([taskId], updateData);
+
+    // Get updated task with relations
+    const updatedTask = await this.taskRepository.findTaskById(taskId);
+
+    return {
+      success: true,
+      message: `Successfully updated task ${field}`,
+      task: {
+        ...updatedTask,
+        taskSkills: updatedTask?.taskSkills.map(ts => ts.skill.name) || [],
+      },
     };
   }
 }

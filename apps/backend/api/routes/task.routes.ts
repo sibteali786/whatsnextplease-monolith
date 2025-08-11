@@ -69,6 +69,14 @@ router.get('/counts', authMiddleware, controller.getTasksCount);
 router.get('/:taskId', authMiddleware, controller.getTaskById);
 
 /**
+ * @route PATCH /tasks/:taskId/field
+ * @desc Update a single field of a task
+ * @access Private (all authenticated users with proper permissions)
+ * @body { field: 'status' | 'priority' | 'taskCategory', value: string }
+ */
+router.patch('/:taskId/field', authMiddleware, controller.updateTaskField);
+
+/**
  * @route PATCH /tasks/batch/update
  * @desc Batch update multiple tasks
  * @access Private (admin roles only)

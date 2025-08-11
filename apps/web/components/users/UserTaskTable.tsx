@@ -38,7 +38,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { CustomTooltip } from '../CustomTooltip';
 import { useRouter } from 'next/navigation';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
@@ -252,7 +251,13 @@ export function UserTasksTable({
       setTaskToEdit(task);
       setIsEditDialogOpen(true);
     },
-    handleDeleteTask
+    handleDeleteTask,
+    async () => {
+      if (fetchTasks) await fetchTasks();
+      if (onTaskUpdate) await onTaskUpdate();
+    },
+    taskCategories,
+    role
   );
 
   const table = useReactTable({
@@ -394,27 +399,19 @@ export function UserTasksTable({
               </TableRow>
             ) : localData && localData.length ? (
               table.getRowModel().rows.map(row => (
-                <CustomTooltip
+                <TableRow
                   key={row.id}
-                  content={
-                    <span className="font-semibold">Show details for {row.original.title}</span>
-                  }
-                  variant="primary"
-                  delayDuration={100}
+                  onClick={() => handleRowClick(row.original)}
+                  className={`cursor-pointer hover:bg-muted/50 ${
+                    row.getIsSelected() ? 'bg-muted/50' : ''
+                  }`}
                 >
-                  <TableRow
-                    onClick={() => handleRowClick(row.original)}
-                    className={`cursor-pointer hover:bg-muted/50 ${
-                      row.getIsSelected() ? 'bg-muted/50' : ''
-                    }`}
-                  >
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </CustomTooltip>
+                  {row.getVisibleCells().map(cell => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
               ))
             ) : (
               <TableRow>

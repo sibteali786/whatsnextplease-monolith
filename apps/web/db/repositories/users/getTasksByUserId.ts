@@ -59,6 +59,9 @@ export const getTasksByUserId = async (
         id: true,
         title: true,
         description: true,
+        createdByUserId: true,
+        createdByClientId: true,
+        assignedToId: true,
         priority: {
           select: { priorityName: true },
         },
