@@ -39,6 +39,7 @@ function formatDateValue(dateString: string): string {
 
 export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTaskResponse> => {
   try {
+    logger.info({ params }, 'Updating task with params');
     // Get current user to check role
     const currentUser = await getCurrentUser();
     const userRole = currentUser?.role?.name;
@@ -120,8 +121,21 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       userRole === Roles.TASK_SUPERVISOR ||
       userRole === Roles.DISTRICT_MANAGER ||
       userRole === Roles.TERRITORY_MANAGER;
+    const isAssignmentChanging = assignedToId && assignedToId !== originalTask.assignedToId;
+    logger.info(
+      { canAssignTasks, isAssignmentChanging, assignedToId },
+      'Checking assignment permissions and changes'
+    );
 
-    if (assignedToId && canAssignTasks) {
+    if (isAssignmentChanging && !canAssignTasks) {
+      // If user tries to change assignment but doesn't have permission, return error
+      return {
+        success: false,
+        task: null,
+        message: "You don't have permission to assign tasks to other users.",
+      };
+    }
+    if (isAssignmentChanging && canAssignTasks) {
       if (typeof assignedToId !== 'string') {
         return {
           success: false,
@@ -149,13 +163,6 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
 
       assignee = assigneeData;
       assigneeName = `${assigneeData.firstName} ${assigneeData.lastName}`;
-    } else if (assignedToId && !canAssignTasks) {
-      // If user tries to assign but doesn't have permission, return error
-      return {
-        success: false,
-        task: null,
-        message: "You don't have permission to assign tasks to other users.",
-      };
     }
 
     // Get original assignee name for comparison
@@ -341,7 +348,11 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       where: { id },
       data: {
         ...modUpdatedData,
-        assignedToId: assignee ? assignee.id : originalTask.assignedToId,
+        assignedToId: isAssignmentChanging
+          ? assignee
+            ? assignee.id
+            : null
+          : originalTask.assignedToId,
         statusId: status.id,
         priorityId: priority.id,
         taskCategoryId: category.id,
