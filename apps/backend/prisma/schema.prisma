@@ -37,36 +37,37 @@ model Role {
 }
 
 model User {
-    id                  String               @id @default(uuid())
-    firstName           String
-    lastName            String
-    username            String               @unique
-    email               String               @unique
-    passwordHash        String
-    country             String?
-    phone               String?
-    address             String?
-    city                String?
-    state               String?
-    zipCode             String?
-    avatarUrl           String?
-    roleId              String?
-    role                Role?                @relation(fields: [roleId], references: [id])
-    designation         String?
-    userSkills          UserSkill[]
-    tasksCreated        Task[]               @relation("TasksCreatedByUser")
-    tasksAssigned       Task[]               @relation("TaskAssignedTo")
-    messagesSent        Message[]
-    messageParticipants MessageParticipant[]
-    auditLogs           AuditLog[]
-    notifications       Notification[]
-    files               File[]               @relation("UserFiles")
-    userTerritories     UserTerritory[]
-    userSchedules       UserSchedule[]
-    TaskHistory         TaskHistory[]        @relation("TaskHistoryChangedBy")
-    createdAt           DateTime             @default(now())
-    updatedAt           DateTime             @updatedAt
-    PushSubscription    PushSubscription[]
+    id                   String               @id @default(uuid())
+    firstName            String
+    lastName             String
+    username             String               @unique
+    email                String               @unique
+    passwordHash         String
+    country              String?
+    phone                String?
+    address              String?
+    city                 String?
+    state                String?
+    zipCode              String?
+    avatarUrl            String?
+    roleId               String?
+    role                 Role?                @relation(fields: [roleId], references: [id])
+    designation          String?
+    userSkills           UserSkill[]
+    tasksCreated         Task[]               @relation("TasksCreatedByUser")
+    tasksAssigned        Task[]               @relation("TaskAssignedTo")
+    messagesSent         Message[]
+    messageParticipants  MessageParticipant[]
+    auditLogs            AuditLog[]
+    notifications        Notification[]
+    files                File[]               @relation("UserFiles")
+    userTerritories      UserTerritory[]
+    userSchedules        UserSchedule[]
+    TaskHistory          TaskHistory[]        @relation("TaskHistoryChangedBy")
+    createdAt            DateTime             @default(now())
+    updatedAt            DateTime             @updatedAt
+    PushSubscription     PushSubscription[]
+    taskCommentsAuthored TaskComment[]        @relation("TaskCommentsAuthoredByUser")
 }
 
 model UserSkill {
@@ -83,31 +84,32 @@ model UserSkill {
 //// =========================================
 
 model Client {
-    id               String             @id @default(uuid())
-    email            String             @unique
-    username         String             @unique
-    passwordHash     String
-    country          String?            @default("US")
-    companyName      String
-    contactName      String?
-    phone            String?
-    website          String?
-    address1         String?
-    address2         String?
-    city             String?
-    state            String?
-    zipCode          String?
-    tasksCreated     Task[]             @relation("TasksCreatedByClient")
-    clientBilling    ClientBilling?
-    files            File[]             @relation("ClientFiles")
-    createdAt        DateTime           @default(now())
-    updatedAt        DateTime           @updatedAt
-    Invoice          Invoice[]
-    avatarUrl        String?
-    roleId           String?
-    role             Role?              @relation(fields: [roleId], references: [id])
-    notifications    Notification[]
-    PushSubscription PushSubscription[]
+    id                   String             @id @default(uuid())
+    email                String             @unique
+    username             String             @unique
+    passwordHash         String
+    country              String?            @default("US")
+    companyName          String
+    contactName          String?
+    phone                String?
+    website              String?
+    address1             String?
+    address2             String?
+    city                 String?
+    state                String?
+    zipCode              String?
+    tasksCreated         Task[]             @relation("TasksCreatedByClient")
+    clientBilling        ClientBilling?
+    files                File[]             @relation("ClientFiles")
+    createdAt            DateTime           @default(now())
+    updatedAt            DateTime           @updatedAt
+    Invoice              Invoice[]
+    avatarUrl            String?
+    roleId               String?
+    role                 Role?              @relation(fields: [roleId], references: [id])
+    notifications        Notification[]
+    PushSubscription     PushSubscription[]
+    taskCommentsAuthored TaskComment[]      @relation("TaskCommentsAuthoredByClient")
 }
 
 //// =========================================
@@ -182,6 +184,7 @@ model Task {
     taskFiles         TaskFile[] // Relation to TaskFile for attachments
     createdAt         DateTime      @default(now())
     updatedAt         DateTime      @updatedAt
+    taskComments      TaskComment[]
 }
 
 // Enum to distinguish between User and Client as the creator
@@ -208,6 +211,51 @@ model TaskSkill {
     skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
     @@id([taskId, skillId])
+}
+
+model TaskComment {
+    id              String        @id @default(uuid())
+    content         String
+    taskId          String
+    task            Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    authorUserId    String?
+    authorUser      User?         @relation("TaskCommentsAuthoredByUser", fields: [authorUserId], references: [id])
+    authorClientId  String?
+    authorClient    Client?       @relation("TaskCommentsAuthoredByClient", fields: [authorClientId], references: [id])
+    authorType      CreatorType // Reuse existing enum: USER or CLIENT
+    // Threading support (for future implementation)
+    parentCommentId String?
+    parentComment   TaskComment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+    replies         TaskComment[] @relation("CommentReplies")
+
+    // File attachments
+    commentFiles TaskCommentFile[]
+
+    // Editing tracking
+    isEdited Boolean   @default(false)
+    editedAt DateTime?
+
+    // Mentions (for future implementation)
+    mentionedUserIds String[] // Array of user IDs mentioned in comment
+
+    // Metadata
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([taskId, createdAt])
+    @@index([parentCommentId])
+    @@index([taskId])
+}
+
+// Junction table for comment file attachments
+model TaskCommentFile {
+    id        String      @id @default(uuid())
+    commentId String
+    comment   TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+    fileId    String
+    file      File        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+    @@unique([commentId, fileId])
 }
 
 //// =========================================
@@ -334,21 +382,22 @@ model FileCategory {
 }
 
 model File {
-    id             String        @id @default(uuid())
+    id             String            @id @default(uuid())
     fileName       String
     filePath       String // URL or path to where the file is stored
     fileSize       String
-    uploadedAt     DateTime      @default(now())
+    uploadedAt     DateTime          @default(now())
     fileCategoryId String?
-    fileCategory   FileCategory? @relation(fields: [fileCategoryId], references: [id])
+    fileCategory   FileCategory?     @relation(fields: [fileCategoryId], references: [id])
     ownerUserId    String?
-    ownerUser      User?         @relation("UserFiles", fields: [ownerUserId], references: [id])
+    ownerUser      User?             @relation("UserFiles", fields: [ownerUserId], references: [id])
     ownerClientId  String?
-    ownerClient    Client?       @relation("ClientFiles", fields: [ownerClientId], references: [id])
+    ownerClient    Client?           @relation("ClientFiles", fields: [ownerClientId], references: [id])
     tasks          TaskFile[] // Relation to TaskFile for task attachments
-    createdAt      DateTime      @default(now())
-    updatedAt      DateTime      @updatedAt
+    createdAt      DateTime          @default(now())
+    updatedAt      DateTime          @updatedAt
     uploadedBy     String // Name of the user who uploaded the file
+    commentFiles   TaskCommentFile[]
 }
 
 //// =========================================
@@ -426,6 +475,7 @@ model AuditLog {
 //// =========================================
 // Notifications and Alerts
 //// =========================================
+
 enum NotificationDeliveryStatus {
     PENDING
     DELIVERED
@@ -440,9 +490,9 @@ enum NotificationType {
     MESSAGE_RECEIVED
     SYSTEM_ALERT
     PAYMENT_RECEIVED
-	TASK_CREATED
-	TASK_OVERDUE
-	TASK_IN_PROGRESS
+    TASK_CREATED
+    TASK_OVERDUE
+    TASK_IN_PROGRESS
 }
 
 enum NotificationStatus {

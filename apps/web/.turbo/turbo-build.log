@@ -7,7 +7,7 @@
 [2mPrisma schema loaded from prisma/schema.prisma[22m
 
 
-✔ Generated [1mPrisma Client[22m (v6.13.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.13.0_prisma@6.13.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/@prisma/client[22m in 151ms
+✔ Generated [1mPrisma Client[22m (v6.13.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.13.0_prisma@6.13.0_magicast@0.3.5_typescript@5.5.4__typescript@5.5.4/node_modules/@prisma/client[22m in 229ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
@@ -23,76 +23,19 @@ Tip: Need your database queries to be 1000x faster? Accelerate offers you that a
 
 [1G[0K[1G[0K⠙[1G[0K[1G[0K⠙[1G[0K[2mEnvironment variables loaded from .env[22m
 [2mPrisma schema loaded from prisma/schema.prisma[22m
-[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:5432"[22m
+[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "192.168.0.102:5432"[22m
 
-27 migrations found in prisma/migrations
+28 migrations found in prisma/migrations
 
 
+[90m[90m┌─[39m[90m[90m────────────────────────────────────────────────────────┐[39m[90m
+[90m│[39m[90m  [0m[34mUpdate available[39m[90m 6.13.0 -> 6.14.0[0m                      [90m│[39m[90m
+[90m│[39m[90m  [0mRun the following to update[0m                            [90m│[39m[90m
+[90m│[39m[90m  [0m  [1mnpm i --save-dev prisma@latest[22m[0m                       [90m│[39m[90m
+[90m│[39m[90m  [0m  [1mnpm i @prisma/client@latest[22m[0m                          [90m│[39m[90m
+└─────────────────────────────────────────────────────────┘[39m
 [32mNo pending migrations to apply.[39m
 [1G[0K⠙[1G[0K  [1m[38;2;173;127;168m▲ Next.js 14.2.15[39m[22m
   - Environments: .env.local, .env
 
  [37m[1m [22m[39m Creating an optimized production build ...
- [32m[1m✓[22m[39m Compiled successfully
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G[?25h
-[36m./app/(dashboard)/clients/data-table.tsx[39m
-[33m61[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchClients'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./app/(dashboard)/settings/permissions/page.tsx[39m
-[33m109[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'fetchUsersWithRoles', 'pagination.limit', and 'searchTerm'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./app/(dashboard)/taskAgents/task-agent-table.tsx[39m
-[33m71[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchAgents'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./app/(dashboard)/users/[userId]/page.tsx[39m
-[33m57[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'refreshTaskStats'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./app/(dashboard)/users/data-table.tsx[39m
-[33m66[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchItems'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/clients/ClientHistoryList.tsx[39m
-[33m43[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/clients/ClientTaskList.tsx[39m
-[33m43[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/clients/billing-table.tsx[39m
-[33m64[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchInvoices'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/clients/file-table.tsx[39m
-[33m100[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'refetch' and 'toast'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-[33m128[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchFiles'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/common/EditTaskDialog.tsx[39m
-[33m257[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'fetchSkills' and 'fetchUsers'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/settings/ProfileFormClient.tsx[39m
-[33m136[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/settings/ProfileFormUser.tsx[39m
-[33m188[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'toast' and 'token'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/tasks/CreateTaskContainer.tsx[39m
-[33m113[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'getDefaultValues'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-[33m227[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'form', 'router', and 'toast'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/tasks/TasksListModal.tsx[39m
-[33m67[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36m./components/users/UserTasks.tsx[39m
-[33m115[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
-
-[36minfo[39m  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[31mFailed to compile.
-[39m
-[36m./utils/notifications/taskNotification.server.ts[39m:[33m172[39m:[33m11[39m
-[31m[1mType error[22m[39m: 'baseMessage' is declared but its value is never read.
-
-[0m [90m 170 |[39m     [36mconst[39m statusDisplay [33m=[39m transformEnumValue(status)[33m;[39m[0m
-[0m [90m 171 |[39m[0m
-[0m[31m[1m>[22m[39m[90m 172 |[39m     [36mconst[39m baseMessage [33m=[39m [32m`New task "${taskTitle}" has been created by ${currentUser.name} and needs assignment`[39m[33m;[39m[0m
-[0m [90m     |[39m           [31m[1m^[22m[39m[0m
-[0m [90m 173 |[39m[0m
-[0m [90m 174 |[39m     [90m// Notification data for push notifications[39m[0m
-[0m [90m 175 |[39m     [36mconst[39m notificationData [33m=[39m {[0m
-[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[?25h[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m

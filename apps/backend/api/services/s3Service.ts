@@ -135,7 +135,7 @@ export class S3BucketService {
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': contentType },
-        body: file,
+        body: new Blob([new Uint8Array(file)]),
       });
 
       return response.ok;
@@ -191,7 +191,7 @@ export class S3BucketService {
   generateFileKey(
     userId: string,
     fileName: string,
-    context: 'user' | 'task' | 'client',
+    context: 'user' | 'task' | 'client' | 'task-comment',
     contextId?: string
   ): string {
     const sanitizedFileName = this.sanitizeFileName(fileName);
@@ -205,6 +205,9 @@ export class S3BucketService {
       case 'client':
         if (!contextId) throw new Error('ClientId required for client context');
         return `clients/${contextId}/uploaded-by/${userId}/${sanitizedFileName}`;
+      case 'task-comment': // Add this new case
+        if (!contextId) throw new Error('TaskId required for task-comment context');
+        return `tasks/${contextId}/comments/${userId}/${sanitizedFileName}`;
       default:
         throw new Error('Invalid file context');
     }

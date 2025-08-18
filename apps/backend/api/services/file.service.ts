@@ -69,6 +69,10 @@ export class FileService {
             throw new BadRequestError('targetUserId required for USER_PROFILE context');
           fileKey = this.s3Service.generateFileKey(userId, fileName, 'user', targetUserId);
           break;
+        case UploadContextType.TASK_COMMENT:
+          if (!taskId) throw new BadRequestError('taskId required for TASK_COMMENT context');
+          fileKey = this.s3Service.generateFileKey(userId, fileName, 'task-comment', taskId);
+          break;
         default:
           throw new BadRequestError('Invalid upload context');
       }

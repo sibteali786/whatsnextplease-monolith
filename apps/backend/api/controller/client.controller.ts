@@ -49,7 +49,7 @@ export class ClientController {
           headers: {
             'Content-Type': file.mimetype,
           },
-          body: file.buffer,
+          body: new Blob([new Uint8Array(file.buffer)]),
         });
         if (!s3UploadedFileResponse.ok) {
           throw new FileUploadError('Failed to upload file to S3', {
