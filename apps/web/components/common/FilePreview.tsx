@@ -26,7 +26,7 @@ const FilePreview = ({ fileData, onRemove }: FilePreviewProps) => {
             onMouseEnter={() => setIsOptionVisible(true)}
             onMouseLeave={() => setIsOptionVisible(false)}
           >
-            <FileTypeIcon fileType={fileData.file.type} />
+            <FileTypeIcon fileType={fileData.file.type} className="w-16 h-16" />
 
             {/* Show upload progress or deletion loading */}
             {(isUploading || fileData.isDeleting) && (

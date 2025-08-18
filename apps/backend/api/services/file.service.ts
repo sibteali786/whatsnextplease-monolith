@@ -127,6 +127,9 @@ export class FileService {
         case UploadContextType.USER_PROFILE:
           ownerFields = { ownerUserId: targetUserId };
           break;
+        case UploadContextType.TASK_COMMENT: // Add this new case
+          ownerFields = role === 'CLIENT' ? { ownerClientId: userId } : { ownerUserId: userId };
+          break;
         default:
           throw new BadRequestError('Invalid upload context');
       }

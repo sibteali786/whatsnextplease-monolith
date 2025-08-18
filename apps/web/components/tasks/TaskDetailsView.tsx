@@ -18,6 +18,7 @@ import { FileAttachmentsList } from '../files/FileAttachmentList';
 import { useToast } from '@/hooks/use-toast';
 import { fileAPI } from '@/utils/fileAPI';
 import { useRouter } from 'next/navigation';
+import CommentSection from '../comments/CommentSection';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -235,6 +236,10 @@ export default function TaskDetailsView({
               loadingFileIds={loadingFileIds}
             />
           )}
+
+          {/* Add Comments Section */}
+          <Separator />
+          <CommentSection taskId={taskId} />
         </div>
       )}
     </div>

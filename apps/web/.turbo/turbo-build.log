@@ -7,11 +7,11 @@
 [2mPrisma schema loaded from prisma/schema.prisma[22m
 
 
-✔ Generated [1mPrisma Client[22m (v6.13.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.13.0_prisma@6.13.0_magicast@0.3.5_typescript@5.5.4__typescript@5.5.4/node_modules/@prisma/client[22m in 229ms
+✔ Generated [1mPrisma Client[22m (v6.13.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.13.0_prisma@6.13.0_magicast@0.3.5_typescript@5.5.4__typescript@5.5.4/node_modules/@prisma/client[22m in 202ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
 
 [1G[0K⠙[1G[0K
 > web@0.1.0 build:cdk /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web
@@ -25,17 +25,7 @@ Tip: Need your database queries to be 1000x faster? Accelerate offers you that a
 [2mPrisma schema loaded from prisma/schema.prisma[22m
 [2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "192.168.0.102:5432"[22m
 
-28 migrations found in prisma/migrations
+[1m[31mError: [39m[22mP1001: Can't reach database server at `192.168.0.102:5432`
 
-
-[90m[90m┌─[39m[90m[90m────────────────────────────────────────────────────────┐[39m[90m
-[90m│[39m[90m  [0m[34mUpdate available[39m[90m 6.13.0 -> 6.14.0[0m                      [90m│[39m[90m
-[90m│[39m[90m  [0mRun the following to update[0m                            [90m│[39m[90m
-[90m│[39m[90m  [0m  [1mnpm i --save-dev prisma@latest[22m[0m                       [90m│[39m[90m
-[90m│[39m[90m  [0m  [1mnpm i @prisma/client@latest[22m[0m                          [90m│[39m[90m
-└─────────────────────────────────────────────────────────┘[39m
-[32mNo pending migrations to apply.[39m
-[1G[0K⠙[1G[0K  [1m[38;2;173;127;168m▲ Next.js 14.2.15[39m[22m
-  - Environments: .env.local, .env
-
- [37m[1m [22m[39m Creating an optimized production build ...
+Please make sure your database server is running at `192.168.0.102:5432`.
+[1G[0K⠙[1G[0K[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
