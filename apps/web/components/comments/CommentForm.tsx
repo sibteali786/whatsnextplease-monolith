@@ -97,7 +97,7 @@ export default function CommentForm({
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred' + error,
+        description: 'An unexpected error occurred: ' + (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     } finally {
