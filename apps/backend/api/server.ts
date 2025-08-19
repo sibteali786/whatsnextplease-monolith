@@ -12,6 +12,7 @@ import { entityRoutes } from './routes/entity.routes';
 import { fileRoutes } from './routes/file.routes';
 import { env } from './config/environment';
 import { taskRoutes } from './routes/task.routes';
+import { commentRoutes } from './routes/comment.routes';
 
 export async function createServer() {
   const app = express();
@@ -62,6 +63,7 @@ export async function createServer() {
   app.use('/taskAgents', taskAgentRoutes);
   app.use('/files', fileRoutes);
   app.use('/tasks', taskRoutes);
+  app.use('/', commentRoutes);
   // Health check route
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });

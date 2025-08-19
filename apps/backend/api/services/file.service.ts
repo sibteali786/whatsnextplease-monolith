@@ -69,6 +69,10 @@ export class FileService {
             throw new BadRequestError('targetUserId required for USER_PROFILE context');
           fileKey = this.s3Service.generateFileKey(userId, fileName, 'user', targetUserId);
           break;
+        case UploadContextType.TASK_COMMENT:
+          if (!taskId) throw new BadRequestError('taskId required for TASK_COMMENT context');
+          fileKey = this.s3Service.generateFileKey(userId, fileName, 'task-comment', taskId);
+          break;
         default:
           throw new BadRequestError('Invalid upload context');
       }
@@ -122,6 +126,9 @@ export class FileService {
           break;
         case UploadContextType.USER_PROFILE:
           ownerFields = { ownerUserId: targetUserId };
+          break;
+        case UploadContextType.TASK_COMMENT: // Add this new case
+          ownerFields = role === 'CLIENT' ? { ownerClientId: userId } : { ownerUserId: userId };
           break;
         default:
           throw new BadRequestError('Invalid upload context');

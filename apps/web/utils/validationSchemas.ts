@@ -487,6 +487,7 @@ export const UpdateTaskParamsSchema = z.object({
   overTime: z.string().optional(),
   skills: z.array(z.string()).optional(),
   assignedToId: z.string().optional().nullable(),
+  initialComment: z.string().max(5000).optional(),
 });
 
 export type UpdateTaskParams = z.infer<typeof UpdateTaskParamsSchema>;
@@ -548,6 +549,7 @@ export enum UploadContextType {
   TASK = 'TASK',
   CLIENT_PROFILE = 'CLIENT_PROFILE',
   USER_PROFILE = 'USER_PROFILE',
+  TASK_COMMENT = 'TASK_COMMENT',
 }
 export const FileMetadataSchema = z.object({
   fileName: z.string(),

@@ -1,12 +1,8 @@
-import { Button } from "../ui/button";
-import { Download, Trash2, Loader2 } from "lucide-react";
-import { getFileExtension } from "@/utils/fileUtils";
-import FileTypeIcon from "../common/FileTypeIcon";
-import {
-  FileSchemaType,
-  TaskFile,
-  type FileAttachmentsList,
-} from "@/utils/validationSchemas";
+import { Button } from '../ui/button';
+import { Download, Trash2, Loader2 } from 'lucide-react';
+import { getFileExtension } from '@/utils/fileUtils';
+import FileTypeIcon from '../common/FileTypeIcon';
+import { FileSchemaType, TaskFile, type FileAttachmentsList } from '@/utils/validationSchemas';
 
 interface FileAttachmentsListProps {
   files: TaskFile[];
@@ -25,10 +21,8 @@ export function FileAttachmentsList({
     <div className="space-y-4">
       <h3 className="font-semibold">Attachments:</h3>
       <div className="flex flex-col gap-2">
-        {files.map((tf) => {
-          const isFileLoading = loadingFileIds
-            ? loadingFileIds.includes(tf.file.id)
-            : false;
+        {files.map(tf => {
+          const isFileLoading = loadingFileIds ? loadingFileIds.includes(tf.file.id) : false;
 
           return (
             <div
@@ -37,7 +31,10 @@ export function FileAttachmentsList({
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <FileTypeIcon fileType={getFileExtension(tf.file.fileName)} />
+                  <FileTypeIcon
+                    fileType={getFileExtension(tf.file.fileName)}
+                    className="h-16 w-16"
+                  />
                   {isFileLoading && (
                     <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-md">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -46,9 +43,7 @@ export function FileAttachmentsList({
                 </div>
                 <div>
                   <p className="font-medium">{tf.file.fileName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {tf.file.fileSize}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{tf.file.fileSize}</p>
                 </div>
               </div>
 

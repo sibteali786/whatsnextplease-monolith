@@ -68,7 +68,7 @@ export class UserController {
         const uploadResponse = await fetch(presignedUrl.uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': file.mimetype },
-          body: file.buffer,
+          body: new Blob([new Uint8Array(file.buffer)]),
         });
 
         if (!uploadResponse.ok) {

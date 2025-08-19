@@ -18,6 +18,7 @@ import { FileAttachmentsList } from '../files/FileAttachmentList';
 import { useToast } from '@/hooks/use-toast';
 import { fileAPI } from '@/utils/fileAPI';
 import { useRouter } from 'next/navigation';
+import CommentSection from '../comments/CommentSection';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -119,6 +120,29 @@ export default function TaskDetailsView({
       onBack();
     } else {
       router.back();
+    }
+  };
+
+  const refreshTaskData = async () => {
+    if (!taskId) return;
+
+    try {
+      const { success, task } = await getTaskById(taskId);
+      if (success && task) {
+        setTaskDetails(task);
+        if (task.taskFiles && task.taskFiles.length > 0) {
+          setFiles(task.taskFiles);
+        } else {
+          setFiles([]); // Clear files if none exist
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh task details:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error refreshing task details',
+        description: 'Failed to reload task information',
+      });
     }
   };
 
@@ -235,6 +259,10 @@ export default function TaskDetailsView({
               loadingFileIds={loadingFileIds}
             />
           )}
+
+          {/* Add Comments Section */}
+          <Separator />
+          <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
         </div>
       )}
     </div>

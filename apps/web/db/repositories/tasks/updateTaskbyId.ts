@@ -46,8 +46,16 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
 
     // Validate the input
     const validatedInput = UpdateTaskParamsSchema.parse(params);
-    const { id, statusName, priorityName, taskCategoryName, assignedToId, skills, ...updateData } =
-      validatedInput;
+    const {
+      id,
+      statusName,
+      priorityName,
+      taskCategoryName,
+      assignedToId,
+      skills,
+      initialComment,
+      ...updateData
+    } = validatedInput;
 
     // handle the timeForTask value to be converted to Decimal
     const modUpdatedData = {
@@ -340,6 +348,51 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
             displayNewValue: newSkills.join(', '),
           });
         }
+      }
+    }
+
+    if (
+      params.initialComment &&
+      typeof params.initialComment === 'string' &&
+      params.initialComment.trim().length > 0
+    ) {
+      try {
+        // Determine author type and ID based on current user
+        const isClient = currentUser?.role?.name === Roles.CLIENT;
+        const authorType = isClient ? 'CLIENT' : 'USER';
+        const authorUserId = isClient ? null : currentUser?.id;
+        const authorClientId = isClient ? currentUser?.id : null;
+
+        // Create initial comment - NO ROLE RESTRICTIONS for commenting
+        await prisma.taskComment.create({
+          data: {
+            content: params.initialComment.trim(),
+            taskId: id,
+            authorUserId,
+            authorClientId,
+            authorType,
+            mentionedUserIds: [], // Future enhancement for mentions
+          },
+        });
+
+        logger.info(
+          {
+            taskId: id,
+            userId: currentUser?.id,
+            userRole: currentUser?.role?.name,
+            commentLength: params.initialComment.length,
+          },
+          'Created initial comment for task'
+        );
+      } catch (commentError) {
+        // Don't fail the task creation/update if comment creation fails
+        logger.error(
+          { error: commentError, taskId: id, userRole: currentUser?.role?.name },
+          'Failed to create initial comment, but task operation was successful'
+        );
+
+        // Optionally, you could add a warning toast here, but don't throw an error
+        // The task operation should still succeed even if comment fails
       }
     }
 

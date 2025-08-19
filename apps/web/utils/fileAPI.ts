@@ -139,6 +139,92 @@ class FileAPIClient {
       };
     }
   }
+
+  // Add these methods to the existing FileAPIClient class
+
+  async uploadCommentFile(formData: FormData): Promise<APIResponse> {
+    try {
+      const response = await fetch(`${this.baseURL}/files/upload-and-save`, {
+        method: 'POST',
+        headers: {
+          ...this.getAuthHeaders(),
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.message || result.error || `HTTP ${response.status}`,
+        };
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
+  async addFilesToComment(commentId: string, fileIds: string[]): Promise<APIResponse> {
+    try {
+      const response = await fetch(`${this.baseURL}/comments/${commentId}/files`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.getAuthHeaders(),
+        },
+        body: JSON.stringify({ fileIds }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.message || result.error || `HTTP ${response.status}`,
+        };
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
+  async removeFileFromComment(commentId: string, fileId: string): Promise<APIResponse> {
+    try {
+      const response = await fetch(`${this.baseURL}/comments/${commentId}/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          ...this.getAuthHeaders(),
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.message || result.error || `HTTP ${response.status}`,
+        };
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
 }
 
 export const fileAPI = new FileAPIClient();

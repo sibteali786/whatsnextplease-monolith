@@ -68,7 +68,7 @@ export class FileController {
       const uploadResponse = await fetch(uploadUrlResult.uploadUrl!, {
         method: 'PUT',
         headers: { 'Content-Type': file.mimetype },
-        body: file.buffer,
+        body: new Blob([new Uint8Array(file.buffer)]),
       });
 
       if (!uploadResponse.ok) {
@@ -275,7 +275,7 @@ export class FileController {
       const uploadResponse = await fetch(uploadUrlResult.uploadUrl!, {
         method: 'PUT',
         headers: { 'Content-Type': file.mimetype },
-        body: file.buffer,
+        body: new Blob([new Uint8Array(file.buffer)]),
       });
 
       if (!uploadResponse.ok) {

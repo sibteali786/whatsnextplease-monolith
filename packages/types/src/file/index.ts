@@ -1,8 +1,10 @@
 import { z } from 'zod';
+
 export enum UploadContextType {
   TASK = 'TASK',
   CLIENT_PROFILE = 'CLIENT_PROFILE',
   USER_PROFILE = 'USER_PROFILE',
+  TASK_COMMENT = 'TASK_COMMENT',
 }
 
 export const FileMetadataSchema = z.object({
