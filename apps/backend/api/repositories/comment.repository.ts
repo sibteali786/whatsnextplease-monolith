@@ -318,17 +318,54 @@ export class CommentRepository {
   /**
    * Delete comment
    */
+
+  /**
+   * Delete comment and associated files
+   */
   async deleteComment(commentId: string): Promise<void> {
     await this.prisma.$transaction(async tx => {
-      // Delete comment files relations
+      // First, get all files associated with this comment
+      const commentFiles = await tx.taskCommentFile.findMany({
+        where: { commentId },
+        include: {
+          file: {
+            select: {
+              id: true,
+              filePath: true,
+              fileName: true,
+            },
+          },
+        },
+      });
+
+      // Store file information for S3 cleanup
+      const filesToDelete = commentFiles.map(cf => ({
+        id: cf.file.id,
+        filePath: cf.file.filePath,
+        fileName: cf.file.fileName,
+      }));
+
+      // Delete comment files relations first
       await tx.taskCommentFile.deleteMany({
         where: { commentId },
       });
+
+      // Delete the actual file records
+      if (filesToDelete.length > 0) {
+        await tx.file.deleteMany({
+          where: {
+            id: { in: filesToDelete.map(f => f.id) },
+          },
+        });
+      }
 
       // Delete the comment (cascade will handle replies if any)
       await tx.taskComment.delete({
         where: { id: commentId },
       });
+
+      // Note: S3 cleanup will be handled by the service layer
+      return filesToDelete;
     });
   }
 

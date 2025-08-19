@@ -73,7 +73,6 @@ export default function CommentSection({ taskId }: CommentSectionProps) {
       <div className="space-y-6">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Comments</h3>
-          <Separator />
         </div>
 
         {/* Loading skeleton */}

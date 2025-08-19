@@ -7,6 +7,7 @@ import {
   CommentWithRelations,
   CommentQueryOptions,
 } from '../repositories/comment.repository';
+import { S3BucketService } from './s3Service';
 
 export interface CreateCommentRequest {
   taskId: string;
@@ -38,7 +39,10 @@ export interface CommentPermissionCheck {
 }
 
 export class CommentService {
-  constructor(private readonly commentRepository: CommentRepository = new CommentRepository()) {}
+  constructor(
+    private readonly commentRepository: CommentRepository = new CommentRepository(),
+    private readonly s3Service: S3BucketService = new S3BucketService()
+  ) {}
 
   /**
    * Create a new comment with optional file attachments
@@ -223,9 +227,6 @@ export class CommentService {
     }
   }
 
-  /**
-   * Delete comment
-   */
   async deleteComment(
     commentId: string,
     permissions: CommentPermissionCheck
@@ -237,7 +238,7 @@ export class CommentService {
     try {
       const { userId, role } = permissions;
 
-      // Find existing comment
+      // Find existing comment with files
       const existingComment = await this.commentRepository.findCommentById(commentId);
       if (!existingComment) {
         throw new NotFoundError('Comment not found');
@@ -249,18 +250,67 @@ export class CommentService {
         throw new ForbiddenError('You do not have permission to delete this comment');
       }
 
-      // Delete comment
+      // Store file information before deletion
+      const filesToDelete = existingComment.commentFiles.map(cf => ({
+        id: cf.file.id,
+        filePath: cf.file.filePath,
+        fileName: cf.file.fileName,
+      }));
+
+      // Delete comment and associated files from database
       await this.commentRepository.deleteComment(commentId);
+
+      // Clean up files from S3 (don't fail the operation if S3 cleanup fails)
+      if (filesToDelete.length > 0) {
+        await this.cleanupS3Files(filesToDelete);
+      }
 
       return {
         success: true,
-        message: 'Comment deleted successfully',
+        message: 'Comment and associated files deleted successfully',
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error deleting comment',
       };
+    }
+  }
+
+  /**
+   * Clean up files from S3 storage
+   */
+  private async cleanupS3Files(files: Array<{ id: string; filePath: string; fileName: string }>) {
+    const cleanupResults = await Promise.allSettled(
+      files.map(async file => {
+        try {
+          const result = await this.s3Service.deleteFile(file.filePath);
+          if (!result.success) {
+            console.warn(`Failed to delete S3 file ${file.filePath}:`, result.error);
+          }
+          return { fileId: file.id, success: result.success, error: result.error };
+        } catch (error) {
+          console.warn(`Error deleting S3 file ${file.filePath}:`, error);
+          return {
+            fileId: file.id,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          };
+        }
+      })
+    );
+
+    // Log cleanup results for monitoring
+    const failed = cleanupResults
+      .filter(result => result.status === 'rejected' || !result.value.success)
+      .map(result =>
+        result.status === 'fulfilled' ? result.value : { error: 'Promise rejected' }
+      );
+
+    if (failed.length > 0) {
+      console.warn(`Failed to clean up ${failed.length} files from S3:`, failed);
+    } else {
+      console.log(`Successfully cleaned up ${files.length} files from S3`);
     }
   }
 
