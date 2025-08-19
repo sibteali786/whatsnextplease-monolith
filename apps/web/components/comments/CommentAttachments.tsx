@@ -42,7 +42,7 @@ export default function CommentAttachments({ files, compact = false }: CommentAt
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An error occurred while downloading the file' + error,
+        description: 'An error occurred while downloading the file: ' + (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
         icon: <CircleX size={20} />,
       });
