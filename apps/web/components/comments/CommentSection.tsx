@@ -43,7 +43,7 @@ export default function CommentSection({ taskId, onDataChange, key }: CommentSec
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An error occurred while loading comments' + error,
+        description: 'An error occurred while loading comments: ' + (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     } finally {
