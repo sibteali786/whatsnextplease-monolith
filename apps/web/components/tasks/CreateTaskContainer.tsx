@@ -51,6 +51,7 @@ export const createTaskSchema = z.object({
     .date()
     .nullable()
     .refine(date => !!date, 'Due date is required'),
+  initialComment: z.string().max(5000, 'Comment cannot exceed 5000 characters').optional(),
 });
 
 interface CreateTaskContainerProps {
@@ -87,6 +88,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     assignedToId: '',
     timeForTask: '1d',
     dueDate: undefined,
+    initialComment: '',
   });
 
   const form = useForm<z.infer<typeof createTaskSchema>>({
@@ -278,13 +280,16 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         id: taskId,
         deuDate: trimmedData.dueDate.toISOString(),
         timeForTask: totalHours.toString(),
+        initialComment: trimmedData.initialComment?.trim() || undefined,
       };
 
       const response = await updateTaskById(formattedData);
       if (response.success) {
         toast({
           title: 'Task Created Successfully',
-          description: `Task: ${response.task?.title} is created successfully`,
+          description: `Task: ${response.task?.title} is created successfully${
+            trimmedData.initialComment ? ' with initial comment' : ''
+          }`,
           variant: 'success',
           icon: <CheckCircle size={40} />,
         });

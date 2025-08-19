@@ -336,6 +336,32 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         />
         {/* File Upload */}
         <FileUploadArea onFilesChange={setFiles} />
+        {/* Initial Comment */}
+        <FormField
+          control={form.control}
+          name="initialComment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Initial Comment (Optional)</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Add an initial comment or note for this task..."
+                  className="min-h-[80px] resize-none"
+                  maxLength={5000}
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                This comment will be added to the task when it&apos;s created. You can add more
+                comments later when editing the task.
+              </FormDescription>
+              <div className="text-xs text-muted-foreground text-right">
+                {field.value?.length || 0}/5000
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </div>
     </Form>
   );

@@ -53,6 +53,8 @@ import { COOKIE_NAME } from '@/utils/constant';
 import { MultiSelect } from '../ui/multi-select';
 import { Badge } from '@/components/ui/badge';
 import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import CommentSection from '../comments/CommentSection';
+import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -128,6 +130,7 @@ export default function EditTaskDialog({
     { id: string; name: string; skillCategory: { categoryName: string } }[]
   >([]);
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Permission checks based on role
   const canAssignTasks = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
@@ -268,6 +271,7 @@ export default function EditTaskDialog({
         if (result.success) {
           // Update local state after successful deletion
           setFiles(prevFiles => prevFiles.filter(file => file.file.id !== fileId));
+          await handleCommentDataChange();
           toast({
             title: 'File Deleted Successfully',
             description: `File with id: ${fileId} deleted successfully`,
@@ -400,7 +404,42 @@ export default function EditTaskDialog({
       }
     }
   };
+  const handleCommentDataChange = async () => {
+    // Or re-fetch task data directly
+    setRefreshKey(prev => prev + 1);
+    await refetchTaskData();
+  };
 
+  const refetchTaskData = async () => {
+    try {
+      const { success, task: freshTask } = await getTaskById(task.id);
+      if (success && freshTask) {
+        // Update form with fresh data
+        form.reset({
+          title: task.title,
+          description: task.description,
+          priorityName: task.priority.priorityName,
+          statusName: task.status.statusName,
+          taskCategoryName: task.taskCategory.categoryName,
+          assignedToId: task?.assignedTo?.id || '',
+          skills: task.taskSkills || [],
+          timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
+          overTime:
+            task.overTime && Number(task.overTime) > 0
+              ? formatOriginalEstimate(Number(task.overTime))
+              : '',
+          dueDate: task.dueDate ? new Date(task.dueDate) : null,
+        });
+
+        // Update files with fresh data
+        if (freshTask.taskFiles) {
+          setFiles(freshTask.taskFiles);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh task data:', error);
+    }
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[700px] max-h-[98%] overflow-hidden px-0">
@@ -794,6 +833,15 @@ export default function EditTaskDialog({
                 loadingFileIds={loadingFileIds}
               />
             )}
+
+            {/* Add Comments Section */}
+            <div className="border-t pt-6 mt-6">
+              <CommentSection
+                taskId={task.id}
+                onDataChange={handleCommentDataChange}
+                key={refreshKey}
+              />
+            </div>
 
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>

@@ -12,9 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 interface CommentSectionProps {
   taskId: string;
   onDataChange?: () => void;
+  key?: number;
 }
 
-export default function CommentSection({ taskId, onDataChange }: CommentSectionProps) {
+export default function CommentSection({ taskId, onDataChange, key }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -76,7 +77,11 @@ export default function CommentSection({ taskId, onDataChange }: CommentSectionP
       onDataChange();
     }
   };
-
+  useEffect(() => {
+    if (key && key > 0) {
+      loadComments();
+    }
+  }, [key]);
   if (loading) {
     return (
       <div className="space-y-6">
