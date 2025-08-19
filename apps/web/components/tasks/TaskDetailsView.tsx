@@ -123,6 +123,29 @@ export default function TaskDetailsView({
     }
   };
 
+  const refreshTaskData = async () => {
+    if (!taskId) return;
+
+    try {
+      const { success, task } = await getTaskById(taskId);
+      if (success && task) {
+        setTaskDetails(task);
+        if (task.taskFiles && task.taskFiles.length > 0) {
+          setFiles(task.taskFiles);
+        } else {
+          setFiles([]); // Clear files if none exist
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh task details:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error refreshing task details',
+        description: 'Failed to reload task information',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -239,7 +262,7 @@ export default function TaskDetailsView({
 
           {/* Add Comments Section */}
           <Separator />
-          <CommentSection taskId={taskId} />
+          <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
         </div>
       )}
     </div>

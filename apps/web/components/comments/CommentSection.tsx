@@ -11,9 +11,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface CommentSectionProps {
   taskId: string;
+  onDataChange?: () => void;
 }
 
-export default function CommentSection({ taskId }: CommentSectionProps) {
+export default function CommentSection({ taskId, onDataChange }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -59,6 +60,10 @@ export default function CommentSection({ taskId }: CommentSectionProps) {
     // Add new comment to the beginning of the list
     setComments(prev => [newComment, ...prev]);
     setTotalCount(prev => prev + 1);
+
+    if (newComment.commentFiles.length > 0 && onDataChange) {
+      onDataChange();
+    }
   };
 
   const handleCommentsUpdate = (updatedComments: Comment[]) => {
@@ -66,6 +71,10 @@ export default function CommentSection({ taskId }: CommentSectionProps) {
     setTotalCount(updatedComments.length);
     setHasMore(false); // Reset pagination when comments are updated
     setNextCursor(null);
+
+    if (onDataChange) {
+      onDataChange();
+    }
   };
 
   if (loading) {
@@ -110,7 +119,6 @@ export default function CommentSection({ taskId }: CommentSectionProps) {
       {/* Header */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Comments</h3>
-        <Separator />
       </div>
 
       {/* Comment form */}
@@ -127,6 +135,7 @@ export default function CommentSection({ taskId }: CommentSectionProps) {
             totalCount={totalCount}
             hasMore={hasMore}
             nextCursor={nextCursor}
+            onDataChange={onDataChange}
           />
         </>
       )}

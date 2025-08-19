@@ -23,12 +23,14 @@ interface CommentItemProps {
   comment: Comment;
   onCommentUpdated: (updatedComment: Comment) => void;
   onCommentDeleted: (commentId: string) => void;
+  onDataChange?: () => void;
 }
 
 export default function CommentItem({
   comment,
   onCommentUpdated,
   onCommentDeleted,
+  onDataChange,
 }: CommentItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -74,6 +76,7 @@ export default function CommentItem({
     const confirmed = window.confirm('Are you sure you want to delete this comment?');
     if (!confirmed) return;
 
+    const hasFiles = comment.commentFiles.length > 0;
     setDeleting(true);
 
     try {
@@ -81,6 +84,9 @@ export default function CommentItem({
 
       if (result.success) {
         onCommentDeleted(comment.id);
+        if (hasFiles && onDataChange) {
+          onDataChange();
+        }
         toast({
           title: 'Comment Deleted',
           description: 'The comment has been deleted successfully.',

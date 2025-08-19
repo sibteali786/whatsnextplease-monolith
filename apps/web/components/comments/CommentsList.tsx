@@ -16,6 +16,7 @@ interface CommentsListProps {
   totalCount: number;
   hasMore: boolean;
   nextCursor: string | null;
+  onDataChange?: () => void;
 }
 
 export default function CommentsList({
@@ -25,6 +26,7 @@ export default function CommentsList({
   totalCount,
   hasMore,
   nextCursor,
+  onDataChange,
 }: CommentsListProps) {
   const [loadingMore, setLoadingMore] = useState(false);
   const { toast } = useToast();
@@ -64,7 +66,11 @@ export default function CommentsList({
   };
 
   const handleCommentDeleted = (commentId: string) => {
+    const deletedComment = comments.find(c => c.id === commentId);
     onCommentsUpdate(comments.filter(comment => comment.id !== commentId));
+    if (deletedComment?.commentFiles.length && onDataChange) {
+      onDataChange();
+    }
   };
 
   if (comments.length === 0) {
@@ -94,6 +100,7 @@ export default function CommentsList({
             comment={comment}
             onCommentUpdated={handleCommentUpdated}
             onCommentDeleted={handleCommentDeleted}
+            onDataChange={onDataChange}
           />
         ))}
       </div>
