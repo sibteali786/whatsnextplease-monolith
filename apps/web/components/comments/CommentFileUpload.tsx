@@ -219,7 +219,7 @@ const CommentFileUpload = forwardRef<CommentFileUploadRef, CommentFileUploadProp
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'An error occurred while deleting the file' + error,
+          description: 'An error occurred while deleting the file: ' + (error instanceof Error ? error.message : String(error)),
           variant: 'destructive',
           icon: <CircleX size={20} />,
         });
