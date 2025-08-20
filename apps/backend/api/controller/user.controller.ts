@@ -323,6 +323,49 @@ export class UserController {
       message: 'Current user profile retrieved successfully',
     });
   };
+
+  /**
+   * Search users for mentions functionality
+   * GET /users/search?q=query&role=optional_role
+   */
+  searchUsersForMentionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const query = (req.query.q as string) || '';
+    const roleFilter = req.query.role as string;
+    const requestingUserId = req.user?.id;
+
+    if (!requestingUserId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+    }
+    if (query.length < 2) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'Query too short, minimum 2 characters required',
+      });
+    }
+    const result = await this.userService.searchUsersForMentions(
+      query,
+      requestingUserId,
+      roleFilter
+    );
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        message: result.message,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.message,
+        error: result.error,
+      });
+    }
+  });
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
@@ -331,4 +374,5 @@ export class UserController {
   updateUserRole = asyncHandler(this.updateUserRoleHandler);
   getAvailableRoles = asyncHandler(this.getAvailableRolesHandler);
   getCurrentUser = asyncHandler(this.handleGetCurrentUser);
+  searchUsersForMentions = asyncHandler(this.searchUsersForMentionsHandler);
 }

@@ -21,6 +21,13 @@ router.patch(
 );
 router.get('/profile', verifyToken, controller.getUserProfile);
 router.patch('/profile', verifyToken, controller.updateProfile);
+
+/**
+ * GET /users/search
+ * Search users for mentions functionality
+ * Accessible by all authenticated users
+ */
+router.get('/search', verifyToken, controller.searchUsersForMentions);
 /**
  * GET /users/available-roles
  * Get available roles for dropdown (excludes CLIENT)

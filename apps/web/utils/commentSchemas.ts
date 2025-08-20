@@ -7,6 +7,8 @@ export const CreateCommentSchema = z.object({
     .string()
     .min(1, 'Comment cannot be empty')
     .max(5000, 'Comment cannot exceed 5000 characters'),
+  contentType: z.enum(['html', 'text']).default('html'), // Add content type
+  mentionedUserIds: z.array(z.string().uuid()).optional(), // Add mentions
   fileIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -16,6 +18,7 @@ export const UpdateCommentSchema = z.object({
     .string()
     .min(1, 'Comment cannot be empty')
     .max(5000, 'Comment cannot exceed 5000 characters'),
+  contentType: z.enum(['html', 'text']).default('html'),
 });
 
 export const CommentAuthorSchema = z.object({
@@ -41,8 +44,10 @@ export const CommentFileSchema = z.object({
 export const CommentSchema = z.object({
   id: z.string(),
   content: z.string(),
+  contentType: z.enum(['html', 'text']).default('html'), // Add content type
   taskId: z.string(),
   authorType: z.nativeEnum(CreatorType),
+  mentionedUserIds: z.array(z.string()).optional(), // Add mentions
   isEdited: z.boolean(),
   editedAt: z.date().nullable(),
   createdAt: z.date(),
@@ -67,8 +72,17 @@ export const GetCommentsResponseSchema = z.object({
   error: z.string().optional(),
 });
 
+export const MentionUserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatar: z.string().nullable(),
+  role: z.string(),
+  username: z.string(),
+});
+
 export type CreateCommentInput = z.infer<typeof CreateCommentSchema>;
 export type UpdateCommentInput = z.infer<typeof UpdateCommentSchema>;
 export type Comment = z.infer<typeof CommentSchema>;
 export type CommentFile = z.infer<typeof CommentFileSchema>;
 export type GetCommentsResponse = z.infer<typeof GetCommentsResponseSchema>;
+export type MentionUser = z.infer<typeof MentionUserSchema>;

@@ -306,4 +306,88 @@ export class UserService {
     }
     return null;
   }
+
+  /**
+   * Search users for mentions functionality
+   * Returns users matching the search query
+   */
+  async searchUsersForMentions(
+    query: string,
+    requestingUserId: string,
+    roleFilter?: string
+  ): Promise<{
+    success: boolean;
+    data?: Array<{
+      id: string;
+      name: string;
+      avatar: string | null;
+      role: string;
+      username: string;
+    }>;
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      if (query.length < 2) {
+        return {
+          success: true,
+          data: [],
+          message: 'Query too short',
+        };
+      }
+      const searchConditions = {
+        AND: [
+          {
+            OR: [
+              { firstName: { contains: query, mode: Prisma.QueryMode.insensitive } },
+              { lastName: { contains: query, mode: Prisma.QueryMode.insensitive } },
+              { username: { contains: query, mode: Prisma.QueryMode.insensitive } },
+            ],
+          },
+          { id: { not: requestingUserId } }, // Exclude current user
+          ...(roleFilter && roleFilter !== 'ALL_ROLES'
+            ? [{ role: { name: roleFilter as Roles } }]
+            : []),
+        ],
+      };
+      const users = await prisma.user.findMany({
+        where: searchConditions,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          avatarUrl: true,
+          role: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        take: 10,
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      });
+
+      const formattedUsers = users.map(user => ({
+        id: user.id,
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+        avatar: user.avatarUrl,
+        role: user.role?.name || 'Unknown',
+        username: user.username,
+      }));
+
+      return {
+        success: true,
+        data: formattedUsers,
+        message: 'Users retrieved successfully',
+      };
+    } catch (error) {
+      logger.error('Error searching users for mentions:', error);
+      return {
+        success: false,
+        message: 'Failed to search users',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }

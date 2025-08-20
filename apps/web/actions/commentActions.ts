@@ -31,6 +31,8 @@ export async function createComment(data: CreateCommentInput): Promise<{
       },
       body: JSON.stringify({
         content: data.content,
+        contentType: data.contentType || 'html', // Add content type
+        mentionedUserIds: data.mentionedUserIds, // Add mentions
         fileIds: data.fileIds,
       }),
     });
@@ -41,6 +43,36 @@ export async function createComment(data: CreateCommentInput): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create comment',
+    };
+  }
+}
+
+export async function updateComment(data: UpdateCommentInput): Promise<{
+  success: boolean;
+  comment?: any;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE_URL}/comments/${data.commentId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      body: JSON.stringify({
+        content: data.content,
+        contentType: data.contentType || 'html', // Add content type
+      }),
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update comment',
     };
   }
 }
@@ -69,35 +101,6 @@ export async function getComments(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch comments',
-    };
-  }
-}
-
-export async function updateComment(data: UpdateCommentInput): Promise<{
-  success: boolean;
-  comment?: any;
-  message?: string;
-  error?: string;
-}> {
-  try {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/comments/${data.commentId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      body: JSON.stringify({
-        content: data.content,
-      }),
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update comment',
     };
   }
 }

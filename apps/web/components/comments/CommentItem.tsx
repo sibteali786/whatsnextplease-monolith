@@ -103,7 +103,9 @@ export default function CommentItem({
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred: ' + (error instanceof Error ? error.message : String(error)),
+        description:
+          'An unexpected error occurred: ' +
+          (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     } finally {
@@ -223,9 +225,12 @@ export default function CommentItem({
           />
         ) : (
           <>
-            <div className="prose prose-sm max-w-none">
-              <p className="whitespace-pre-wrap break-words m-0">{comment.content}</p>
-            </div>
+            <div
+              className="prose prose-sm max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+              dangerouslySetInnerHTML={{
+                __html: comment.content || '<p>No content</p>',
+              }}
+            />
 
             {/* Attachments */}
             {comment.commentFiles.length > 0 && (
