@@ -113,16 +113,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             CodeBlockComponent as React.ComponentType<ReactNodeViewProps<HTMLElement>>
           );
         },
-      })
-        .configure({})
-        .configure({
-          lowlight,
-          HTMLAttributes: {
-            class: 'bg-muted border border-border rounded-lg my-4 overflow-hidden',
-          },
-          languageClassPrefix: 'language-',
-          defaultLanguage: 'plaintext',
-        }),
+      }).configure({
+        lowlight,
+        HTMLAttributes: {
+          class: 'bg-muted border border-border rounded-lg my-4 overflow-hidden',
+        },
+        languageClassPrefix: 'language-',
+        defaultLanguage: 'plaintext',
+      }),
 
       ListItem.configure({
         HTMLAttributes: {
@@ -156,7 +154,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       Mention.configure({
         HTMLAttributes: {
           class:
-            'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors',
+            'inline-flex items-center px-2 py-0.5 rounded-md font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-2000 transition-colors',
         },
         suggestion: {
           items: async ({ query }) => {
@@ -201,7 +199,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
               },
 
               onUpdate(props) {
-                component.updateProps(props);
+                component.updateProps({
+                  ...props,
+                  command: (item: MentionUser) => {
+                    const mentionData = {
+                      id: item.id,
+                      label: item.name,
+                    };
+                    props.command(mentionData);
+                  },
+                });
 
                 if (!props.clientRect) {
                   return;

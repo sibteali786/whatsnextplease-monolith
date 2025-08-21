@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -16,8 +16,8 @@ import { deleteComment } from '@/actions/commentActions';
 import CommentForm from './CommentForm';
 import CommentAttachments from './CommentAttachments';
 import { getCurrentUser } from '@/utils/user';
-import { useEffect } from 'react';
 import { CreatorType } from '@prisma/client';
+import { useSyntaxHighlighting } from '@/hooks/useSyntaxHighlighting';
 
 interface CommentItemProps {
   comment: Comment;
@@ -37,6 +37,12 @@ export default function CommentItem({
   const [canEdit, setCanEdit] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
   const { toast } = useToast();
+
+  // Add ref for syntax highlighting
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Apply syntax highlighting to code blocks
+  useSyntaxHighlighting(contentRef);
 
   // Check permissions on mount
   useEffect(() => {
@@ -226,7 +232,8 @@ export default function CommentItem({
         ) : (
           <>
             <div
-              className="prose prose-sm max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+              ref={contentRef}
+              className="comment-content prose prose-sm max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
               dangerouslySetInnerHTML={{
                 __html: comment.content || '<p>No content</p>',
               }}

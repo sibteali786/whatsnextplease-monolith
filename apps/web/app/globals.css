@@ -371,3 +371,100 @@ body {
   font-size: inherit;
 }
 
+/* Comment-specific code block styling with syntax highlighting */
+.comment-content pre {
+  @apply bg-muted border border-border rounded-lg p-4 my-4 overflow-x-auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.comment-content pre code {
+  @apply bg-transparent p-0 text-foreground;
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+.comment-content code:not(pre code) {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+/* Ensure syntax highlighting works in comments */
+.comment-content .hljs-comment,
+.comment-content .hljs-quote {
+  @apply text-muted-foreground italic;
+}
+
+.comment-content .hljs-keyword,
+.comment-content .hljs-selector-tag,
+.comment-content .hljs-type {
+  @apply text-purple-600 font-semibold;
+}
+
+.comment-content .hljs-string,
+.comment-content .hljs-attr {
+  @apply text-green-600;
+}
+
+.comment-content .hljs-number,
+.comment-content .hljs-literal {
+  @apply text-blue-600;
+}
+
+.comment-content .hljs-function,
+.comment-content .hljs-title {
+  @apply text-yellow-600 font-semibold;
+}
+
+.comment-content .hljs-variable,
+.comment-content .hljs-name {
+  @apply text-red-600;
+}
+
+.comment-content .hljs-tag {
+  @apply text-blue-600;
+}
+
+/* Dark mode syntax highlighting for comments */
+.dark .comment-content .hljs-keyword,
+.dark .comment-content .hljs-selector-tag,
+.dark .comment-content .hljs-type {
+  @apply text-purple-400 font-semibold;
+}
+
+.dark .comment-content .hljs-string,
+.dark .comment-content .hljs-attr {
+  @apply text-green-400;
+}
+
+.dark .comment-content .hljs-number,
+.dark .comment-content .hljs-literal {
+  @apply text-blue-400;
+}
+
+.dark .comment-content .hljs-function,
+.dark .comment-content .hljs-title {
+  @apply text-yellow-400 font-semibold;
+}
+
+.dark .comment-content .hljs-variable,
+.dark .comment-content .hljs-name {
+  @apply text-red-400;
+}
+
+.dark .comment-content .hljs-tag {
+  @apply text-blue-400;
+}
+
+/* Language indicator for code blocks in comments */
+.comment-content pre[data-language]:not([data-language=""]):not([data-language="plaintext"])::before {
+  content: attr(data-language);
+  @apply absolute top-2 right-2 text-xs text-muted-foreground bg-background px-2 py-1 rounded;
+  text-transform: uppercase;
+  font-weight: 500;
+  position: absolute;
+}
+
+.comment-content pre {
+  @apply relative;
+}
