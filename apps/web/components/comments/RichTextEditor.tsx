@@ -28,6 +28,7 @@ import json from 'highlight.js/lib/languages/json';
 import python from 'highlight.js/lib/languages/python';
 import sql from 'highlight.js/lib/languages/sql';
 import bash from 'highlight.js/lib/languages/bash';
+import EditorToolbar from './EditorToolbar';
 
 interface RichTextEditorProps {
   content: string;
@@ -102,7 +103,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         codeBlock: false,
         code: {
           HTMLAttributes: {
-            class: 'bg-muted px-1.5 py-0.5 rounded text-sm font-mono',
+            class:
+              'bg-muted px-1.5 py-0.5 rounded font-mono text-red-500 dark:text-red-300 dark:font-medium',
           },
         },
       }),
@@ -253,6 +255,24 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       },
       handleKeyDown: (view, event) => {
         // Add code block shortcut
+        if (event.key === '`') {
+          const { state } = view;
+          const { from } = state.selection;
+          const textBefore = state.doc.textBetween(Math.max(0, from - 2), from);
+
+          // If we already have two backticks before, create a code block
+          if (textBefore === '``') {
+            event.preventDefault();
+            // Delete the two backticks and create a code block
+            editor
+              ?.chain()
+              .focus()
+              .deleteRange({ from: from - 2, to: from })
+              .toggleCodeBlock()
+              .run();
+            return true;
+          }
+        }
         if (event.key === 'Enter' && event.ctrlKey && event.altKey) {
           editor?.chain().focus().toggleCodeBlock().run();
           return true;
@@ -282,6 +302,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   return (
     <div className="rich-text-editor">
+      <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
     </div>
   );

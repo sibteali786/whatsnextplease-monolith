@@ -457,7 +457,8 @@ body {
 }
 
 /* Language indicator for code blocks in comments */
-.comment-content pre[data-language]:not([data-language=""]):not([data-language="plaintext"])::before {
+.comment-content
+  pre[data-language]:not([data-language='']):not([data-language='plaintext'])::before {
   content: attr(data-language);
   @apply absolute top-2 right-2 text-xs text-muted-foreground bg-background px-2 py-1 rounded;
   text-transform: uppercase;
@@ -467,4 +468,21 @@ body {
 
 .comment-content pre {
   @apply relative;
+}
+
+/* Add blockquote styles for comments */
+.comment-content blockquote {
+  @apply border-l-4 border-border pl-4 italic my-4 text-muted-foreground;
+  margin-left: 0;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-border pl-4 italic my-4 text-muted-foreground;
+  margin-left: 0;
+}
+
+/* Dark mode blockquote */
+.dark .comment-content blockquote,
+.dark .prose blockquote {
+  @apply border-muted-foreground/30;
 }

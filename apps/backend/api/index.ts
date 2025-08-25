@@ -38,6 +38,7 @@ initializeServer()
     process.on('SIGTERM', () => shutdown('SIGTERM'));
   })
   .catch(error => {
+    console.log(error);
     logger.error('Failed to start server:', error);
     process.exit(1);
   });

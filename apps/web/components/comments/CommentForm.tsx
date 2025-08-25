@@ -32,8 +32,14 @@ export default function CommentForm({
   const { toast } = useToast();
 
   const isEditing = !!editingComment;
-
-  const canSubmit = content.trim().length > 0 && !submitting;
+  const getCharacterCount = (html: string) => {
+    // Create a temporary div to parse HTML and get plain text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent?.length || 0;
+  };
+  const hasContent = getCharacterCount(content) > 0;
+  const canSubmit = hasContent && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -133,10 +139,6 @@ export default function CommentForm({
       e.preventDefault();
       handleSubmit();
     }
-  };
-
-  const getCharacterCount = (html: string) => {
-    return html.replace(/<[^>]*>/g, '').length;
   };
 
   return (
