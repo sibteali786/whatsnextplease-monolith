@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Roles, CreatorType } from '@prisma/client';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@wnp/types';
 import { canViewTasks } from '../utils/tasks/taskPermissions';
@@ -8,6 +9,10 @@ import {
   CommentQueryOptions,
 } from '../repositories/comment.repository';
 import { S3BucketService } from './s3Service';
+import prisma from '../config/db';
+import { MentionExtractionService, UserInfo } from './mentionExtraction.service';
+import { MentionNotificationTemplates } from '../templates/mentionNotificationTemplates';
+import { NotificationService } from './notification.service';
 
 export interface CreateCommentRequest {
   taskId: string;
@@ -16,6 +21,7 @@ export interface CreateCommentRequest {
   authorUserId?: string;
   authorClientId?: string;
   authorType: CreatorType;
+  mentionedUserIds?: string[];
 }
 
 export interface UpdateCommentRequest {
@@ -41,7 +47,8 @@ export interface CommentPermissionCheck {
 export class CommentService {
   constructor(
     private readonly commentRepository: CommentRepository = new CommentRepository(),
-    private readonly s3Service: S3BucketService = new S3BucketService()
+    private readonly s3Service: S3BucketService = new S3BucketService(),
+    private readonly notificationService: NotificationService = new NotificationService()
   ) {}
 
   /**
@@ -54,7 +61,15 @@ export class CommentService {
     error?: string;
   }> {
     try {
-      const { taskId, content, fileIds, authorUserId, authorClientId, authorType } = request;
+      const {
+        taskId,
+        content,
+        fileIds,
+        authorUserId,
+        authorClientId,
+        authorType,
+        mentionedUserIds,
+      } = request;
 
       // Validate input
       if (!content || content.trim().length === 0) {
@@ -78,6 +93,58 @@ export class CommentService {
       if (authorType === CreatorType.CLIENT && !authorClientId) {
         throw new BadRequestError('authorClientId is required for CLIENT type');
       }
+      let authorInfo: UserInfo | null = null;
+      if (authorType === CreatorType.USER && authorUserId) {
+        const author = await prisma.user.findUnique({
+          where: { id: authorUserId },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            email: true,
+            avatarUrl: true,
+            role: { select: { name: true } },
+          },
+        });
+        if (author) {
+          authorInfo = {
+            id: author.id,
+            name: `${author.firstName} ${author.lastName}`.trim(),
+            email: author.email,
+            username: author.username,
+            avatarUrl: author.avatarUrl,
+            role: author.role?.name as Roles,
+          };
+        }
+      } else if (authorType === CreatorType.CLIENT && authorClientId) {
+        const author = await prisma.client.findUnique({
+          where: { id: authorClientId },
+          select: {
+            id: true,
+            contactName: true,
+            companyName: true,
+            username: true,
+            email: true,
+            avatarUrl: true,
+            role: { select: { name: true } },
+          },
+        });
+        if (author) {
+          authorInfo = {
+            id: author.id,
+            name: `${author.contactName}`.trim(),
+            email: author.email,
+            username: author.username,
+            avatarUrl: author.avatarUrl,
+            role: author?.role?.name as Roles,
+          };
+        }
+      }
+
+      if (!authorInfo) {
+        throw new BadRequestError('Could not retrieve author information');
+      }
 
       // Validate file IDs if provided
       if (fileIds && fileIds.length > 0) {
@@ -92,6 +159,31 @@ export class CommentService {
         }
       }
 
+      const extractedMentions = await MentionExtractionService.processCommentMentions(content, {
+        taskId,
+        authorUserId,
+        authorClientId,
+        authorRole: authorInfo.role,
+      });
+
+      // Extract just the user IDs from validated mentions
+      const validMentionIds = extractedMentions.map(mention => mention.userId);
+
+      // Optional: Log if frontend sent different mentions than what we extracted
+      if (mentionedUserIds && mentionedUserIds.length > 0) {
+        const frontendMentions = new Set(mentionedUserIds);
+        const extractedMentionIds = new Set(validMentionIds);
+
+        if (
+          frontendMentions.size !== extractedMentionIds.size ||
+          ![...frontendMentions].every(id => extractedMentionIds.has(id))
+        ) {
+          console.warn(
+            `Frontend mentions (${mentionedUserIds.length}) differ from extracted mentions (${validMentionIds.length})`
+          );
+        }
+      }
+
       // Create comment data
       const commentData: CreateCommentData = {
         content: content.trim(),
@@ -101,9 +193,21 @@ export class CommentService {
         authorType,
         mentionedUserIds: [], // Will implement mention extraction later
       };
-
       // Create comment with transaction
       const comment = await this.commentRepository.createComment(commentData, fileIds);
+
+      if (extractedMentions.length > 0) {
+        try {
+          await this.sendMentionNotifications(comment, task.title, extractedMentions, authorInfo);
+
+          console.log(
+            `Sent mention notifications to ${extractedMentions.length} users for comment ${comment.id}`
+          );
+        } catch (mentionError) {
+          // Don't fail comment creation if mention notifications fail
+          console.error('Failed to send mention notifications:', mentionError);
+        }
+      }
 
       return {
         success: true,
@@ -116,6 +220,75 @@ export class CommentService {
         error: error instanceof Error ? error.message : 'Unknown error creating comment',
       };
     }
+  }
+
+  /**
+   * Send notifications to mentioned users
+   */
+  private async sendMentionNotifications(
+    comment: CommentWithRelations,
+    taskTitle: string,
+    mentions: Array<{ userId: string; userInfo: any }>,
+    authorInfo: {
+      id: string;
+      name: string;
+      username: string;
+      avatarUrl: string | null;
+    }
+  ): Promise<void> {
+    const notificationPromises = mentions.map(async mention => {
+      try {
+        // Generate notification data
+        const notificationData = MentionNotificationTemplates.createMentionNotificationData(
+          comment.taskId,
+          taskTitle,
+          comment.id,
+          comment.content,
+          {
+            name: authorInfo.name,
+            username: authorInfo.username,
+            avatarUrl: authorInfo.avatarUrl,
+          }
+        );
+
+        // Create notification using backend service
+        const notification = await this.notificationService.createNotification({
+          type: notificationData.type,
+          message: notificationData.message,
+          userId: mention.userId,
+          clientId: null,
+          data: notificationData.data,
+        });
+
+        // Deliver the notification
+        await this.notificationService.deliverNotification(
+          {
+            type: notificationData.type,
+            message: notificationData.message,
+            data: notificationData.data,
+          },
+          {
+            type: notificationData.type,
+            message: notificationData.message,
+            userId: mention.userId,
+            clientId: null,
+            data: notificationData.data,
+          }
+        );
+
+        // Update delivery status
+        await this.notificationService.updateDeliveryStatus(notification.id);
+
+        console.log(
+          `Created mention notification for user ${mention.userId} in comment ${comment.id}`
+        );
+      } catch (error) {
+        console.error(`Failed to create mention notification for user ${mention.userId}:`, error);
+      }
+    });
+
+    // Send all notifications concurrently
+    await Promise.allSettled(notificationPromises);
   }
 
   /**
