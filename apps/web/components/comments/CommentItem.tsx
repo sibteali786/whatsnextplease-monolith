@@ -177,7 +177,7 @@ export default function CommentItem({
   };
 
   return (
-    <div className="flex gap-3 p-4 rounded-lg border bg-card">
+    <div className="flex gap-3 p-4 rounded-lg border bg-card" id={`comment-${comment.id}`}>
       {/* Avatar */}
       <Avatar className="w-8 h-8 mt-1">
         <AvatarImage src={getAuthorAvatar() || undefined} />

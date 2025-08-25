@@ -486,3 +486,21 @@ body {
 .dark .prose blockquote {
   @apply border-muted-foreground/30;
 }
+
+/* Comment highlighting for mentions */
+.comment-highlight {
+  @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-background;
+  animation: mentionPulse 0.6s ease-in-out;
+}
+
+@keyframes mentionPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+}

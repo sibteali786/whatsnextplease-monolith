@@ -204,7 +204,7 @@ export class MentionExtractionService {
     }
 
     // Task agents can access assigned tasks
-    if (userRole === Roles.TASK_AGENT && task.assignedToId === userId) {
+    if (userRole === Roles.TASK_AGENT && task.assignedToId) {
       return true;
     }
 

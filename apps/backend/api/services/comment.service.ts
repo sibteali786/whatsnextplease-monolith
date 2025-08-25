@@ -195,7 +195,7 @@ export class CommentService {
       };
       // Create comment with transaction
       const comment = await this.commentRepository.createComment(commentData, fileIds);
-
+      console.log('Created Comment:', comment, extractedMentions);
       if (extractedMentions.length > 0) {
         try {
           await this.sendMentionNotifications(comment, task.title, extractedMentions, authorInfo);

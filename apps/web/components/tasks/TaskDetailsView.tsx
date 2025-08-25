@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { fileAPI } from '@/utils/fileAPI';
 import { useRouter } from 'next/navigation';
 import CommentSection from '../comments/CommentSection';
+import { handleCommentFragment } from '@/utils/commentNavigation';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -145,6 +146,14 @@ export default function TaskDetailsView({
       });
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleCommentFragment();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [taskId]);
 
   return (
     <div className="space-y-6">
