@@ -333,6 +333,7 @@ export class UserController {
   searchUsersForMentionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const query = (req.query.q as string) || '';
     const roleFilter = req.query.role as string;
+    const taskId = req.query.taskId as string;
     const requestingUserId = req.user?.id;
 
     if (!requestingUserId) {
@@ -341,17 +342,12 @@ export class UserController {
         message: 'User not authenticated',
       });
     }
-    if (query.length < 2) {
-      return res.status(200).json({
-        success: true,
-        data: [],
-        message: 'Query too short, minimum 2 characters required',
-      });
-    }
+
     const result = await this.userService.searchUsersForMentions(
       query,
       requestingUserId,
-      roleFilter
+      roleFilter,
+      taskId
     );
 
     if (result.success) {

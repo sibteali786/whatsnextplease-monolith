@@ -37,13 +37,13 @@ interface RichTextEditorProps {
   placeholder?: string;
   disabled?: boolean;
   onKeyDown?: (event: React.KeyboardEvent) => void;
+  taskId?: string;
 }
 
 // Move searchUsers function outside component to avoid recreating
-async function searchUsers(query: string): Promise<MentionUser[]> {
-  if (query.length < 2) return [];
+async function searchUsers(query: string, taskId?: string): Promise<MentionUser[]> {
   try {
-    const response = await searchUsersAction(query);
+    const response = await searchUsersAction(query, taskId);
     if (!response.success) {
       console.error('Failed to search users:', response.message);
       return [];
@@ -80,6 +80,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = 'Add a comment...',
   disabled = false,
   onKeyDown,
+  taskId,
 }) => {
   const extractMentions = useCallback(
     (html: string) => {
@@ -160,8 +161,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         },
         suggestion: {
           items: async ({ query }) => {
-            console.log('Searching users for query:', query);
-            return await searchUsers(query);
+            return await searchUsers(query, taskId);
           },
           render: () => {
             let component: ReactRenderer<MentionSuggestionRef>;

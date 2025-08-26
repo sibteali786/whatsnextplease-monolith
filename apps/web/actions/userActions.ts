@@ -32,25 +32,29 @@ export async function fetchTaskStats(userId: string) {
 }
 
 export async function searchUsersAction(
-  query: string
+  query: string,
+  taskId?: string // Add optional taskId
 ): Promise<{ users: any[]; success: boolean; message?: string }> {
   const token = cookies().get(COOKIE_NAME)?.value;
-  const users = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/user/search?q=${encodeURIComponent(query)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+
+  // Build query parameters
+  const params = new URLSearchParams({ q: query });
+  if (taskId) params.append('taskId', taskId);
+
+  const users = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/search?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
   if (!users.ok) {
     console.error('Failed to search users:', users.statusText);
     return { users: [], success: false, message: 'Failed to search users' };
   }
+
   const result = await users.json();
-  console.log('Search users response status:', result);
+
   if (result.success) {
     return { users: result.data, success: true };
   } else {

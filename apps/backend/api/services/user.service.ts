@@ -314,7 +314,8 @@ export class UserService {
   async searchUsersForMentions(
     query: string,
     requestingUserId: string,
-    roleFilter?: string
+    roleFilter?: string,
+    taskId?: string
   ): Promise<{
     success: boolean;
     data?: Array<{
@@ -328,6 +329,9 @@ export class UserService {
     error?: string;
   }> {
     try {
+      if (query.length === 0 || query.trim() === '') {
+        return await this.getContextualUsersForMentions(requestingUserId, taskId);
+      }
       if (query.length < 2) {
         return {
           success: true,
@@ -387,6 +391,249 @@ export class UserService {
         success: false,
         message: 'Failed to search users',
         error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get contextual users for empty @ mentions
+   * Priority: Task assignee → Skill-matched users → Recent collaborators → All users
+   */
+
+  private async getContextualUsersForMentions(
+    requestingUserId: string,
+    taskId?: string
+  ): Promise<{
+    success: boolean;
+    data?: Array<{
+      id: string;
+      name: string;
+      avatar: string | null;
+      role: string;
+      username: string;
+    }>;
+    message?: string;
+  }> {
+    try {
+      const contextualUsers = new Set<string>();
+      const userResults: Array<{
+        id: string;
+        name: string;
+        avatar: string | null;
+        role: string;
+        username: string;
+        priority: number;
+      }> = [];
+      // 1. Task assignee (highest priority)
+      if (taskId) {
+        const taskWithAssignee = await prisma.task.findUnique({
+          where: { id: taskId },
+          select: {
+            assignedToId: true,
+            assignedTo: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+                avatarUrl: true,
+                role: { select: { name: true } },
+              },
+            },
+          },
+        });
+        if (taskWithAssignee?.assignedTo && taskWithAssignee.assignedToId !== requestingUserId) {
+          const assignee = taskWithAssignee.assignedTo;
+          contextualUsers.add(assignee.id);
+          userResults.push({
+            id: assignee.id,
+            name:
+              `${assignee.firstName || ''} ${assignee.lastName || ''}`.trim() || assignee.username,
+            avatar: assignee.avatarUrl,
+            role: assignee.role?.name || 'Unknown',
+            username: assignee.username,
+            priority: 1, // Highest priority
+          });
+        }
+      }
+      // 2. Users with matching skills (second priority)
+      if (taskId) {
+        const taskSkills = await prisma.taskSkill.findMany({
+          where: { taskId },
+          select: { skillId: true },
+        });
+
+        const skillIds = taskSkills.map(ts => ts.skillId);
+
+        if (skillIds.length > 0) {
+          const skillMatchedUsers = await prisma.user.findMany({
+            where: {
+              AND: [
+                { id: { not: requestingUserId } },
+                { id: { notIn: Array.from(contextualUsers) } },
+                // Users who have any of the task's required skills
+                {
+                  userSkills: {
+                    some: {
+                      skillId: { in: skillIds },
+                    },
+                  },
+                },
+                // Exclude CLIENT role users
+                { role: { name: { not: Roles.CLIENT } } },
+              ],
+            },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              username: true,
+              avatarUrl: true,
+              role: { select: { name: true } },
+              userSkills: {
+                where: { skillId: { in: skillIds } },
+                select: { skillId: true },
+              },
+            },
+            take: 4, // Limit to prevent too many results
+          });
+
+          // Sort by number of matching skills (more matches = higher in results)
+          const sortedBySkillMatch = skillMatchedUsers
+            .map(user => ({
+              ...user,
+              matchingSkillsCount: user.userSkills.length,
+            }))
+            .sort((a, b) => b.matchingSkillsCount - a.matchingSkillsCount);
+
+          sortedBySkillMatch.forEach(user => {
+            if (!contextualUsers.has(user.id)) {
+              contextualUsers.add(user.id);
+              userResults.push({
+                id: user.id,
+                name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+                avatar: user.avatarUrl,
+                role: user.role?.name || 'Unknown',
+                username: user.username,
+                priority: 2, // Second priority
+              });
+            }
+          });
+        }
+      }
+      // 3. Recent collaborators (third priority)
+      const recentCollaborators = await prisma.user.findMany({
+        where: {
+          AND: [
+            { id: { not: requestingUserId } },
+            { id: { notIn: Array.from(contextualUsers) } },
+            { role: { name: { not: Roles.CLIENT } } },
+            {
+              OR: [
+                // Users who commented on tasks where requesting user also commented (last 30 days)
+                {
+                  taskCommentsAuthored: {
+                    some: {
+                      task: {
+                        taskComments: {
+                          some: {
+                            authorUserId: requestingUserId,
+                            createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+                          },
+                        },
+                      },
+                      createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+                    },
+                  },
+                },
+                // Users assigned to tasks created by requesting user
+                { tasksAssigned: { some: { createdByUserId: requestingUserId } } },
+                // Users who created tasks assigned to requesting user
+                { tasksCreated: { some: { assignedToId: requestingUserId } } },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          username: true,
+          avatarUrl: true,
+          role: { select: { name: true } },
+        },
+        take: 3,
+        orderBy: [{ taskCommentsAuthored: { _count: 'desc' } }, { firstName: 'asc' }],
+      });
+
+      recentCollaborators.forEach(user => {
+        if (!contextualUsers.has(user.id)) {
+          contextualUsers.add(user.id);
+          userResults.push({
+            id: user.id,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+            avatar: user.avatarUrl,
+            role: user.role?.name || 'Unknown',
+            username: user.username,
+            priority: 3, // Third priority
+          });
+        }
+      });
+
+      // 4. Other users (lowest priority) - fill remaining slots up to 8 total
+      const remainingSlots = Math.max(0, 8 - userResults.length);
+      if (remainingSlots > 0) {
+        const otherUsers = await prisma.user.findMany({
+          where: {
+            AND: [
+              { id: { not: requestingUserId } },
+              { id: { notIn: Array.from(contextualUsers) } },
+              // Exclude CLIENT role users
+              { role: { name: { not: Roles.CLIENT } } },
+            ],
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            avatarUrl: true,
+            role: { select: { name: true } },
+          },
+          take: remainingSlots,
+          orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+        });
+
+        otherUsers.forEach(user => {
+          userResults.push({
+            id: user.id,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username,
+            avatar: user.avatarUrl,
+            role: user.role?.name || 'Unknown',
+            username: user.username,
+            priority: 4, // Lowest priority
+          });
+        });
+      }
+
+      // Sort by priority, then by name
+      const sortedResults = userResults
+        .sort((a, b) => {
+          if (a.priority !== b.priority) return a.priority - b.priority;
+          return a.name.localeCompare(b.name);
+        })
+        .map(({ priority, ...user }) => user);
+
+      return {
+        success: true,
+        data: sortedResults,
+        message: 'Contextual users retrieved successfully',
+      };
+    } catch (error) {
+      logger.error('Error getting contextual users for mentions:', error);
+      return {
+        success: false,
+        message: 'Failed to get contextual users',
       };
     }
   }

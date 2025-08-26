@@ -152,6 +152,7 @@ export default function CommentForm({
         }
         disabled={submitting}
         onKeyDown={handleKeyDown}
+        taskId={taskId}
       />
 
       {/* Character count */}
