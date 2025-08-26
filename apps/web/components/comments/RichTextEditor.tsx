@@ -160,6 +160,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         },
         suggestion: {
           items: async ({ query }) => {
+            console.log('Searching users for query:', query);
             return await searchUsers(query);
           },
           render: () => {

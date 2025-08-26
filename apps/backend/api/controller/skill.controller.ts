@@ -34,6 +34,27 @@ export class SkillController {
     }
   };
 
+  private handleAssignSkillsToUser = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { skillNames } = req.body;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'User not authenticated' });
+      }
+
+      const result = await this.skillService.assignSkillsToUser(userId, skillNames);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getSkills = asyncHandler(this.handleGetSkills);
   createSkills = asyncHandler(this.handleCreateSkills);
+  assignSkillsToUser = asyncHandler(this.handleAssignSkillsToUser);
 }

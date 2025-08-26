@@ -48,6 +48,7 @@ router.delete(
 );
 router.get('/me', verifyToken, controller.getCurrentUser);
 
+router.get('/skills/:userId', verifyToken, controller.getUserSkills);
 /**
  * PUT /users/:userId/role
  * Update user role

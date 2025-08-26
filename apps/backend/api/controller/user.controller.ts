@@ -8,6 +8,8 @@ import { S3BucketService } from '../services/s3Service';
 import { checkIfUserExists } from '../utils/helperHandlers';
 import { logger } from '../utils/logger';
 import { hashPW } from '../utils/auth/hashPW';
+import { Roles } from '@prisma/client';
+import prisma from '../config/db';
 
 export class UserController {
   constructor(
@@ -366,6 +368,42 @@ export class UserController {
       });
     }
   });
+
+  private handleGetUserSkills = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.user?.id;
+
+      // Users can only view their own skills unless they're SUPER_USER
+      if (userId !== currentUserId && req.user?.role !== Roles.SUPER_USER) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+
+      const userSkills = await prisma.userSkill.findMany({
+        where: { userId },
+        include: {
+          skill: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+        },
+      });
+
+      const skills = userSkills.map(us => us.skill);
+      res.status(200).json({ success: true, skills });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getUserSkills = asyncHandler(this.handleGetUserSkills);
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
