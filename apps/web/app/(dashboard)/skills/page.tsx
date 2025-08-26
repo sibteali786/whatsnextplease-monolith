@@ -20,31 +20,31 @@ export default function Skills() {
   const [data, setData] = useState<SkillData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchSkills = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch skills');
+      }
+
+      const skillsData = await response.json();
+      setData(skillsData);
+    } catch (err) {
+      console.error('Error fetching skills:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
-          headers: {
-            Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch skills');
-        }
-
-        const skillsData = await response.json();
-        setData(skillsData);
-      } catch (err) {
-        console.error('Error fetching skills:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSkills();
   }, []);
 

@@ -36,6 +36,23 @@ export class SkillCategoryController {
       next(error);
     }
   };
+
+  private handleSearchSkillCategories = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { q } = req.query;
+      const searchTerm = typeof q === 'string' ? q : '';
+      const skillCategories = await this.skillCategoryService.searchSkillCategories(searchTerm);
+      res.status(200).json(skillCategories);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  searchSkillCategories = asyncHandler(this.handleSearchSkillCategories);
   getAllSkillCategories = asyncHandler(this.handleGetAllSkillCategories);
   createSkillCategory = asyncHandler(this.handleCreateSkillCategory);
 }

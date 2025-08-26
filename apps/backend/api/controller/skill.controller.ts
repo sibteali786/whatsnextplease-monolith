@@ -28,7 +28,7 @@ export class SkillController {
       const skillsFromBody = req.body;
       const parsedInput = SkillCreateSchema.parse(skillsFromBody);
       const skills = await this.skillService.createSkill(parsedInput);
-      res.status(200).json(skills);
+      res.status(200).json({ success: true, skills });
     } catch (error) {
       next(error);
     }
