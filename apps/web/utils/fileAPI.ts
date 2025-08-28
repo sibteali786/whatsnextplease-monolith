@@ -86,7 +86,13 @@ class FileAPIClient {
     }
   }
 
-  async generateDownloadUrl(fileId: string): Promise<APIResponse> {
+  async generateDownloadUrl(
+    fileId: string,
+    options?: {
+      forceDownload?: boolean;
+      openInNewTab?: boolean;
+    }
+  ): Promise<APIResponse> {
     try {
       const response = await fetch(`${this.baseURL}/files/${fileId}/download`, {
         method: 'GET',
@@ -101,6 +107,41 @@ class FileAPIClient {
         return {
           success: false,
           error: result.message || result.error || `HTTP ${response.status}`,
+        };
+      }
+
+      // Enhanced download handling
+      if (result.success && result.downloadUrl) {
+        const fileName = result.fileName || 'download';
+        const fileExtension = fileName.split('.').pop()?.toLowerCase();
+
+        // File types that should open in new tab instead of downloading
+        const viewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt', 'html', 'htm'];
+        const shouldOpenInNewTab =
+          options?.openInNewTab ||
+          (!options?.forceDownload && viewableTypes.includes(fileExtension || ''));
+
+        if (shouldOpenInNewTab) {
+          // Open in new tab for viewable files
+          window.open(result.downloadUrl, '_blank');
+        } else {
+          // Force download for other files
+          const link = document.createElement('a');
+          link.href = result.downloadUrl;
+          link.setAttribute('download', fileName);
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
+        return {
+          success: true,
+          data: {
+            downloadUrl: result.downloadUrl,
+            fileName: result.fileName,
+            openedInNewTab: shouldOpenInNewTab,
+          },
         };
       }
 

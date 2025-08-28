@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Download, CircleX } from 'lucide-react';
@@ -8,6 +8,7 @@ import { fileAPI } from '@/utils/fileAPI';
 import { CommentFile } from '@/utils/commentSchemas';
 import FileTypeIcon from '@/components/common/FileTypeIcon';
 import { truncateFileName } from '@/utils/fileUtils';
+import { FileSchemaType } from '@/utils/validationSchemas';
 
 interface CommentAttachmentsProps {
   files: CommentFile[];
@@ -17,38 +18,49 @@ interface CommentAttachmentsProps {
 export default function CommentAttachments({ files, compact = false }: CommentAttachmentsProps) {
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
   const { toast } = useToast();
-
-  const handleDownload = async (file: CommentFile['file']) => {
+  const [, startTransition] = useTransition();
+  const handleDownload = async (file: FileSchemaType, options?: { forceDownload?: boolean }) => {
     setLoadingFileIds(prev => [...prev, file.id]);
 
-    try {
-      const result = await fileAPI.generateDownloadUrl(file.id);
-
-      if (result.success && 'downloadUrl' in result && 'fileName' in result) {
-        const downloadLink = document.createElement('a');
-        downloadLink.href = result.downloadUrl as string;
-        downloadLink.setAttribute('download', (result.fileName as string) || file.fileName);
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      } else {
-        toast({
-          title: 'Download Failed',
-          description: result.error || result.message || 'Failed to generate download URL',
-          variant: 'destructive',
-          icon: <CircleX size={20} />,
+    startTransition(async () => {
+      try {
+        const result = await fileAPI.generateDownloadUrl(file.id, {
+          forceDownload: options?.forceDownload || false,
+          openInNewTab: true, // Allow opening in new tab for viewable files
         });
+
+        if (result.success) {
+          // The fileAPI now handles the download/open logic internally
+          toast({
+            title: result.data?.openedInNewTab ? 'File Opened' : 'Download Started',
+            description: result.data?.openedInNewTab
+              ? `"${result.data.fileName}" opened in new tab`
+              : `"${result.data.fileName}" download started`,
+            variant: 'success',
+          });
+        } else {
+          toast({
+            title: 'Download Failed',
+            description: result.error || result.message || 'Failed to generate download URL',
+            variant: 'destructive',
+            icon: <CircleX size={40} />,
+          });
+        }
+      } catch (error) {
+        console.error('Error downloading file', error);
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error
+              ? error.message
+              : 'An error occurred while downloading the file.',
+          variant: 'destructive',
+          icon: <CircleX size={40} />,
+        });
+      } finally {
+        setLoadingFileIds(prev => prev.filter(id => id !== file.id));
       }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'An error occurred while downloading the file: ' + (error instanceof Error ? error.message : String(error)),
-        variant: 'destructive',
-        icon: <CircleX size={20} />,
-      });
-    } finally {
-      setLoadingFileIds(prev => prev.filter(id => id !== file.id));
-    }
+    });
   };
 
   if (files.length === 0) return null;

@@ -76,22 +76,24 @@ export default function TaskDetailsView({
   const overTime = taskDetails?.overTime ? new Prisma.Decimal(taskDetails.overTime).toString() : '';
 
   const [, startTransition] = useTransition();
-  const handleDownload = async (file: FileSchemaType) => {
+  const handleDownload = async (file: FileSchemaType, options?: { forceDownload?: boolean }) => {
     setLoadingFileIds(prev => [...prev, file.id]);
+
     startTransition(async () => {
       try {
-        const result = await fileAPI.generateDownloadUrl(file.id);
+        const result = await fileAPI.generateDownloadUrl(file.id, {
+          forceDownload: options?.forceDownload || false,
+          openInNewTab: true,
+        });
 
-        if (result.success && 'downloadUrl' in result && 'fileName' in result) {
-          const downloadLink = document.createElement('a');
-          downloadLink.href = result.downloadUrl as string;
-          downloadLink.setAttribute(
-            'download',
-            (result.fileName as string) || (file.fileName as string)
-          );
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          document.body.removeChild(downloadLink);
+        if (result.success) {
+          toast({
+            title: result.data?.openedInNewTab ? 'File Opened' : 'Download Started',
+            description: result.data?.openedInNewTab
+              ? `"${result.data.fileName}" opened in new tab`
+              : `"${result.data.fileName}" download started`,
+            variant: 'success',
+          });
         } else {
           toast({
             title: 'Download Failed',
@@ -101,6 +103,7 @@ export default function TaskDetailsView({
           });
         }
       } catch (error) {
+        console.error('Error downloading file', error);
         toast({
           title: 'Error',
           description:

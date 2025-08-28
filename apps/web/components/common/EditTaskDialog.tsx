@@ -301,20 +301,25 @@ export default function EditTaskDialog({
   };
 
   // Updated download handler using backend API
-  const handleDownload = async (file: FileSchemaType) => {
+  const handleDownload = async (file: FileSchemaType, options?: { forceDownload?: boolean }) => {
     setLoadingFileIds(prev => [...prev, file.id]);
+
     startTransition(async () => {
       try {
-        const result = await fileAPI.generateDownloadUrl(file.id);
+        const result = await fileAPI.generateDownloadUrl(file.id, {
+          forceDownload: options?.forceDownload || false,
+          openInNewTab: true, // Allow opening in new tab for viewable files
+        });
 
-        if (result.success && 'downloadUrl' in result && 'fileName' in result) {
-          // Create temporary anchor element to trigger download
-          const link = document.createElement('a');
-          link.href = result.downloadUrl as string;
-          link.setAttribute('download', (result.fileName as string) || (file.fileName as string));
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+        if (result.success) {
+          // The fileAPI now handles the download/open logic internally
+          toast({
+            title: result.data?.openedInNewTab ? 'File Opened' : 'Download Started',
+            description: result.data?.openedInNewTab
+              ? `"${result.data.fileName}" opened in new tab`
+              : `"${result.data.fileName}" download started`,
+            variant: 'success',
+          });
         } else {
           toast({
             title: 'Download Failed',
