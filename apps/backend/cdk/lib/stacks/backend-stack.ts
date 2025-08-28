@@ -2,10 +2,14 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { Stage } from '../stage';
 
@@ -17,10 +21,130 @@ export class WnpBackendStack extends cdk.Stack {
   public readonly ecsService: ecs.FargateService;
   public readonly ecrRepository: ecr.Repository;
   public readonly networkLoadBalancer: elbv2.NetworkLoadBalancer;
+  public readonly s3Bucket: s3.Bucket;
+  public readonly cloudFrontDistribution: cloudfront.Distribution;
 
   constructor(scope: Construct, id: string, props: WnpBackendStackProps) {
     super(scope, id, props);
     const isProduction = props.stage === Stage.PRODUCTION;
+
+    // Create S3 bucket (moved from S3Stack)
+    this.s3Bucket = new s3.Bucket(this, 'WnpS3Bucket', {
+      bucketName: `wnp-media-${props.stage.toLowerCase()}`,
+      removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: !isProduction,
+      versioned: isProduction, // Enable versioning in production for better data protection
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.HEAD,
+            s3.HttpMethods.POST, // For multipart uploads
+            s3.HttpMethods.DELETE, // If you need client-side deletions
+          ],
+          allowedOrigins: ['*'], // Restrict this in production to your domains
+          allowedHeaders: [
+            '*',
+            'Range',
+            'Accept-Ranges',
+            'Content-Type',
+            'Content-Length',
+            'Content-MD5',
+            'x-amz-content-sha256',
+          ],
+          exposedHeaders: [
+            'ETag',
+            'Content-Length',
+            'Content-Type',
+            'Content-Range',
+            'Accept-Ranges',
+            'Last-Modified',
+            'x-amz-version-id',
+          ],
+          maxAge: 3600,
+        },
+      ],
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      lifecycleRules: [
+        {
+          id: 'DeleteIncompleteMultipartUploads',
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
+        },
+        // Add more lifecycle rules as needed
+        ...(isProduction
+          ? []
+          : [
+              {
+                id: 'DeleteOldVersions',
+                noncurrentVersionExpiration: cdk.Duration.days(30),
+              },
+            ]),
+      ],
+    });
+
+    // Create CloudFront Origin Access Control (moved from S3Stack)
+    const oac = new cloudfront.S3OriginAccessControl(this, 'WnpOAC', {
+      signing: cloudfront.Signing.SIGV4_ALWAYS,
+      originAccessControlName: `WnpS3BucketOAC-${props.stage}`,
+    });
+
+    // Create CloudFront distribution (simplified - remove Lambda@Edge for now)
+    this.cloudFrontDistribution = new cloudfront.Distribution(this, 'WnpDistribution', {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(this.s3Bucket, {
+          originAccessControl: oac,
+        }),
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+        cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
+        responseHeadersPolicy: new cloudfront.ResponseHeadersPolicy(this, 'CorsHeadersPolicy', {
+          corsBehavior: {
+            accessControlAllowCredentials: false,
+            accessControlAllowHeaders: [
+              'Authorization',
+              'Content-Type',
+              'Range',
+              'Accept-Ranges',
+              'Content-Length',
+              'Content-MD5',
+            ],
+            accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS'],
+            accessControlAllowOrigins: ['*'], // Restrict in production
+            originOverride: true,
+          },
+          securityHeadersBehavior: {
+            contentTypeOptions: { override: false }, // AWS manages this
+            referrerPolicy: {
+              referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+              override: false,
+            },
+            strictTransportSecurity: {
+              accessControlMaxAge: cdk.Duration.seconds(31536000),
+              includeSubdomains: true,
+              preload: true,
+              override: false,
+            },
+          },
+        }),
+        // Note: Removed Lambda@Edge for now - can add back if needed for advanced auth
+      },
+    });
+
+    // Add S3 bucket policy for CloudFront access
+    const bucketPolicyStatement = new iam.PolicyStatement({
+      actions: ['s3:GetObject', 's3:GetObjectAttributes'],
+      effect: iam.Effect.ALLOW,
+      principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')],
+      resources: [this.s3Bucket.arnForObjects('*')],
+      conditions: {
+        StringEquals: {
+          'AWS:SourceArn': `arn:aws:cloudfront::${cdk.Stack.of(this).account}:distribution/${this.cloudFrontDistribution.distributionId}`,
+        },
+      },
+    });
+    this.s3Bucket.addToResourcePolicy(bucketPolicyStatement);
 
     // Create a VPC - COST REDUCTION: Single AZ, no NAT Gateways
     const vpc = new ec2.Vpc(this, 'WnpBackendVPC', {
@@ -76,18 +200,42 @@ export class WnpBackendStack extends cdk.Stack {
         cpu: 256, // Minimum viable CPU
       });
 
+      // Enhanced IAM policies for ECS task to access S3
+      const s3FullAccessPolicy = new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          's3:GetObject',
+          's3:PutObject',
+          's3:DeleteObject',
+          's3:GetObjectAttributes',
+          's3:PutObjectAcl',
+          's3:ListBucket',
+        ],
+        resources: [this.s3Bucket.bucketArn, this.s3Bucket.arnForObjects('*')],
+      });
+
+      // Add S3 permissions to task role (not just execution role)
+      taskDefinition.taskRole.addToPrincipalPolicy(s3FullAccessPolicy);
+
       // Add container to task definition
       const container = taskDefinition.addContainer('WnpBackendContainer', {
         image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, 'latest'),
         environment: {
           NODE_ENV: props.stage,
           PORT: '3000',
+          // S3 Configuration (no more Lambda/API Gateway dependencies)
+          AWS_REGION: 'us-east-1',
+          S3_BUCKET_NAME: this.s3Bucket.bucketName,
+          CLOUDFRONT_DOMAIN: this.cloudFrontDistribution.distributionDomainName,
         },
         secrets: {
           DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
           NEXT_PUBLIC_APP_URL: ecs.Secret.fromSecretsManager(nextPublicAppUrlSecret),
         },
-        logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'wnp-backend' }),
+        logging: ecs.LogDrivers.awsLogs({
+          streamPrefix: 'wnp-backend',
+          logRetention: logs.RetentionDays.ONE_WEEK, // Cost optimization
+        }),
       });
 
       // Add port mapping
@@ -111,15 +259,6 @@ export class WnpBackendStack extends cdk.Stack {
         'Allow incoming traffic to container port'
       );
 
-      const secretsPolicy = new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['secretsmanager:GetSecretValue'],
-        resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:APIGatewayUrl*`],
-      });
-
-      // Add the policy to the task execution role
-      taskDefinition.taskRole.addToPrincipalPolicy(secretsPolicy);
-
       // Create the Fargate service
       this.ecsService = new ecs.FargateService(this, 'WnpBackendService', {
         cluster,
@@ -136,6 +275,7 @@ export class WnpBackendStack extends cdk.Stack {
           },
         ],
       });
+
       const certificate = acm.Certificate.fromCertificateArn(
         this,
         'ApiCertificate',
@@ -191,6 +331,7 @@ export class WnpBackendStack extends cdk.Stack {
         description: 'Network Load Balancer DNS Name',
         exportName: `LoadBalancerDNS-${props.stage}`,
       });
+
       // Output both listener ARNs
       new cdk.CfnOutput(this, 'HttpListenerARN', {
         value: httpListener.listenerArn,
@@ -204,6 +345,25 @@ export class WnpBackendStack extends cdk.Stack {
         exportName: `HttpsListenerARN-${props.stage}`,
       });
     }
+
+    // S3 and CloudFront Outputs (moved from S3Stack)
+    new cdk.CfnOutput(this, 'S3BucketName', {
+      value: this.s3Bucket.bucketName,
+      description: 'S3 Bucket Name for Media Storage',
+      exportName: `S3BucketName-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
+      value: this.cloudFrontDistribution.distributionId,
+      description: 'CloudFront Distribution ID',
+      exportName: `CloudFrontDistributionId-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'CloudFrontDomainName', {
+      value: this.cloudFrontDistribution.distributionDomainName,
+      description: 'CloudFront Distribution Domain Name',
+      exportName: `CloudFrontDomainName-${props.stage}`,
+    });
 
     // Output the ECR repository URI
     new cdk.CfnOutput(this, 'ECRRepositoryURI', {
