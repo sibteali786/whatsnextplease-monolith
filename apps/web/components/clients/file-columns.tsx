@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { ColumnDef, Row } from '@tanstack/react-table';
-import { ArrowUpDown, CircleCheckBig, FileIcon, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown, CircleCheckBig, FileIcon, MoreHorizontal, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -13,6 +14,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTransition } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { fileAPI } from '@/utils/fileAPI';
+import { isPreviewable } from '@/utils/files/utils';
+
 export type FileType = {
   id: string;
   fileName: string;
@@ -21,11 +26,11 @@ export type FileType = {
   lastUpdated: Date;
   uploadedBy: string;
 };
-import { useToast } from '@/hooks/use-toast';
-import { fileAPI } from '@/utils/fileAPI';
 
 // Define columns for the Files table
-export const fileColumns: ColumnDef<FileType>[] = [
+export const createFileColumns = (
+  onPreviewFile?: (fileIndex: number) => void
+): ColumnDef<FileType>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -55,10 +60,15 @@ export const fileColumns: ColumnDef<FileType>[] = [
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const fileName: string = row.getValue('fileName');
+      const filePreviewable = isPreviewable(fileName);
+
+      // Get row index for preview
+      const rowIndex = table.getRowModel().rows.findIndex(r => r.id === row.id);
+
       return (
-        <div className="gap-1 flex flex-row items-center">
+        <div className="gap-2 flex flex-row items-center">
           <Button
             className="rounded-full bg-primary-foreground dark:bg-primary-foreground"
             variant="outline"
@@ -66,7 +76,20 @@ export const fileColumns: ColumnDef<FileType>[] = [
           >
             <FileIcon className="text-primary h-6 w-6" />
           </Button>
-          {fileName}
+
+          {filePreviewable && onPreviewFile ? (
+            <button
+              onClick={() => onPreviewFile(rowIndex)}
+              className="text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+              title={`Preview ${fileName}`}
+            >
+              {fileName}
+            </button>
+          ) : (
+            <span>{fileName}</span>
+          )}
+
+          {filePreviewable && <Eye className="h-4 w-4 text-muted-foreground" />}
         </div>
       );
     },
@@ -97,16 +120,24 @@ export const fileColumns: ColumnDef<FileType>[] = [
   },
   {
     id: 'actions',
-    cell: ({ row }) => <CellAction row={row} />,
+    cell: ({ row, table }) => <CellAction row={row} onPreviewFile={onPreviewFile} table={table} />,
   },
 ];
+
 interface CellActionProps {
   row: Row<FileType>;
+  onPreviewFile?: (fileIndex: number) => void;
+  table?: any; // Table instance
 }
-export const CellAction: React.FC<CellActionProps> = ({ row }) => {
-  const file = row.original; // Now we have access to the `original` file data
+
+export const CellAction: React.FC<CellActionProps> = ({ row, onPreviewFile, table }) => {
+  const file = row.original;
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const filePreviewable = isPreviewable(file.fileName);
+  const rowIndex = table ? table.getRowModel().rows.findIndex((r: any) => r.id === row.id) : -1;
+
   const handleDeleteFile = () => {
     startTransition(async () => {
       try {
@@ -136,6 +167,43 @@ export const CellAction: React.FC<CellActionProps> = ({ row }) => {
     });
   };
 
+  const handlePreviewFile = () => {
+    console.log('Preview file clicked', filePreviewable, rowIndex);
+    if (filePreviewable && onPreviewFile && rowIndex >= 0) {
+      onPreviewFile(rowIndex);
+    }
+  };
+
+  const handleDownloadFile = async () => {
+    try {
+      const result = await fileAPI.generateDownloadUrl(file.id, {
+        forceDownload: true,
+      });
+
+      if (result.success && result.data?.downloadUrl) {
+        const link = document.createElement('a');
+        link.href = result.data.downloadUrl;
+        link.setAttribute('download', file.fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast({
+          title: 'Download Started',
+          description: `Downloading ${file.fileName}`,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to generate download URL');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Download Failed',
+        description: error instanceof Error ? error.message : 'Failed to download file',
+      });
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -146,14 +214,36 @@ export const CellAction: React.FC<CellActionProps> = ({ row }) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+        {filePreviewable && onPreviewFile && (
+          <>
+            <DropdownMenuItem onClick={handlePreviewFile}>
+              <Eye className="mr-2 h-4 w-4" />
+              Preview File
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        <DropdownMenuItem onClick={handleDownloadFile}>Download File</DropdownMenuItem>
+
         <DropdownMenuItem onClick={() => navigator.clipboard.writeText(file.id)}>
           Copy File ID
         </DropdownMenuItem>
+
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleDeleteFile} disabled={isPending}>
+
+        <DropdownMenuItem
+          onClick={handleDeleteFile}
+          disabled={isPending}
+          className="text-destructive"
+        >
           {isPending ? 'Deleting...' : 'Delete File'}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
+
+// Export the default columns for backward compatibility
+export const fileColumns = createFileColumns();

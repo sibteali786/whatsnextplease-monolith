@@ -1,4 +1,4 @@
-// utils/fileAPI.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { COOKIE_NAME } from '@/utils/constant';
 
 interface APIResponse {
@@ -255,6 +255,44 @@ class FileAPIClient {
         return {
           success: false,
           error: result.message || result.error || `HTTP ${response.status}`,
+        };
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
+  async generatePreviewUrl(fileId: string): Promise<APIResponse> {
+    try {
+      const response = await fetch(`${this.baseURL}/files/${fileId}/download`, {
+        method: 'GET',
+        headers: {
+          ...this.getAuthHeaders(),
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.message || result.error || `HTTP ${response.status}`,
+        };
+      }
+
+      // Return URL without any automatic download/opening behavior
+      if (result.success && result.downloadUrl) {
+        return {
+          success: true,
+          data: {
+            downloadUrl: result.downloadUrl,
+            fileName: result.fileName,
+          },
         };
       }
 

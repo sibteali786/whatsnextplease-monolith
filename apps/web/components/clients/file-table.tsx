@@ -19,13 +19,15 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/Pagination';
-import { fileColumns, FileType } from './file-columns';
+import { createFileColumns, FileType } from './file-columns';
 import { Button } from '../ui/button';
 import { Loader2, UploadCloud, AlertCircle, RefreshCw } from 'lucide-react';
 import { useCurrentUser } from '@/utils/authUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { fileAPI } from '@/utils/fileAPI';
+import { useFilePreview } from '@/hooks/useFilePreview';
+import { FilePreviewModal, PreviewFile } from '../files/FilePreviewModal';
 
 interface FileTableProps {
   fileIds: string[] | null;
@@ -67,6 +69,26 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
     maxRetries,
     refetch,
   } = useCurrentUser();
+
+  // File preview integration
+  const { isPreviewOpen, currentFileIndex, previewFiles, openPreview, closePreview } =
+    useFilePreview();
+
+  // Handle file preview
+  const handlePreviewFile = (fileIndex: number) => {
+    if (!data || data.length === 0) return;
+
+    // Convert FileType[] to PreviewFile[]
+    const previewFileList: PreviewFile[] = data.map(file => ({
+      id: file.id,
+      fileName: file.fileName,
+      fileSize: file.fileSize,
+      uploadedBy: file.uploadedBy,
+      dateUploaded: file.dateUploaded,
+    }));
+
+    openPreview(previewFileList, fileIndex);
+  };
 
   useEffect(() => {
     if (userError && retryCount >= maxRetries && !hasShownErrorToast.current) {
@@ -217,9 +239,12 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
+  // Create columns with preview handler
+  const columns = createFileColumns(handlePreviewFile);
+
   const table = useReactTable({
     data: data ? data : [],
-    columns: fileColumns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -315,7 +340,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={fileColumns.length} className="text-center">
+                <TableCell colSpan={columns.length} className="text-center">
                   <Skeleton className="h-64 w-full" />
                 </TableCell>
               </TableRow>
@@ -331,7 +356,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={fileColumns.length} className="text-center">
+                <TableCell colSpan={columns.length} className="text-center">
                   No files found.
                 </TableCell>
               </TableRow>
@@ -339,6 +364,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           </TableBody>
         </Table>
       </div>
+
       <div className="flex flex-row my-2">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
@@ -356,6 +382,14 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           clientIds={[]}
         />
       </div>
+
+      {/* File Preview Modal */}
+      <FilePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={closePreview}
+        files={previewFiles}
+        initialIndex={currentFileIndex}
+      />
     </>
   );
 }
