@@ -8,7 +8,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import {
   Table,
   TableBody,
@@ -74,12 +74,46 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
   const { isPreviewOpen, currentFileIndex, previewFiles, openPreview, closePreview } =
     useFilePreview();
 
-  // Handle file preview
+  // Helper function to check if file is previewable
+  const isPreviewable = (fileName: string): boolean => {
+    const extension = fileName.toLowerCase().split('.').pop() || '';
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) {
+      return true;
+    }
+    if (extension === 'pdf') {
+      return true;
+    }
+    // Only include file types that can actually be previewed via iframe
+    if (['txt', 'html', 'htm'].includes(extension)) {
+      return true;
+    }
+    return false;
+  };
+
+  // Handle file preview with proper navigation logic
   const handlePreviewFile = (fileIndex: number) => {
     if (!data || data.length === 0) return;
 
-    // Convert FileType[] to PreviewFile[]
-    const previewFileList: PreviewFile[] = data.map(file => ({
+    // Get the clicked file
+    const clickedFile = data[fileIndex];
+    if (!clickedFile) return;
+
+    // Check if the clicked file is previewable
+    const isClickedFilePreviewable = isPreviewable(clickedFile.fileName);
+
+    if (!isClickedFilePreviewable) {
+      // If file is not previewable, show a toast and don't open preview
+      toast({
+        title: 'Preview Not Available',
+        description: `${clickedFile.fileName} cannot be previewed. Please download to view.`,
+        variant: 'default',
+      });
+      return;
+    }
+
+    // Convert FileType[] to PreviewFile[] and filter to previewable only
+    const allPreviewFiles: PreviewFile[] = data.map(file => ({
       id: file.id,
       fileName: file.fileName,
       fileSize: file.fileSize,
@@ -87,7 +121,15 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
       dateUploaded: file.dateUploaded,
     }));
 
-    openPreview(previewFileList, fileIndex);
+    // Filter to only previewable files
+    const previewableFiles = allPreviewFiles.filter(file => isPreviewable(file.fileName));
+
+    // Find the correct index in the previewable files array
+    const previewableIndex = previewableFiles.findIndex(file => file.id === clickedFile.id);
+
+    if (previewableIndex >= 0) {
+      openPreview(previewableFiles, previewableIndex);
+    }
   };
 
   useEffect(() => {
@@ -119,7 +161,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
         ),
       });
     }
-  }, [userError, retryCount, maxRetries]); // Only these dependencies
+  }, [userError, retryCount, maxRetries, refetch, toast]); // Added missing dependencies
 
   // Reset the flag when user is successfully loaded
   useEffect(() => {
@@ -128,7 +170,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
     }
   }, [user]);
 
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetchData(id, cursor, pageSize);
@@ -143,11 +185,11 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
       console.error('Error fetching files:', error);
     }
     setLoading(false);
-  };
+  }, [fetchData, id, cursor, pageSize]);
 
   useEffect(() => {
     fetchFiles();
-  }, [cursor, pageSize]);
+  }, [fetchFiles]);
 
   const handleUploadClick = () => {
     if (fileInputRef.current) {

@@ -38,6 +38,8 @@ interface FilePreviewModalProps {
   initialIndex: number;
 }
 
+type FileType = 'image' | 'pdf' | 'document' | 'other';
+
 // Image transformation state
 interface ImageTransform {
   scale: number;
@@ -78,12 +80,18 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
     });
   }, []);
 
-  // Load file URL
+  // Load file URL - only for previewable files
   const loadFileUrl = useCallback(
-    async (fileId: string) => {
+    async (fileId: string, fileType: FileType) => {
       setLoading(true);
       setError('');
       setFileUrl('');
+
+      // Don't try to load URL for non-previewable files
+      if (fileType === 'other') {
+        setLoading(false);
+        return;
+      }
 
       try {
         const result = await fileAPI.generatePreviewUrl(fileId);
@@ -247,10 +255,12 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
         case 'r':
         case 'R':
           e.preventDefault();
-          if (e.shiftKey) {
-            rotateCounterClockwise();
-          } else {
-            rotateClockwise();
+          if (fileType === 'image') {
+            if (e.shiftKey) {
+              rotateCounterClockwise();
+            } else {
+              rotateClockwise();
+            }
           }
           break;
         case '0':
@@ -277,9 +287,9 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
   // Load file when modal opens or index changes
   useEffect(() => {
     if (isOpen && currentFile) {
-      loadFileUrl(currentFile.id);
+      loadFileUrl(currentFile.id, fileType);
     }
-  }, [isOpen, currentFile?.id, loadFileUrl]);
+  }, [isOpen, currentFile?.id, fileType, loadFileUrl]);
 
   // Update index when initialIndex changes
   useEffect(() => {
@@ -292,7 +302,10 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-[90%] h-[90vh] p-0 overflow-hidden">
+      <DialogContent
+        className="max-w-7xl w-[90%] h-[90vh] p-0 overflow-hidden"
+        showCloseButton={false}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -393,7 +406,7 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
                 <p className="text-destructive">{error}</p>
                 <Button
                   variant="outline"
-                  onClick={() => loadFileUrl(currentFile.id)}
+                  onClick={() => loadFileUrl(currentFile.id, fileType)}
                   className="mt-4"
                 >
                   Try Again
@@ -402,9 +415,9 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
             </div>
           )}
 
-          {!loading && !error && fileUrl && (
+          {!loading && !error && (
             <>
-              {fileType === 'image' && (
+              {fileType === 'image' && fileUrl && (
                 <div className="flex items-center justify-center h-full p-4 overflow-hidden">
                   <img
                     ref={imageRef}
@@ -424,13 +437,48 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
                 </div>
               )}
 
-              {(fileType === 'pdf' || fileType === 'document') && (
+              {(fileType === 'pdf' || fileType === 'document') && fileUrl && (
                 <iframe
                   src={fileUrl}
                   className="w-full h-full border-0"
                   title={currentFile.fileName}
                   allow="fullscreen"
                 />
+              )}
+
+              {fileType === 'other' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center max-w-md p-8">
+                    <div className="mb-6">
+                      <div className="w-24 h-24 mx-auto mb-4 bg-muted rounded-lg flex items-center justify-center">
+                        <svg
+                          className="w-12 h-12 text-muted-foreground"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Preview Not Available</h3>
+                    <p className="text-muted-foreground mb-4">
+                      This file type cannot be previewed in the browser. You can download it to view
+                      the contents.
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <Button onClick={handleDownload} className="flex items-center gap-2">
+                        <Download className="w-4 h-4" />
+                        Download File
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
             </>
           )}
