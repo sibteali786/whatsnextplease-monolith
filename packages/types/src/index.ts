@@ -15,6 +15,7 @@ export const CreateNotificationDtoSchema = z.object({
     'TASK_CREATED',
     'TASK_OVERDUE',
     'TASK_IN_PROGRESS',
+    'COMMENT_MENTION',
   ]),
   message: z.string(),
   data: z.any().optional(),
@@ -226,3 +227,4 @@ export type SkillCategoryState = z.infer<typeof SkillCategoryStateSchema>;
 export * from './errors';
 export * from './logger';
 export * from './file';
+export * from './skills';

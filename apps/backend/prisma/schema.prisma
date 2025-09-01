@@ -493,6 +493,7 @@ enum NotificationType {
     TASK_CREATED
     TASK_OVERDUE
     TASK_IN_PROGRESS
+    COMMENT_MENTION
 }
 
 enum NotificationStatus {

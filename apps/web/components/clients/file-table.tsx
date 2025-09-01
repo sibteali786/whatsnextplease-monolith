@@ -8,7 +8,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import {
   Table,
   TableBody,
@@ -19,13 +19,15 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/Pagination';
-import { fileColumns, FileType } from './file-columns';
+import { createFileColumns, FileType } from './file-columns';
 import { Button } from '../ui/button';
 import { Loader2, UploadCloud, AlertCircle, RefreshCw } from 'lucide-react';
 import { useCurrentUser } from '@/utils/authUtils';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { fileAPI } from '@/utils/fileAPI';
+import { useFilePreview } from '@/hooks/useFilePreview';
+import { FilePreviewModal, PreviewFile } from '../files/FilePreviewModal';
 
 interface FileTableProps {
   fileIds: string[] | null;
@@ -68,6 +70,68 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
     refetch,
   } = useCurrentUser();
 
+  // File preview integration
+  const { isPreviewOpen, currentFileIndex, previewFiles, openPreview, closePreview } =
+    useFilePreview();
+
+  // Helper function to check if file is previewable
+  const isPreviewable = (fileName: string): boolean => {
+    const extension = fileName.toLowerCase().split('.').pop() || '';
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(extension)) {
+      return true;
+    }
+    if (extension === 'pdf') {
+      return true;
+    }
+    // Only include file types that can actually be previewed via iframe
+    if (['txt', 'html', 'htm'].includes(extension)) {
+      return true;
+    }
+    return false;
+  };
+
+  // Handle file preview with proper navigation logic
+  const handlePreviewFile = (fileIndex: number) => {
+    if (!data || data.length === 0) return;
+
+    // Get the clicked file
+    const clickedFile = data[fileIndex];
+    if (!clickedFile) return;
+
+    // Check if the clicked file is previewable
+    const isClickedFilePreviewable = isPreviewable(clickedFile.fileName);
+
+    if (!isClickedFilePreviewable) {
+      // If file is not previewable, show a toast and don't open preview
+      toast({
+        title: 'Preview Not Available',
+        description: `${clickedFile.fileName} cannot be previewed. Please download to view.`,
+        variant: 'default',
+      });
+      return;
+    }
+
+    // Convert FileType[] to PreviewFile[] and filter to previewable only
+    const allPreviewFiles: PreviewFile[] = data.map(file => ({
+      id: file.id,
+      fileName: file.fileName,
+      fileSize: file.fileSize,
+      uploadedBy: file.uploadedBy,
+      dateUploaded: file.dateUploaded,
+    }));
+
+    // Filter to only previewable files
+    const previewableFiles = allPreviewFiles.filter(file => isPreviewable(file.fileName));
+
+    // Find the correct index in the previewable files array
+    const previewableIndex = previewableFiles.findIndex(file => file.id === clickedFile.id);
+
+    if (previewableIndex >= 0) {
+      openPreview(previewableFiles, previewableIndex);
+    }
+  };
+
   useEffect(() => {
     if (userError && retryCount >= maxRetries && !hasShownErrorToast.current) {
       hasShownErrorToast.current = true;
@@ -97,7 +161,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
         ),
       });
     }
-  }, [userError, retryCount, maxRetries]); // Only these dependencies
+  }, [userError, retryCount, maxRetries, refetch, toast]); // Added missing dependencies
 
   // Reset the flag when user is successfully loaded
   useEffect(() => {
@@ -106,7 +170,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
     }
   }, [user]);
 
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetchData(id, cursor, pageSize);
@@ -121,11 +185,11 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
       console.error('Error fetching files:', error);
     }
     setLoading(false);
-  };
+  }, [fetchData, id, cursor, pageSize]);
 
   useEffect(() => {
     fetchFiles();
-  }, [cursor, pageSize]);
+  }, [fetchFiles]);
 
   const handleUploadClick = () => {
     if (fileInputRef.current) {
@@ -217,9 +281,12 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
+  // Create columns with preview handler
+  const columns = createFileColumns(handlePreviewFile);
+
   const table = useReactTable({
     data: data ? data : [],
-    columns: fileColumns,
+    columns,
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
@@ -315,7 +382,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={fileColumns.length} className="text-center">
+                <TableCell colSpan={columns.length} className="text-center">
                   <Skeleton className="h-64 w-full" />
                 </TableCell>
               </TableRow>
@@ -331,7 +398,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={fileColumns.length} className="text-center">
+                <TableCell colSpan={columns.length} className="text-center">
                   No files found.
                 </TableCell>
               </TableRow>
@@ -339,6 +406,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           </TableBody>
         </Table>
       </div>
+
       <div className="flex flex-row my-2">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
@@ -356,6 +424,14 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           clientIds={[]}
         />
       </div>
+
+      {/* File Preview Modal */}
+      <FilePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={closePreview}
+        files={previewFiles}
+        initialIndex={currentFileIndex}
+      />
     </>
   );
 }

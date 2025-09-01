@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -16,8 +16,8 @@ import { deleteComment } from '@/actions/commentActions';
 import CommentForm from './CommentForm';
 import CommentAttachments from './CommentAttachments';
 import { getCurrentUser } from '@/utils/user';
-import { useEffect } from 'react';
 import { CreatorType } from '@prisma/client';
+import { useSyntaxHighlighting } from '@/hooks/useSyntaxHighlighting';
 
 interface CommentItemProps {
   comment: Comment;
@@ -37,6 +37,12 @@ export default function CommentItem({
   const [canEdit, setCanEdit] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
   const { toast } = useToast();
+
+  // Add ref for syntax highlighting
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Apply syntax highlighting to code blocks
+  useSyntaxHighlighting(contentRef);
 
   // Check permissions on mount
   useEffect(() => {
@@ -103,7 +109,9 @@ export default function CommentItem({
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred: ' + (error instanceof Error ? error.message : String(error)),
+        description:
+          'An unexpected error occurred: ' +
+          (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     } finally {
@@ -169,7 +177,7 @@ export default function CommentItem({
   };
 
   return (
-    <div className="flex gap-3 p-4 rounded-lg border bg-card">
+    <div className="flex gap-3 p-4 rounded-lg border bg-card" id={`comment-${comment.id}`}>
       {/* Avatar */}
       <Avatar className="w-8 h-8 mt-1">
         <AvatarImage src={getAuthorAvatar() || undefined} />
@@ -223,9 +231,13 @@ export default function CommentItem({
           />
         ) : (
           <>
-            <div className="prose prose-sm max-w-none">
-              <p className="whitespace-pre-wrap break-words m-0">{comment.content}</p>
-            </div>
+            <div
+              ref={contentRef}
+              className="comment-content prose prose-sm max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+              dangerouslySetInnerHTML={{
+                __html: comment.content || '<p>No content</p>',
+              }}
+            />
 
             {/* Attachments */}
             {comment.commentFiles.length > 0 && (

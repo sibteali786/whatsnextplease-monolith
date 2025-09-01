@@ -42,6 +42,9 @@ export class CommentController {
       const authorType = isClient ? CreatorType.CLIENT : CreatorType.USER;
       const authorUserId = isClient ? undefined : req.user.id;
       const authorClientId = isClient ? req.user.id : undefined;
+      const mentionedUserIds = req.body.mentionedUserIds || [];
+
+      console.log('Request Body from Comment made', req.body);
 
       const request: CreateCommentRequest = {
         taskId,
@@ -50,6 +53,7 @@ export class CommentController {
         authorUserId,
         authorClientId,
         authorType,
+        mentionedUserIds,
       };
 
       const result = await this.commentService.createComment(request);

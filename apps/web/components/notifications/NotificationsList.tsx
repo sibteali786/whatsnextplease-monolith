@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { NotificationList } from '@wnp/types';
 import { formatDistance as dateFnsFormatDistance } from 'date-fns';
-import { MoreHorizontal, Loader2, ArrowRight } from 'lucide-react';
+import { MoreHorizontal, Loader2, ArrowRight, AtSign, MessageSquare } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,6 +118,29 @@ const TaskUpdateContent = ({ notification }: { notification: NotificationList })
             {details.category && (
               <Badge className="bg-blue-100 text-blue-800 text-xs">{details.category}</Badge>
             )}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (notification.type === NotificationType.COMMENT_MENTION) {
+    const { taskTitle, commentPreview, mentionerName } = details || {};
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <AtSign className="h-4 w-4 text-blue-500" />
+          <p className="text-sm font-medium leading-none">
+            <span className="font-semibold text-blue-600 dark:text-blue-400">{mentionerName}</span>{' '}
+            mentioned you in{' '}
+            <span className="font-semibold text-purple-500 dark:text-purple-300">
+              &quot;{taskTitle}&quot;
+            </span>
+          </p>
+        </div>
+        {commentPreview && (
+          <div className="bg-muted/50 rounded-md p-2 border-l-2 border-blue-500">
+            <p className="text-sm text-muted-foreground italic">&quot;{commentPreview}&quot;</p>
           </div>
         )}
       </div>
@@ -323,9 +346,22 @@ export default function NotificationsList({
                 {item.data?.taskId && (
                   <>
                     <DropdownMenuItem
-                      onClick={() => window.open(`/taskOfferings/${item.data.taskId}`, '_blank')}
+                      onClick={() => {
+                        const url =
+                          item.type === NotificationType.COMMENT_MENTION && item.data?.commentId
+                            ? `/taskOfferings/${item.data.taskId}#comment-${item.data.commentId}`
+                            : `/taskOfferings/${item.data.taskId}`;
+                        window.open(url, '_blank');
+                      }}
                     >
-                      View Task
+                      {item.type === NotificationType.COMMENT_MENTION ? (
+                        <>
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Go to Comment
+                        </>
+                      ) : (
+                        'View Task'
+                      )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

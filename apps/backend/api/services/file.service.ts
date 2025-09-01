@@ -48,7 +48,18 @@ export class FileService {
     this.fileRepository = new FileRepository();
   }
 
-  async generateUploadUrl(fileData: FileUploadData, fileType: string): Promise<FileUploadResult> {
+  /**
+   * Generate upload URL using direct SDK approach (no Lambda/API Gateway)
+   * This method now generates presigned URLs locally with full control over parameters
+   */
+  async generateUploadUrl(
+    fileData: FileUploadData,
+    fileType: string,
+    options?: {
+      expiresIn?: number; // seconds, default 900 (15 minutes)
+      maxFileSize?: number; // bytes, for Content-Length validation
+    }
+  ): Promise<FileUploadResult> {
     try {
       const { userId, fileName, uploadContext, taskId, targetClientId, targetUserId } = fileData;
 
@@ -77,8 +88,20 @@ export class FileService {
           throw new BadRequestError('Invalid upload context');
       }
 
-      // Generate presigned upload URL
-      const uploadResponse = await this.s3Service.generatePresignedUploadUrl(fileKey, fileType);
+      // Generate presigned upload URL with enhanced options
+      const uploadResponse = await this.s3Service.generatePresignedUploadUrl(fileKey, fileType, {
+        expiresIn: options?.expiresIn || 900, // 15 minutes default
+        contentLength: options?.maxFileSize,
+        metadata: {
+          uploadedBy: fileData.uploadedBy,
+          userId: fileData.userId,
+          uploadContext: uploadContext.toString(),
+          originalFileName: fileName,
+          ...(taskId && { taskId }),
+          ...(targetClientId && { targetClientId }),
+          ...(targetUserId && { targetUserId }),
+        },
+      });
 
       if (!uploadResponse.success) {
         return {
@@ -115,6 +138,15 @@ export class FileService {
         targetUserId,
       } = fileData;
 
+      // Verify file was actually uploaded to S3
+      const fileExists = await this.s3Service.doesFileExist(fileKey);
+      if (!fileExists) {
+        throw new BadRequestError('File upload verification failed - file not found in S3');
+      }
+
+      // Get actual file metadata from S3
+      const s3Metadata = await this.s3Service.getFileMetadata(fileKey);
+
       // Determine owner fields based on context and role
       let ownerFields: Partial<CreateFileData> = {};
       switch (uploadContext) {
@@ -127,7 +159,7 @@ export class FileService {
         case UploadContextType.USER_PROFILE:
           ownerFields = { ownerUserId: targetUserId };
           break;
-        case UploadContextType.TASK_COMMENT: // Add this new case
+        case UploadContextType.TASK_COMMENT:
           ownerFields = role === 'CLIENT' ? { ownerClientId: userId } : { ownerUserId: userId };
           break;
         default:
@@ -137,7 +169,7 @@ export class FileService {
       const createFileData: CreateFileData = {
         fileName,
         filePath: fileKey,
-        fileSize,
+        fileSize: s3Metadata.contentLength?.toString() || fileSize, // Use actual S3 size if available
         createdAt: new Date(createdAt),
         uploadedBy,
         ...ownerFields,
@@ -207,7 +239,18 @@ export class FileService {
     }
   }
 
-  async generateDownloadUrl(fileId: string): Promise<FileDownloadResult> {
+  /**
+   * Generate download URL using direct SDK (no Lambda/API Gateway)
+   * Now supports enhanced options like Content-Disposition for downloads
+   */
+  async generateDownloadUrl(
+    fileId: string,
+    options?: {
+      expiresIn?: number;
+      forceDownload?: boolean; // Set Content-Disposition to attachment
+      customFilename?: string;
+    }
+  ): Promise<FileDownloadResult> {
     try {
       // Use repository to get file details
       const file = await this.fileRepository.findFileById(fileId);
@@ -216,8 +259,13 @@ export class FileService {
         throw new NotFoundError('File not found');
       }
 
-      // Generate download URL from S3
-      const downloadResponse = await this.s3Service.generatePresignedDownloadUrl(file.filePath);
+      // Generate download URL from S3 with enhanced options
+      const downloadResponse = await this.s3Service.generatePresignedDownloadUrl(file.filePath, {
+        expiresIn: options?.expiresIn || 900,
+        ...(options?.forceDownload && {
+          responseContentDisposition: `attachment; filename="${options?.customFilename || file.fileName}"`,
+        }),
+      });
 
       if (!downloadResponse.success) {
         return {
@@ -239,7 +287,15 @@ export class FileService {
     }
   }
 
-  async generateDownloadUrlByKey(fileKey: string, fileType?: string): Promise<FileDownloadResult> {
+  async generateDownloadUrlByKey(
+    fileKey: string,
+    options?: {
+      expiresIn?: number;
+      fileType?: string;
+      forceDownload?: boolean;
+      customFilename?: string;
+    }
+  ): Promise<FileDownloadResult> {
     try {
       // Check if file exists in S3
       const exists = await this.s3Service.doesFileExist(fileKey);
@@ -247,8 +303,14 @@ export class FileService {
         throw new NotFoundError('File not found in S3');
       }
 
-      // Generate download URL
-      const downloadResponse = await this.s3Service.generatePresignedDownloadUrl(fileKey, fileType);
+      // Generate download URL with options
+      const downloadResponse = await this.s3Service.generatePresignedDownloadUrl(fileKey, {
+        expiresIn: options?.expiresIn || 900,
+        responseContentType: options?.fileType,
+        ...(options?.forceDownload && {
+          responseContentDisposition: `attachment; filename="${options?.customFilename || 'download'}"`,
+        }),
+      });
 
       if (!downloadResponse.success) {
         return {
@@ -283,7 +345,7 @@ export class FileService {
     }
   }
 
-  // Additional service methods using repository
+  // Additional service methods using repository (unchanged)
   async getFilesByUser(userId: string, options?: { cursor?: string; limit?: number }) {
     return await this.fileRepository.getFilesByUser(userId, options);
   }
@@ -309,5 +371,69 @@ export class FileService {
 
   async checkDuplicateFiles(fileName: string, userId: string, uploadContext: UploadContextType) {
     return await this.fileRepository.findDuplicateFiles(fileName, userId, uploadContext);
+  }
+
+  /**
+   * Alternative method for server-side uploads (when you have the file buffer)
+   * This bypasses presigned URLs entirely for internal operations
+   */
+  async uploadFileDirectly(
+    fileData: FileUploadData,
+    fileBuffer: Buffer,
+    fileType: string
+  ): Promise<FileUploadResult> {
+    try {
+      const { userId, fileName, uploadContext, taskId, targetClientId, targetUserId } = fileData;
+
+      // Generate file key
+      let fileKey: string;
+      switch (uploadContext) {
+        case UploadContextType.TASK:
+          if (!taskId) throw new BadRequestError('taskId required for TASK context');
+          fileKey = this.s3Service.generateFileKey(userId, fileName, 'task', taskId);
+          break;
+        case UploadContextType.CLIENT_PROFILE:
+          if (!targetClientId)
+            throw new BadRequestError('targetClientId required for CLIENT_PROFILE context');
+          fileKey = this.s3Service.generateFileKey(userId, fileName, 'client', targetClientId);
+          break;
+        case UploadContextType.USER_PROFILE:
+          if (!targetUserId)
+            throw new BadRequestError('targetUserId required for USER_PROFILE context');
+          fileKey = this.s3Service.generateFileKey(userId, fileName, 'user', targetUserId);
+          break;
+        case UploadContextType.TASK_COMMENT:
+          if (!taskId) throw new BadRequestError('taskId required for TASK_COMMENT context');
+          fileKey = this.s3Service.generateFileKey(userId, fileName, 'task-comment', taskId);
+          break;
+        default:
+          throw new BadRequestError('Invalid upload context');
+      }
+
+      // Upload directly to S3
+      const uploadSuccess = await this.s3Service.uploadFileDirectly(fileKey, fileBuffer, fileType, {
+        metadata: {
+          uploadedBy: fileData.uploadedBy,
+          userId: fileData.userId,
+          uploadContext: uploadContext.toString(),
+          originalFileName: fileName,
+        },
+      });
+
+      if (!uploadSuccess) {
+        return {
+          success: false,
+          error: 'Failed to upload file to S3',
+        };
+      }
+
+      // Complete the upload process
+      return await this.completeFileUpload(fileData, fileKey);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error during direct upload',
+      };
+    }
   }
 }

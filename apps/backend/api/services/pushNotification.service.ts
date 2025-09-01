@@ -32,6 +32,13 @@ export class PushNotificationService {
         return data?.taskId
           ? `${baseUrl}/taskOfferings/${data.taskId}`
           : `${baseUrl}/taskOfferings`;
+      case NotificationType.COMMENT_MENTION:
+        // Direct link to the specific comment within the task
+        return data?.taskId && data?.commentId
+          ? `${baseUrl}/taskOfferings/${data.taskId}#comment-${data.commentId}`
+          : data?.taskId
+            ? `${baseUrl}/taskOfferings/${data.taskId}`
+            : `${baseUrl}/taskOfferings`;
 
       case NotificationType.MESSAGE_RECEIVED:
         return `${baseUrl}/messages`;
@@ -93,17 +100,22 @@ export class PushNotificationService {
         const contextualUrl = this.getNotificationUrl(data?.type, data);
         // Format notification payload
         const payload = {
-          title: "What's Next Please",
-          body: message,
+          title: data?.pushNotification?.title || "What's Next Please",
+          body: data?.pushNotification?.body || message,
           data: {
             ...data,
             timestamp: new Date().toISOString(),
             url: contextualUrl,
+            // Include comment-specific data for mentions
+            ...(data?.type === NotificationType.COMMENT_MENTION && {
+              commentId: data.commentId,
+              taskId: data.taskId,
+              commentPreview: data.details?.commentPreview,
+            }),
           },
         };
-        console.log('Sending push notification:', payload);
-        logger.info('Sending push notification:', payload);
 
+        console.log('Sending push notification:', payload);
         return webpush.sendNotification(pushSubscription, JSON.stringify(payload));
       });
 

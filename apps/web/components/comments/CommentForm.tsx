@@ -2,12 +2,12 @@
 
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Send, X } from 'lucide-react';
 import CommentFileUpload from './CommentFileUpload';
 import { Comment } from '@/utils/commentSchemas';
 import { createComment, updateComment } from '@/actions/commentActions';
+import RichTextEditor from './RichTextEditor';
 
 interface CommentFormProps {
   taskId: string;
@@ -25,13 +25,21 @@ export default function CommentForm({
   onCancel,
 }: CommentFormProps) {
   const [content, setContent] = useState(editingComment?.content || '');
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [fileIds, setFileIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const fileUploadRef = useRef<{ reset: () => void }>(null); // Add ref for file upload
   const { toast } = useToast();
 
   const isEditing = !!editingComment;
-  const canSubmit = content.trim().length > 0 && !submitting;
+  const getCharacterCount = (html: string) => {
+    // Create a temporary div to parse HTML and get plain text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent?.length || 0;
+  };
+  const hasContent = getCharacterCount(content) > 0;
+  const canSubmit = hasContent && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -44,6 +52,7 @@ export default function CommentForm({
         const result = await updateComment({
           commentId: editingComment.id,
           content: content.trim(),
+          contentType: 'html',
         });
 
         if (result.success && result.comment) {
@@ -66,6 +75,8 @@ export default function CommentForm({
         const result = await createComment({
           taskId,
           content: content.trim(),
+          contentType: 'html',
+          mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
           fileIds: fileIds.length > 0 ? fileIds : undefined,
         });
 
@@ -74,6 +85,7 @@ export default function CommentForm({
 
           // Clear form state after successful submission
           setContent('');
+          setMentionedUserIds([]);
           setFileIds([]);
 
           // Reset file upload component
@@ -97,7 +109,9 @@ export default function CommentForm({
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred: ' + (error instanceof Error ? error.message : String(error)),
+        description:
+          'An unexpected error occurred: ' +
+          (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     } finally {
@@ -111,6 +125,7 @@ export default function CommentForm({
       if (onCancel) onCancel();
     } else {
       setContent('');
+      setMentionedUserIds([]);
       setFileIds([]);
       // Reset file upload component
       if (fileUploadRef.current) {
@@ -128,20 +143,22 @@ export default function CommentForm({
 
   return (
     <div className="space-y-3">
-      <Textarea
-        placeholder={isEditing ? 'Edit your comment...' : 'Add a comment...'}
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="min-h-[80px] resize-none"
-        maxLength={5000}
+      <RichTextEditor
+        content={content}
+        onChange={setContent}
+        onMentionsChange={setMentionedUserIds}
+        placeholder={
+          isEditing ? 'Edit your comment...' : 'Add a comment... (Type @ to mention someone)'
+        }
         disabled={submitting}
+        onKeyDown={handleKeyDown}
+        taskId={taskId}
       />
 
       {/* Character count */}
       <div className="flex justify-between items-center text-sm text-muted-foreground">
-        <span>{content.length}/5000</span>
-        {!isEditing && <span className="text-xs">Press Ctrl+Enter to send</span>}
+        <span>{getCharacterCount(content)}/5000</span>
+        {!isEditing && <span className="text-xs">Press Ctrl+Enter to send • @ to mention</span>}
       </div>
 
       {/* File upload for new comments only */}

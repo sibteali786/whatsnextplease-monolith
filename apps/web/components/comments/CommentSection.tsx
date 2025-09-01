@@ -8,6 +8,7 @@ import { getComments } from '@/actions/commentActions';
 import CommentForm from './CommentForm';
 import CommentsList from './CommentsList';
 import { useToast } from '@/hooks/use-toast';
+import { handleCommentFragment } from '@/utils/commentNavigation';
 
 interface CommentSectionProps {
   taskId: string;
@@ -43,7 +44,9 @@ export default function CommentSection({ taskId, onDataChange, key }: CommentSec
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'An error occurred while loading comments: ' + (error instanceof Error ? error.message : String(error)),
+        description:
+          'An error occurred while loading comments: ' +
+          (error instanceof Error ? error.message : String(error)),
         variant: 'destructive',
       });
     } finally {
@@ -82,6 +85,11 @@ export default function CommentSection({ taskId, onDataChange, key }: CommentSec
       loadComments();
     }
   }, [key]);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      handleCommentFragment();
+    }
+  }, [comments]);
   if (loading) {
     return (
       <div className="space-y-6">

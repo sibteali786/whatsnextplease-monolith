@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { DeleteObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
-import { InternalServerError } from '@wnp/types';
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from 'dotenv';
 import path from 'path';
 
@@ -24,7 +29,6 @@ export interface DownloadUrlResponse {
 
 export class S3BucketService {
   private s3Client: S3Client;
-  private secretsClient: SecretsManagerClient;
   private bucket: string;
   private cloudFrontDomain: string;
 
@@ -35,9 +39,7 @@ export class S3BucketService {
     this.s3Client = new S3Client({
       region: process.env.AWS_REGION || 'us-east-1',
     });
-    this.secretsClient = new SecretsManagerClient({
-      region: process.env.AWS_REGION || 'us-east-1',
-    });
+
     this.bucket = process.env.S3_BUCKET_NAME!;
     this.cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN!;
   }
@@ -46,53 +48,37 @@ export class S3BucketService {
     return this.cloudFrontDomain;
   }
 
-  async getApiGatewayUrl(secretName = process.env.API_GATEWAY_SECRET_NAME!): Promise<string> {
-    try {
-      const secretResponse = await this.secretsClient.send(
-        new GetSecretValueCommand({
-          SecretId: secretName,
-          VersionStage: 'AWSCURRENT',
-        })
-      );
-
-      if (!secretResponse?.SecretString) {
-        throw new InternalServerError('Empty secret response');
-      }
-
-      const secretValue = JSON.parse(secretResponse.SecretString);
-      const apiUrl = secretValue?.apiGateUrl;
-
-      if (!apiUrl) {
-        throw new InternalServerError('API Gateway URL not found in secret');
-      }
-
-      return apiUrl;
-    } catch (error) {
-      console.error('Failed to get API Gateway URL:', error);
-      throw new InternalServerError('Failed to retrieve API Gateway URL');
+  /**
+   * Generate presigned upload URL directly using AWS SDK
+   * This replaces the API Gateway + Lambda approach
+   */
+  async generatePresignedUploadUrl(
+    fileKey: string,
+    fileType: string,
+    options?: {
+      expiresIn?: number; // seconds, default 900 (15 minutes)
+      contentLength?: number;
+      metadata?: Record<string, string>;
     }
-  }
-
-  async generatePresignedUploadUrl(fileKey: string, fileType: string): Promise<UploadResponse> {
+  ): Promise<UploadResponse> {
     try {
-      const apiGatewayUrl = await this.getApiGatewayUrl();
-
-      const response = await fetch(`${apiGatewayUrl}generate-upload-url`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileKey, fileType }),
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: fileKey,
+        ContentType: fileType,
+        ...(options?.contentLength && { ContentLength: options.contentLength }),
+        ...(options?.metadata && { Metadata: options.metadata }),
       });
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Failed to generate presigned URL: ${response.statusText}`,
-        };
-      }
+      const uploadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn: options?.expiresIn || 900, // 15 minutes default
+        // Sign the Content-Type header to prevent tampering
+        signableHeaders: new Set(['content-type']),
+      });
 
-      const { uploadUrl } = await response.json();
       return { success: true, uploadUrl };
     } catch (error) {
+      console.error('Error generating presigned upload URL:', error);
       return {
         success: false,
         error: `Error generating presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -100,29 +86,37 @@ export class S3BucketService {
     }
   }
 
+  /**
+   * Generate presigned download URL directly using AWS SDK
+   * This replaces the API Gateway + Lambda approach
+   */
   async generatePresignedDownloadUrl(
     fileKey: string,
-    fileType?: string
+    options?: {
+      expiresIn?: number; // seconds, default 900 (15 minutes)
+      responseContentType?: string;
+      responseContentDisposition?: string; // e.g., 'attachment; filename="example.pdf"'
+      versionId?: string;
+    }
   ): Promise<DownloadUrlResponse> {
     try {
-      const apiGatewayUrl = await this.getApiGatewayUrl();
-
-      const response = await fetch(`${apiGatewayUrl}generate-download-url`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileKey, fileType }),
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: fileKey,
+        ...(options?.responseContentType && { ResponseContentType: options.responseContentType }),
+        ...(options?.responseContentDisposition && {
+          ResponseContentDisposition: options.responseContentDisposition,
+        }),
+        ...(options?.versionId && { VersionId: options.versionId }),
       });
 
-      if (!response.ok) {
-        return {
-          success: false,
-          error: `Failed to generate download URL: ${response.statusText}`,
-        };
-      }
+      const downloadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn: options?.expiresIn || 900, // 15 minutes default
+      });
 
-      const { downloadUrl } = await response.json();
       return { success: true, downloadUrl };
     } catch (error) {
+      console.error('Error generating presigned download URL:', error);
       return {
         success: false,
         error: `Error generating download URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -130,17 +124,34 @@ export class S3BucketService {
     }
   }
 
-  async uploadFileToS3(uploadUrl: string, file: Buffer, contentType: string): Promise<boolean> {
+  /**
+   * Upload file directly to S3 (alternative to presigned URLs for server-side uploads)
+   */
+  async uploadFileDirectly(
+    fileKey: string,
+    fileBuffer: Buffer,
+    contentType: string,
+    options?: {
+      metadata?: Record<string, string>;
+      cacheControl?: string;
+      contentDisposition?: string;
+    }
+  ): Promise<boolean> {
     try {
-      const response = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: new Blob([new Uint8Array(file)]),
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: fileKey,
+        Body: fileBuffer,
+        ContentType: contentType,
+        ...(options?.metadata && { Metadata: options.metadata }),
+        ...(options?.cacheControl && { CacheControl: options.cacheControl }),
+        ...(options?.contentDisposition && { ContentDisposition: options.contentDisposition }),
       });
 
-      return response.ok;
+      await this.s3Client.send(command);
+      return true;
     } catch (error) {
-      console.error('Error uploading to S3:', error);
+      console.error('Error uploading file directly to S3:', error);
       return false;
     }
   }
@@ -188,6 +199,32 @@ export class S3BucketService {
     }
   }
 
+  /**
+   * Get file metadata without downloading
+   */
+  async getFileMetadata(fileKey: string) {
+    try {
+      const command = new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: fileKey,
+      });
+
+      const response = await this.s3Client.send(command);
+      return {
+        contentType: response.ContentType,
+        contentLength: response.ContentLength,
+        lastModified: response.LastModified,
+        etag: response.ETag,
+        metadata: response.Metadata,
+      };
+    } catch (error: any) {
+      if (error.$metadata?.httpStatusCode === 404) {
+        throw new Error('File not found');
+      }
+      throw error;
+    }
+  }
+
   generateFileKey(
     userId: string,
     fileName: string,
@@ -205,7 +242,7 @@ export class S3BucketService {
       case 'client':
         if (!contextId) throw new Error('ClientId required for client context');
         return `clients/${contextId}/uploaded-by/${userId}/${sanitizedFileName}`;
-      case 'task-comment': // Add this new case
+      case 'task-comment':
         if (!contextId) throw new Error('TaskId required for task-comment context');
         return `tasks/${contextId}/comments/${userId}/${sanitizedFileName}`;
       default:
@@ -221,7 +258,6 @@ export class S3BucketService {
   }
 
   private sanitizeFileName(fileName: string): string {
-    // Keep original extension and make filename safe
     const parts = fileName.split('.');
     const extension = parts.pop();
     const name = parts.join('.');
@@ -236,12 +272,7 @@ export class S3BucketService {
   }
 
   private validateEnvironmentVariables(): void {
-    const requiredEnvVars = [
-      'AWS_REGION',
-      'S3_BUCKET_NAME',
-      'CLOUDFRONT_DOMAIN',
-      'API_GATEWAY_SECRET_NAME',
-    ];
+    const requiredEnvVars = ['AWS_REGION', 'S3_BUCKET_NAME', 'CLOUDFRONT_DOMAIN'];
 
     const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 

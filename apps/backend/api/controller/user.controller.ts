@@ -8,6 +8,8 @@ import { S3BucketService } from '../services/s3Service';
 import { checkIfUserExists } from '../utils/helperHandlers';
 import { logger } from '../utils/logger';
 import { hashPW } from '../utils/auth/hashPW';
+import { Roles } from '@prisma/client';
+import prisma from '../config/db';
 
 export class UserController {
   constructor(
@@ -323,6 +325,81 @@ export class UserController {
       message: 'Current user profile retrieved successfully',
     });
   };
+
+  /**
+   * Search users for mentions functionality
+   * GET /users/search?q=query&role=optional_role
+   */
+  searchUsersForMentionsHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+    const query = (req.query.q as string) || '';
+    const roleFilter = req.query.role as string;
+    const taskId = req.query.taskId as string;
+    const requestingUserId = req.user?.id;
+
+    if (!requestingUserId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+    }
+
+    const result = await this.userService.searchUsersForMentions(
+      query,
+      requestingUserId,
+      roleFilter,
+      taskId
+    );
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        data: result.data,
+        message: result.message,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.message,
+        error: result.error,
+      });
+    }
+  });
+
+  private handleGetUserSkills = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { userId } = req.params;
+      const currentUserId = req.user?.id;
+
+      // Users can only view their own skills unless they're SUPER_USER
+      if (userId !== currentUserId && req.user?.role !== Roles.SUPER_USER) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+
+      const userSkills = await prisma.userSkill.findMany({
+        where: { userId },
+        include: {
+          skill: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+        },
+      });
+
+      const skills = userSkills.map(us => us.skill);
+      res.status(200).json({ success: true, skills });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getUserSkills = asyncHandler(this.handleGetUserSkills);
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
@@ -331,4 +408,5 @@ export class UserController {
   updateUserRole = asyncHandler(this.updateUserRoleHandler);
   getAvailableRoles = asyncHandler(this.getAvailableRolesHandler);
   getCurrentUser = asyncHandler(this.handleGetCurrentUser);
+  searchUsersForMentions = asyncHandler(this.searchUsersForMentionsHandler);
 }
