@@ -26,3 +26,12 @@ export const getPreviewableFiles = (files: PreviewFile[]): PreviewFile[] => {
     return ['image', 'pdf', 'document'].includes(type);
   });
 };
+export const formatFileSize = (size: string) => {
+  const fileSize = parseInt(size, 10) / 1024; // Convert bytes to KB
+  if (isNaN(fileSize)) return 'N/A';
+  const wholePart = fileSize.toString().split('.')[0];
+  if (wholePart && wholePart.length > 3) {
+    return `${(fileSize / 1024).toPrecision(4)} MB`;
+  }
+  return `${(fileSize).toPrecision(4)} KB`;
+};

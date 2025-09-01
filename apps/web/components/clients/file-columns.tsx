@@ -16,7 +16,7 @@ import {
 import { useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { fileAPI } from '@/utils/fileAPI';
-import { isPreviewable } from '@/utils/files/utils';
+import { formatFileSize, isPreviewable } from '@/utils/files/utils';
 
 export type FileType = {
   id: string;
@@ -97,6 +97,11 @@ export const createFileColumns = (
   {
     accessorKey: 'fileSize',
     header: 'File size',
+    cell: ({ row }) => {
+      const fileSize: string = row.getValue('fileSize');
+
+      return formatFileSize(fileSize);
+    },
   },
   {
     accessorKey: 'dateUploaded',
