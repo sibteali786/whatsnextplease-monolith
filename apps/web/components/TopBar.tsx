@@ -4,17 +4,18 @@ import { Input } from './ui/input';
 import { ModeToggle } from '@/utils/modeToggle';
 import { NavUser } from './common/NavUser';
 import { getCurrentUser, UserState } from '@/utils/user';
-import { Button } from './ui/button';
 import { ActiveVerticalMenu } from './common/ActiveVerticalMenu';
 import { NotificationBell } from './notifications/NotificationBell';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useEffect, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { LinkButton } from './ui/LinkButton';
+import { usePathname } from 'next/navigation';
 
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
   const { unreadCount } = useNotifications();
+  const pathname = usePathname();
 
   useEffect(() => {
     const fetchDependencies = async () => {
@@ -25,6 +26,10 @@ const TopBar = () => {
   }, []);
 
   if (!user) return null;
+
+  // Check if current path is messages
+  const isMessagesActive = pathname === '/messages';
+  const isTaskOfferingsActive = pathname === '/taskOfferings';
 
   return (
     <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10 ">
@@ -39,13 +44,23 @@ const TopBar = () => {
         </div>
       </div>
       <div className="flex flex-row gap-6 items-center justify-around">
+        {/* Task Management */}
         <div className="flex flex-col items-center">
           <ActiveVerticalMenu activePath="/taskOfferings" />
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <LinkButton href="/taskOfferings" prefetch={true} variant={'ghost'}>
-                  <ListChecks size={24} className="text-textPrimary" />
+                <LinkButton
+                  href="/taskOfferings"
+                  prefetch={true}
+                  variant={isTaskOfferingsActive ? 'default' : 'ghost'}
+                >
+                  <ListChecks
+                    size={24}
+                    className={
+                      isTaskOfferingsActive ? 'text-primary-foreground' : 'text-textPrimary'
+                    }
+                  />
                 </LinkButton>
               </TooltipTrigger>
               <TooltipContent>
@@ -55,25 +70,42 @@ const TopBar = () => {
             </Tooltip>
           </TooltipProvider>
         </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant={'ghost'}>
-                <MessageSquareText size={24} className="text-textPrimary" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Messages</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+
+        {/* Messages */}
+        <div className="flex flex-col items-center">
+          <ActiveVerticalMenu activePath="/messages" />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <LinkButton
+                  href="/messages"
+                  prefetch={true}
+                  variant={isMessagesActive ? 'default' : 'ghost'}
+                >
+                  <MessageSquareText
+                    size={24}
+                    className={isMessagesActive ? 'text-primary-foreground' : 'text-textPrimary'}
+                  />
+                </LinkButton>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Messages</p>
+                <p className="text-xs text-muted-foreground mt-1">Team communication and chat</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
         <ModeToggle />
+
         <div className="flex flex-col items-center">
           <NotificationBell unreadCount={unreadCount} />
         </div>
+
         <div className="ml-auto flex items-center gap-2">
           <NavUser user={user} />
         </div>
+
         <div className="w-10"></div>
       </div>
     </header>

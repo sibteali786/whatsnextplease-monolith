@@ -7,11 +7,11 @@
 [2mPrisma schema loaded from prisma/schema.prisma[22m
 
 
-✔ Generated [1mPrisma Client[22m (v6.13.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.13.0_prisma@6.13.0_magicast@0.3.5_typescript@5.5.4__typescript@5.5.4/node_modules/@prisma/client[22m in 202ms
+✔ Generated [1mPrisma Client[22m (v6.15.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/@prisma/client[22m in 458ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
 
 [1G[0K⠙[1G[0K
 > web@0.1.0 build:cdk /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web
@@ -23,9 +23,102 @@ Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
 
 [1G[0K[1G[0K⠙[1G[0K[1G[0K⠙[1G[0K[2mEnvironment variables loaded from .env[22m
 [2mPrisma schema loaded from prisma/schema.prisma[22m
-[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "192.168.0.102:5432"[22m
+[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:5432"[22m
 
-[1m[31mError: [39m[22mP1001: Can't reach database server at `192.168.0.102:5432`
+28 migrations found in prisma/migrations
 
-Please make sure your database server is running at `192.168.0.102:5432`.
-[1G[0K⠙[1G[0K[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
+
+[32mNo pending migrations to apply.[39m
+[1G[0K⠙[1G[0K  [1m[38;2;173;127;168m▲ Next.js 14.2.15[39m[22m
+  - Environments: .env.local, .env
+
+ [37m[1m [22m[39m Creating an optimized production build ...
+ [32m[1m✓[22m[39m Compiled successfully
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G[?25h
+[36m./app/(dashboard)/clients/data-table.tsx[39m
+[33m61[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchClients'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./app/(dashboard)/settings/permissions/page.tsx[39m
+[33m106[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'fetchUsersWithRoles', 'pagination.limit', and 'searchTerm'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./app/(dashboard)/taskAgents/task-agent-table.tsx[39m
+[33m71[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchAgents'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./app/(dashboard)/users/[userId]/page.tsx[39m
+[33m57[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'refreshTaskStats'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./app/(dashboard)/users/data-table.tsx[39m
+[33m66[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchItems'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/clients/ClientHistoryList.tsx[39m
+[33m43[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/clients/ClientTaskList.tsx[39m
+[33m43[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/clients/billing-table.tsx[39m
+[33m64[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchInvoices'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/comments/CommentSection.tsx[39m
+[33m61[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'loadComments'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+[33m87[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'loadComments'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/comments/EditorToolbar.tsx[39m
+[33m68[39m:[33m9[39m  [33m[1mWarning[22m[39m: The 'toggleLink' function makes the dependencies of useEffect Hook (at line 119) change on every render. To fix this, wrap the definition of 'toggleLink' in its own useCallback() Hook.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/common/EditTaskDialog.tsx[39m
+[33m260[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'fetchSkills' and 'fetchUsers'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/files/FilePreviewModal.tsx[39m
+[33m292[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'currentFile'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/settings/ProfileFormClient.tsx[39m
+[33m136[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/settings/ProfileFormUser.tsx[39m
+[33m188[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'toast' and 'token'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/tasks/CreateTaskContainer.tsx[39m
+[33m115[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'getDefaultValues'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+[33m229[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has missing dependencies: 'form', 'router', and 'toast'. Either include them or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/tasks/TasksListModal.tsx[39m
+[33m67[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36m./components/users/UserTasks.tsx[39m
+[33m115[39m:[33m6[39m  [33m[1mWarning[22m[39m: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  [90m[1mreact-hooks/exhaustive-deps[22m[39m
+
+[36minfo[39m  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
+[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G[?25hunhandledRejection Error: Cannot find module './9039.js'
+Require stack:
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web/.next/server/webpack-runtime.js
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web/.next/server/pages/_document.js
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/worker.js
+- /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/jest-worker/processChild.js
+[90m    at Function.<anonymous> (node:internal/modules/cjs/loader:1405:15)[39m
+    at /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/[4m.pnpm[24m/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/require-hook.js:55:36
+[90m    at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)[39m
+[90m    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)[39m
+[90m    at Function._load (node:internal/modules/cjs/loader:1215:37)[39m
+[90m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+[90m    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)[39m
+[90m    at Module.<anonymous> (node:internal/modules/cjs/loader:1491:12)[39m
+    at mod.require (/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/[4m.pnpm[24m/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/[4mnext[24m/dist/server/require-hook.js:65:28)
+[90m    at require (node:internal/modules/helpers:135:16)[39m {
+  type: [32m'Error'[39m,
+  code: [32m'MODULE_NOT_FOUND'[39m,
+  requireStack: [
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web/.next/server/webpack-runtime.js'[39m,
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web/.next/server/pages/_document.js'[39m,
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/require.js'[39m,
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/server/load-components.js'[39m,
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/utils.js'[39m,
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/build/worker.js'[39m,
+    [32m'/Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/node_modules/.pnpm/next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1/node_modules/next/dist/compiled/jest-worker/processChild.js'[39m
+  ]
+}
+[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[?25h[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
