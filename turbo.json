@@ -1,67 +1,48 @@
 {
-	"$schema": "https://turbo.build/schema.json",
-	"globalDependencies": [
-		"**/.env.*local"
-	],
-	"tasks": {
-		"topo": {
-			"dependsOn": [
-				"^topo"
-			]
-		},
-		"build": {
-			"dependsOn": [
-				"^build"
-			],
-			"outputs": [
-				"dist/**",
-				".next/**",
-				"!.next/cache/**"
-			],
-			"env": [
-				"NODE_ENV",
-				"SECRET",
-				"API_GATEWAY_SECRET_NAME",
-				"AWS_ACCESS_KEY_ID",
-				"AWS_REGION",
-				"AWS_SECRET_ACCESS_KEY",
-				"DATABASE_URL",
-				"S3_BUCKET_NAME",
-				"API_URL"
-			]
-		},
-		"lint": {
-			"dependsOn": [
-				"^topo"
-			]
-		},
-		"format": {
-			"dependsOn": [
-				"^topo"
-			]
-		},
-		"lint:fix": {
-			"dependsOn": [
-				"^topo"
-			]
-		},
-		"format:fix": {
-			"dependsOn": [
-				"^topo"
-			]
-		},
-		"check-types": {},
-		"dev": {
-			"cache": false,
-			"persistent": true
-		},
-		"add-shadcn-component": {
-			"dependsOn": [
-				"^topo"
-			]
-		},
-		"clean": {
-			"cache": false
-		}
-	}
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "tasks": {
+    "topo": {
+      "dependsOn": ["^topo"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": [
+        "NODE_ENV",
+        "SECRET",
+        "API_GATEWAY_SECRET_NAME",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_REGION",
+        "AWS_SECRET_ACCESS_KEY",
+        "DATABASE_URL",
+        "S3_BUCKET_NAME",
+        "API_URL",
+        "NEXT_PUBLIC_CHAT_APP_URL"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^topo"]
+    },
+    "format": {
+      "dependsOn": ["^topo"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^topo"]
+    },
+    "format:fix": {
+      "dependsOn": ["^topo"]
+    },
+    "check-types": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "add-shadcn-component": {
+      "dependsOn": ["^topo"]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
 }

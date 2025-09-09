@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ReactNode, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import RouteProgressBar from '@/components/RoutesProgressBar';
+import { ChatProvider } from '../providers/ChatContextProvider';
 
 // Loading fallback component
 const ShellSkeleton = () => (
@@ -27,7 +28,16 @@ const Dashboard = ({ children }: { children: ReactNode }) => {
         <RouteProgressBar />
         <Shell>
           <TooltipProvider>
-            <div className="h-full">{children}</div>
+            <ChatProvider
+              enableFloatingButton={true}
+              floatingButtonConfig={{
+                position: 'bottom-right',
+                hideOnRoutes: ['/messages'],
+                enableMinimize: true,
+              }}
+            >
+              <div className="h-full">{children}</div>
+            </ChatProvider>
           </TooltipProvider>
         </Shell>
       </Suspense>
