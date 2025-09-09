@@ -18,7 +18,7 @@
         "DATABASE_URL",
         "S3_BUCKET_NAME",
         "API_URL",
-        "CHAT_APP_URL"
+        "NEXT_PUBLIC_CHAT_APP_URL"
       ]
     },
     "lint": {

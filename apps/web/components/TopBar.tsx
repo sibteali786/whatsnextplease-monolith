@@ -42,7 +42,7 @@ const TopBar = () => {
   });
 
   const configRef = useRef({
-    chatAppOrigin: process.env.CHAT_APP_URL || 'http://localhost:3000/',
+    chatAppOrigin: process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000/',
     parentAppId: 'wnp-app',
   });
 

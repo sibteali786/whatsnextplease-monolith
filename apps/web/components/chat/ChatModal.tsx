@@ -32,7 +32,7 @@ interface ChatModalProps {
 }
 
 const DEFAULT_CONFIG = {
-  url: process.env.CHAT_APP_URL || 'http://localhost:3000/',
+  url: process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000/',
   title: 'Client Messages Chat',
 };
 

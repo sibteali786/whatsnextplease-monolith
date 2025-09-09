@@ -21,7 +21,7 @@ interface ChatMessage {
 
 export default function ChatNotificationIndicator({
   className = '',
-  chatAppOrigin = process.env.CHAT_APP_URL || 'http://localhost:3000/',
+  chatAppOrigin = process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000/',
   parentAppId = 'parent-app',
   onNewMessage,
   onConnectionChange,
