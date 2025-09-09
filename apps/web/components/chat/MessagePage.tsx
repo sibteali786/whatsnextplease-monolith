@@ -37,18 +37,6 @@ export default function MessagesPage({ className = '' }: MessagesPageProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Status Indicators */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mr-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Online</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Real-time</span>
-              </div>
-            </div>
-
             {/* Modal Option Button */}
             <ChatModal
               trigger={
