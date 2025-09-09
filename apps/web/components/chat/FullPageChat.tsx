@@ -264,18 +264,6 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
           )}
-
-          <Button asChild variant="ghost" size="sm" className="h-8 px-3">
-            <a
-              href={CHAT_CONFIG.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Open in new tab"
-            >
-              <ExternalLink className="w-3 h-3" />
-              <span className="ml-1 text-xs">New Tab</span>
-            </a>
-          </Button>
         </div>
       </div>
 

@@ -2,17 +2,14 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquare } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LinkButton } from '@/components/ui/LinkButton';
-import ChatModal from '@/components/chat/ChatModal';
 import { ChatMessageType, ParentChatInfoTypes } from '@/utils/chat/constants';
 
 interface ChatNotificationIndicatorProps {
   className?: string;
   chatAppOrigin?: string;
   parentAppId?: string;
+  onNewMessage?: (hasNewMessages: boolean, messageCount: number, lastMessage: any) => void;
+  onConnectionChange?: (isConnected: boolean) => void;
 }
 
 interface ChatMessage {
@@ -26,6 +23,8 @@ export default function ChatNotificationIndicator({
   className = '',
   chatAppOrigin = process.env.CHAT_APP_URL || 'http://localhost:3000/',
   parentAppId = 'parent-app',
+  onNewMessage,
+  onConnectionChange,
 }: ChatNotificationIndicatorProps) {
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [messageCount, setMessageCount] = useState(0);
@@ -65,6 +64,15 @@ export default function ChatNotificationIndicator({
       parentAppId,
     };
   }, [chatAppOrigin, parentAppId]);
+
+  // Notify parent components of state changes
+  useEffect(() => {
+    onNewMessage?.(hasNewMessages, messageCount, lastMessage);
+  }, [hasNewMessages, messageCount, lastMessage, onNewMessage]);
+
+  useEffect(() => {
+    onConnectionChange?.(isConnected);
+  }, [isConnected, onConnectionChange]);
 
   // Stable function to send messages to chat iframe
   const sendToChat = useCallback((type: string, payload?: any) => {
@@ -192,67 +200,11 @@ export default function ChatNotificationIndicator({
     };
   }, []); // Empty dependency array - only run once
 
-  // Handle chat open action
-  const handleChatOpen = useCallback(() => {
-    setHasNewMessages(false);
-    setMessageCount(0);
-    sendToChat(ParentChatInfoTypes.Enum.MARK_AS_READ, {
-      timestamp: Date.now(),
-    });
-  }, [sendToChat]);
-
+  // This component no longer renders any UI - it's purely for notification logic
+  // The chat functionality and UI has been moved to the TopBar component
   return (
-    <div className={`relative ${className}`}>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <ChatModal
-              trigger={
-                <LinkButton href="#" variant="ghost" className="relative" onClick={handleChatOpen}>
-                  <MessageSquare size={24} className="text-textPrimary" />
-
-                  {/* Notification Badge */}
-                  {hasNewMessages && messageCount > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 min-w-5 text-xs flex items-center justify-center p-0 px-1.5"
-                    >
-                      {messageCount > 99 ? '99+' : messageCount}
-                    </Badge>
-                  )}
-
-                  {/* Connection status indicator */}
-                  <div
-                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-black ${
-                      isConnected ? 'bg-green-500' : 'bg-gray-400'
-                    }`}
-                  />
-
-                  {/* Animated pulse effect for new messages */}
-                  {hasNewMessages && (
-                    <div className="absolute inset-0 rounded-md animate-pulse bg-blue-400 opacity-20 pointer-events-none" />
-                  )}
-                </LinkButton>
-              }
-              title="Team Chat"
-              onModalOpen={handleChatOpen}
-            />
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Team Chat</p>
-            {hasNewMessages && lastMessage ? (
-              <div className="text-xs text-muted-foreground mt-1 max-w-48">
-                <p>Latest: {lastMessage.sender}</p>
-                <p className="truncate">{lastMessage.content}</p>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1">
-                {isConnected ? 'Chat is connected' : 'Chat is loading...'}
-              </p>
-            )}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <div className={`hidden ${className}`}>
+      {/* This component is now invisible and only handles notification logic */}
     </div>
   );
 }
