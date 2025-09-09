@@ -5,7 +5,7 @@
   "main": "api/index.ts",
   "scripts": {
     "start": "node dist/api/index.js",
-    "dev": "PORT=5001 nodemon api/index.ts",
+    "dev": "nodemon api/index.ts",
     "build": "pnpm dlx prisma generate && tsc",
     "db:studio": "npx prisma studio",
     "test": "jest",

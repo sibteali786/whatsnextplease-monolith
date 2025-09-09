@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { LinkButton } from './ui/LinkButton';
 import { usePathname } from 'next/navigation';
+import ChatNotificationIndicator from './chat/ChatNotificationsIndicator';
 
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
@@ -94,6 +95,14 @@ const TopBar = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+        </div>
+
+        <div className="flex flex-col items-center">
+          <ChatNotificationIndicator
+            className="flex flex-col items-center"
+            chatAppOrigin={process.env.CHAT_APP_URL}
+            parentAppId="wnp-app"
+          />
         </div>
 
         <ModeToggle />

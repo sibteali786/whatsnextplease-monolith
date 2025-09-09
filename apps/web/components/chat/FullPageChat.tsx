@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 const CHAT_CONFIG = {
-  url: 'https://chat-app-frontend-one-coral.vercel.app/',
+  url: process.env.CHAT_APP_URL || 'http://localhost:3000/',
   title: 'Messages',
   timeout: 15000,
   maxRetries: 3,

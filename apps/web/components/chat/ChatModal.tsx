@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquare, Maximize2, Minimize2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +32,7 @@ interface ChatModalProps {
 }
 
 const DEFAULT_CONFIG = {
-  url: 'https://chat-app-frontend-one-coral.vercel.app/',
+  url: process.env.CHAT_APP_URL || 'http://localhost:3000/',
   title: 'Client Messages Chat',
 };
 
@@ -50,27 +50,75 @@ export default function ChatModal({
   const [isFullscreen, setIsFullscreen] = useState(defaultFullscreen);
   const [isChatLoaded, setIsChatLoaded] = useState(false);
 
+  // Use refs to prevent unnecessary iframe recreation
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const loadTimeoutRef = useRef<ReturnType<typeof window.setTimeout>>();
+  const modalOpenTimeRef = useRef<number>(0);
+
+  // Stable iframe URL to prevent recreation
+  const iframeUrl = useRef(`${chatUrl}?modal=true&embedded=true`);
+
   // Handle modal state changes
-  const handleModalChange = (open: boolean) => {
-    setIsModalOpen(open);
-    if (open) {
-      setIsChatLoaded(false);
-      onModalOpen?.();
-    } else {
-      setIsFullscreen(false);
-      onModalClose?.();
-    }
-  };
+  const handleModalChange = useCallback(
+    (open: boolean) => {
+      setIsModalOpen(open);
+
+      if (open) {
+        modalOpenTimeRef.current = Date.now();
+        setIsChatLoaded(false);
+        onModalOpen?.();
+
+        // Set a timeout for iframe loading
+        loadTimeoutRef.current = setTimeout(() => {
+          if (!isChatLoaded) {
+            console.warn('Chat iframe took too long to load');
+            setIsChatLoaded(true); // Assume loaded to remove loading indicator
+          }
+        }, 10000); // 10 second timeout
+      } else {
+        setIsFullscreen(false);
+        onModalClose?.();
+
+        // Clear loading timeout
+        if (loadTimeoutRef.current) {
+          clearTimeout(loadTimeoutRef.current);
+        }
+
+        // Reset load state when modal closes
+        setTimeout(() => {
+          setIsChatLoaded(false);
+        }, 300); // Wait for modal animation
+      }
+    },
+    [onModalOpen, onModalClose, isChatLoaded]
+  );
 
   // Handle fullscreen toggle
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => !prev);
+  }, []);
 
-  // Handle iframe load
-  const handleIframeLoad = () => {
-    setIsChatLoaded(true);
-  };
+  // Handle iframe load with debouncing to prevent multiple calls
+  const handleIframeLoad = useCallback(() => {
+    const loadTime = Date.now() - modalOpenTimeRef.current;
+
+    // Only set as loaded if modal has been open for at least 500ms
+    // This prevents rapid load/unload cycles
+    if (loadTime > 500) {
+      setIsChatLoaded(true);
+
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+
+      console.log(`Chat iframe loaded in ${loadTime}ms`);
+    } else {
+      // If loaded too quickly, it might be a cache/reload, wait a bit
+      setTimeout(() => {
+        setIsChatLoaded(true);
+      }, 1000);
+    }
+  }, []);
 
   // Handle escape key to exit fullscreen
   useEffect(() => {
@@ -80,9 +128,25 @@ export default function ChatModal({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    if (isModalOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
   }, [isFullscreen, isModalOpen]);
+
+  // Update iframe URL when chatUrl changes
+  useEffect(() => {
+    iframeUrl.current = `${chatUrl}?modal=true&embedded=true&t=${Date.now()}`;
+  }, [chatUrl]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Default trigger button
   const defaultTrigger = (
@@ -154,19 +218,22 @@ export default function ChatModal({
             </div>
           )}
 
-          {/* Chat iframe */}
-          <iframe
-            src={`${chatUrl}?modal=true&embedded=true&t=${Date.now()}`}
-            title={title}
-            className="w-full h-full border-0"
-            onLoad={handleIframeLoad}
-            style={{
-              height: isFullscreen ? 'calc(100vh - 60px)' : 'calc(85vh - 60px)',
-              minHeight: '400px',
-            }}
-            allow="camera; microphone; clipboard-write"
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation"
-          />
+          {/* Chat iframe - only render when modal is open */}
+          {isModalOpen && (
+            <iframe
+              ref={iframeRef}
+              src={iframeUrl.current}
+              title={title}
+              className="w-full h-full border-0"
+              onLoad={handleIframeLoad}
+              style={{
+                height: isFullscreen ? 'calc(100vh - 60px)' : 'calc(85vh - 60px)',
+                minHeight: '400px',
+              }}
+              allow="camera; microphone; clipboard-write"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation"
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
