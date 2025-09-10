@@ -13,10 +13,19 @@ import { fileRoutes } from './routes/file.routes';
 import { env } from './config/environment';
 import { taskRoutes } from './routes/task.routes';
 import { commentRoutes } from './routes/comment.routes';
+import { logger } from './utils/logger';
 
 export async function createServer() {
   const app = express();
-
+  logger.info(
+    {
+      nodeEnv: process.env.NODE_ENV,
+      logLevel: process.env.LOG_LEVEL,
+      corsOrigin: env.NEXT_PUBLIC_APP_URL,
+      port: env.PORT,
+    },
+    'Starting server with configuration'
+  );
   // middlewares
   app.use(
     cors({

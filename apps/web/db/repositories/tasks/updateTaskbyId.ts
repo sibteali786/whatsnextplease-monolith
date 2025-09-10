@@ -451,6 +451,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       // This is a new task creation - KEEP ALL EXISTING FUNCTIONALITY
       let shouldNotifySupervisors = false;
       let notificationMessage = '';
+      logger.debug({ userRole }, 'Handling notifications for new task creation');
 
       // Determine if we should send notifications based on creator role
       switch (userRole) {
@@ -477,9 +478,10 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       if (shouldNotifySupervisors) {
         const taskSupervisors = await prisma.user.findMany({
           where: { role: { name: Roles.TASK_SUPERVISOR }, id: { not: currentUser?.id } },
-          select: { id: true },
+          select: { id: true, firstName: true, lastName: true },
         });
 
+        logger.debug(taskSupervisors, 'Notifying task supervisors about new task');
         for (const supervisor of taskSupervisors) {
           try {
             await createNotification({

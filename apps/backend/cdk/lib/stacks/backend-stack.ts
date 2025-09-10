@@ -227,6 +227,7 @@ export class WnpBackendStack extends cdk.Stack {
           AWS_REGION: 'us-east-1',
           S3_BUCKET_NAME: this.s3Bucket.bucketName,
           CLOUDFRONT_DOMAIN: this.cloudFrontDistribution.distributionDomainName,
+          LOG_LEVEL: isProduction ? 'debug' : 'debug',
         },
         secrets: {
           DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),

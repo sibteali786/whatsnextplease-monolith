@@ -8,6 +8,7 @@ import {
   NotificationPayload,
   NotificationRecipient,
 } from './notificationDelivery.service';
+import { logger } from '../utils/logger';
 
 export class NotificationService {
   private deliveryResults: DeliveryResults;
@@ -15,23 +16,82 @@ export class NotificationService {
     this.deliveryResults = [];
   }
   async createNotification(data: CreateNotificationDto) {
-    return await prisma.notification.create({
+    logger.debug(
+      {
+        notificationType: data.type,
+        recipientUserId: data.userId,
+        recipientClientId: data.clientId,
+        message: data.message?.substring(0, 100) + '...', // Truncate for logging
+      },
+      'Creating notification'
+    );
+
+    const notification = await prisma.notification.create({
       data: { ...data, deliveryStatus: NotificationDeliveryStatus.PENDING },
     });
+
+    logger.info(
+      {
+        notificationId: notification.id,
+        type: notification.type,
+      },
+      'Notification created successfully'
+    );
+
+    return notification;
   }
 
   async deliverNotification(notification: NotificationPayload, data: CreateNotificationDto) {
+    logger.debug(
+      {
+        notificationType: notification.type,
+        hasUserId: !!data.userId,
+        hasClientId: !!data.clientId,
+        userId: data.userId,
+        clientId: data.clientId,
+      },
+      'Starting notification delivery'
+    );
+
     const deliveryService = new NotificationDeliveryService();
+
     if (data.userId) {
+      logger.debug({ userId: data.userId }, 'Delivering to USER');
       const recipient: NotificationRecipient = { id: data.userId, type: 'USER' };
       const deliveryResult = await deliveryService.deliverToAll(notification, recipient);
       this.deliveryResults = deliveryResult;
+
+      logger.debug(
+        {
+          userId: data.userId,
+          deliveryResults: deliveryResult,
+        },
+        'USER delivery completed'
+      );
     }
+
     if (data.clientId) {
+      logger.debug({ clientId: data.clientId }, 'Delivering to CLIENT');
       const recipient: NotificationRecipient = { id: data.clientId, type: 'CLIENT' };
       const deliveryResult = await deliveryService.deliverToAll(notification, recipient);
       this.deliveryResults = deliveryResult;
+
+      logger.debug(
+        {
+          clientId: data.clientId,
+          deliveryResults: deliveryResult,
+        },
+        'CLIENT delivery completed'
+      );
     }
+
+    logger.info(
+      {
+        totalDeliveries: this.deliveryResults.length,
+        successfulDeliveries: this.deliveryResults.filter(r => r.success).length,
+      },
+      'Notification delivery process completed'
+    );
   }
 
   getDeliveryResult(): DeliveryResults {
