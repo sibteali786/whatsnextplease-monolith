@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 import { z } from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { TaskTable } from '@/utils/validationSchemas';
@@ -122,7 +122,6 @@ export const generateUserTaskColumns = (
                 task.assignedToId || undefined
               );
             }
-
 
             if (onTaskUpdate) {
               await onTaskUpdate();

@@ -52,7 +52,7 @@ import { fileAPI } from '@/utils/fileAPI';
 import { COOKIE_NAME } from '@/utils/constant';
 import { MultiSelect } from '../ui/multi-select';
 import { Badge } from '@/components/ui/badge';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 import CommentSection from '../comments/CommentSection';
 import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 

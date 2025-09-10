@@ -27,7 +27,7 @@ import {
   NotificationType,
 } from '@prisma/client';
 import { ConnectionStatusIndicator } from './NotificatonIndicator';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 
 interface NotificationsListProps {
   notifications: NotificationList[];

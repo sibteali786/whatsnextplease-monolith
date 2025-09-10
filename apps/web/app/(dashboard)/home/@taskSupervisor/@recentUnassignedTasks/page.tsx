@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 import { transformEnumValue } from '@/utils/utils';
 import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/utils/user';
