@@ -60,7 +60,33 @@ router.get('/unassigned', adminMiddleware, controller.getUnassignedTasks);
  * @query userId
  */
 router.get('/counts', authMiddleware, controller.getTasksCount);
+/**
+ * @route GET /tasks/metadata
+ * @desc Get all available statuses and priorities
+ * @access Private (all authenticated users)
+ */
+router.get('/metadata', authMiddleware, controller.getTaskMetadata);
 
+/**
+ * @route GET /tasks/priority/:level
+ * @desc Get tasks by priority level (critical, high, medium, low, hold)
+ * @access Private (all authenticated users)
+ * @params level: critical | high | medium | low | hold
+ * @query cursor, pageSize, search, duration, status, assignedToId, categoryId, userId
+ */
+router.get('/priority/:level', authMiddleware, controller.getTasksByPriorityLevel);
+
+/**
+ * @route PATCH /tasks/:taskId/status-transition
+ * @desc Update task status with workflow validation
+ * @access Private (all authenticated users)
+ * @body { status: TaskStatusEnum }
+ */
+router.patch(
+  '/:taskId/status-transition',
+  authMiddleware,
+  controller.updateTaskStatusWithValidation
+);
 /**
  * @route GET /tasks/:taskId
  * @desc Get task by ID

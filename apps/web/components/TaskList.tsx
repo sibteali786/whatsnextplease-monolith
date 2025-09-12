@@ -6,7 +6,7 @@ import { Badge } from './ui/badge';
 import { capitalizeFirstChar, transformEnumValue } from '@/utils/utils';
 import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { TaskByPriority } from '@/utils/validationSchemas';
-import { Skeleton } from './ui/skeleton';
+import { taskStatusColors } from '@/utils/taskUtilColorClasses';
 
 interface TaskListProps {
   tasks: TaskByPriority[];
@@ -23,23 +23,10 @@ export const TaskList: React.FC<TaskListProps> = ({
   priority,
   handlePriority,
 }) => {
-  // Function to determine badge color based on status
-  const getBadgeVariant = (status: TaskStatusEnum) => {
-    switch (status) {
-      case TaskStatusEnum.OVERDUE:
-        return 'destructive';
-      case TaskStatusEnum.IN_PROGRESS:
-        return 'warning';
-      case TaskStatusEnum.COMPLETED:
-        return 'success';
-      case TaskStatusEnum.NEW:
-        return 'secondary';
-      default:
-        return 'secondary';
-    }
+  const getStatusBadgeClass = (status: TaskStatusEnum): string => {
+    return taskStatusColors[status] || 'bg-gray-500 text-white hover:bg-gray-600';
   };
 
-  // Define a consistent icon for tasks
   const taskIcon = 'Clipboard';
 
   return (
@@ -68,9 +55,9 @@ export const TaskList: React.FC<TaskListProps> = ({
                           </h5>
                         </div>
                       </div>
+                      {/* Updated Badge to use new color system */}
                       <Badge
-                        className="text-xs font-medium"
-                        variant={getBadgeVariant(task.status.statusName)}
+                        className={`text-xs font-medium ${getStatusBadgeClass(task.status.statusName)}`}
                       >
                         {transformEnumValue(task.status.statusName)}
                       </Badge>
@@ -84,48 +71,18 @@ export const TaskList: React.FC<TaskListProps> = ({
             ))}
           </ul>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">Nothing to show here</div>
+          <div className="p-4 text-center text-muted-foreground">
+            <p>No tasks found</p>
+          </div>
+        )}
+        {tasks.length > 0 && (
+          <div className="p-4 border-t">
+            <Button variant="ghost" className="w-full" onClick={() => handlePriority(priority)}>
+              View All {title}
+            </Button>
+          </div>
         )}
       </CardContent>
-      <div className="px-4 py-3 bg-card border-t text-center">
-        {tasks.length > 0 ? (
-          <Button variant="link" onClick={() => handlePriority(priority)}>
-            View More
-          </Button>
-        ) : null}
-      </div>
     </Card>
   );
 };
-
-export const TaskListSkeleton = () => (
-  <Card className="w-full max-w-md rounded-2xl shadow-sm overflow-hidden">
-    <CardHeader className="p-6 pb-3">
-      <div className="flex justify-between">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-6 w-6 rounded-full" />
-      </div>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="divide-y">
-        {[1, 2, 3].map(index => (
-          <div key={index} className="p-4">
-            <div className="flex gap-3">
-              <Skeleton className="h-9 w-9 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-3/4" />
-                <div className="flex justify-between">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </CardContent>
-    <div className="px-4 py-3 border-t text-center">
-      <Skeleton className="h-9 w-24 mx-auto" />
-    </div>
-  </Card>
-);

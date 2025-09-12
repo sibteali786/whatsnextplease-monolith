@@ -451,4 +451,169 @@ export class TaskRepository {
 
     return tasks.map(task => task.id);
   }
+  /**
+   * Get all available task statuses for dropdowns
+   */
+  async getAllTaskStatuses() {
+    return this.prisma.taskStatus.findMany({
+      select: { id: true, statusName: true },
+      orderBy: { statusName: 'asc' },
+    });
+  }
+
+  /**
+   * Get all available task priorities for dropdowns
+   */
+  async getAllTaskPriorities() {
+    return this.prisma.taskPriority.findMany({
+      select: { id: true, priorityName: true },
+      orderBy: { priorityName: 'asc' },
+    });
+  }
+
+  /**
+   * Validate task status transition based on workflow rules
+   */
+  async validateStatusTransition(
+    fromStatus: TaskStatusEnum,
+    toStatus: TaskStatusEnum
+  ): Promise<boolean> {
+    // Define your workflow transitions
+    const allowedTransitions: Record<TaskStatusEnum, TaskStatusEnum[]> = {
+      [TaskStatusEnum.NEW]: [
+        TaskStatusEnum.IN_PROGRESS,
+        TaskStatusEnum.CONTENT_IN_PROGRESS,
+        TaskStatusEnum.BLOCKED,
+        TaskStatusEnum.ON_HOLD,
+      ],
+      [TaskStatusEnum.IN_PROGRESS]: [
+        TaskStatusEnum.TESTING,
+        TaskStatusEnum.REVIEW,
+        TaskStatusEnum.COMPLETED,
+        TaskStatusEnum.BLOCKED,
+        TaskStatusEnum.ON_HOLD,
+      ],
+      [TaskStatusEnum.CONTENT_IN_PROGRESS]: [
+        TaskStatusEnum.REVIEW,
+        TaskStatusEnum.IN_PROGRESS,
+        TaskStatusEnum.BLOCKED,
+        TaskStatusEnum.ON_HOLD,
+      ],
+      [TaskStatusEnum.TESTING]: [
+        TaskStatusEnum.REVIEW,
+        TaskStatusEnum.COMPLETED,
+        TaskStatusEnum.REJECTED,
+        TaskStatusEnum.BLOCKED,
+      ],
+      [TaskStatusEnum.REVIEW]: [
+        TaskStatusEnum.APPROVED,
+        TaskStatusEnum.REJECTED,
+        TaskStatusEnum.IN_PROGRESS,
+      ],
+      [TaskStatusEnum.BLOCKED]: [
+        TaskStatusEnum.IN_PROGRESS,
+        TaskStatusEnum.NEW,
+        TaskStatusEnum.ON_HOLD,
+      ],
+      [TaskStatusEnum.ON_HOLD]: [TaskStatusEnum.IN_PROGRESS, TaskStatusEnum.NEW],
+      [TaskStatusEnum.REJECTED]: [TaskStatusEnum.IN_PROGRESS, TaskStatusEnum.CONTENT_IN_PROGRESS],
+      [TaskStatusEnum.APPROVED]: [TaskStatusEnum.COMPLETED],
+      [TaskStatusEnum.COMPLETED]: [], // Terminal state
+      [TaskStatusEnum.OVERDUE]: [
+        TaskStatusEnum.IN_PROGRESS,
+        TaskStatusEnum.COMPLETED,
+        TaskStatusEnum.BLOCKED,
+      ],
+    };
+
+    return allowedTransitions[fromStatus]?.includes(toStatus) ?? false;
+  }
+
+  /**
+   * Get priority mapping for grouping legacy and new priorities
+   */
+  getPriorityLevelMapping(): Record<string, TaskPriorityEnum[]> {
+    return {
+      critical: [TaskPriorityEnum.CRITICAL, TaskPriorityEnum.URGENT],
+      high: [TaskPriorityEnum.HIGH],
+      medium: [TaskPriorityEnum.MEDIUM, TaskPriorityEnum.NORMAL],
+      low: [TaskPriorityEnum.LOW, TaskPriorityEnum.LOW_PRIORITY],
+      hold: [TaskPriorityEnum.HOLD],
+    };
+  }
+
+  /**
+   * Get tasks by priority level (combines legacy and new priorities)
+   */
+  async getTasksByPriorityLevel(
+    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    filters: TaskFilters,
+    options: TaskQueryOptions
+  ) {
+    const priorityMapping = this.getPriorityLevelMapping();
+    const priorities = priorityMapping[level] || [];
+
+    if (priorities.length === 0) {
+      return { tasks: [], hasNextCursor: false, nextCursor: null };
+    }
+
+    const updatedFilters = {
+      ...filters,
+      priority: undefined, // Remove single priority filter
+    };
+
+    const { cursor, pageSize, orderBy = { id: 'asc' } } = options;
+
+    const where: Prisma.TaskWhereInput = {
+      ...updatedFilters.whereCondition,
+      ...updatedFilters.dateFilter,
+      priority: { priorityName: { in: priorities } }, // Use multiple priorities
+      ...(updatedFilters.status && { status: { statusName: updatedFilters.status } }),
+      ...(updatedFilters.assignedToId !== undefined && {
+        assignedToId: updatedFilters.assignedToId,
+      }),
+      ...(updatedFilters.categoryId && { categoryId: updatedFilters.categoryId }),
+      ...(updatedFilters.searchTerm && {
+        OR: [
+          { title: { contains: updatedFilters.searchTerm, mode: 'insensitive' } },
+          { description: { contains: updatedFilters.searchTerm, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const tasks = await this.prisma.task.findMany({
+      where,
+      take: pageSize + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        priority: { select: { id: true, priorityName: true } },
+        status: { select: { id: true, statusName: true } },
+        taskCategory: { select: { id: true, categoryName: true } },
+        assignedTo: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        assignedToId: true,
+        dueDate: true,
+        timeForTask: true,
+        overTime: true,
+        taskSkills: {
+          select: { skill: { select: { id: true, name: true } } },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const hasNextCursor = tasks.length > pageSize;
+    const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
+    if (hasNextCursor) {
+      tasks.pop();
+    }
+
+    return { tasks, hasNextCursor, nextCursor };
+  }
 }

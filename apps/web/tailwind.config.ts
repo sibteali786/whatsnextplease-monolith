@@ -6,6 +6,97 @@ const config: Config = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './utils/**/*.{js,ts,jsx,tsx}', // Include utils directory
+  ],
+  safelist: [
+    // CRITICAL: All task status colors - explicitly list every single one
+    'bg-blue-500',
+    'bg-yellow-500',
+    'bg-green-500',
+    'bg-red-500',
+    'bg-purple-500',
+    'bg-orange-500',
+    'bg-cyan-500',
+    'bg-red-700',
+    'bg-gray-500',
+    'bg-green-700',
+    'bg-red-300',
+    'bg-red-600',
+    'bg-gray-400',
+
+    // Text colors
+    'text-white',
+    'text-black',
+
+    // Hover states
+    'hover:bg-blue-600',
+    'hover:bg-yellow-600',
+    'hover:bg-green-600',
+    'hover:bg-red-600',
+    'hover:bg-purple-600',
+    'hover:bg-orange-600',
+    'hover:bg-cyan-600',
+    'hover:bg-red-800',
+    'hover:bg-gray-600',
+    'hover:bg-green-800',
+    'hover:bg-red-400',
+    'hover:bg-red-700',
+    'hover:bg-gray-500',
+
+    // Custom CSS property colors with opacity variants
+    'bg-info',
+    'text-info-foreground',
+    'hover:bg-info/90',
+    'bg-warning',
+    'text-warning-foreground',
+    'hover:bg-warning/90',
+    'bg-success',
+    'text-success-foreground',
+    'hover:bg-success/90',
+    'hover:bg-success/80',
+    'bg-destructive',
+    'text-destructive-foreground',
+    'hover:bg-destructive/90',
+    'bg-primary',
+    'text-primary-foreground',
+    'hover:bg-primary/90',
+    'bg-muted',
+    'text-muted-foreground',
+    'hover:bg-muted/90',
+    'bg-destructive/70',
+    'hover:bg-destructive/60',
+
+    // Add these specific missing colors that were in your images
+    'bg-cyan-500',
+    'hover:bg-cyan-600',
+    'text-cyan-500',
+    'bg-purple-500',
+    'hover:bg-purple-600',
+    'text-purple-500',
+    'bg-red-700',
+    'hover:bg-red-800',
+    'text-red-700',
+    'bg-gray-400',
+    'hover:bg-gray-500',
+    'text-gray-400',
+
+    // Pattern-based safelist for comprehensive coverage
+    {
+      pattern: /^bg-(red|green|blue|yellow|orange|purple|cyan|gray)-(300|400|500|600|700|800)$/,
+      variants: ['hover', 'focus', 'active', 'dark'],
+    },
+    {
+      pattern: /^text-(red|green|blue|yellow|orange|purple|cyan|gray)-(300|400|500|600|700|800)$/,
+      variants: ['hover', 'focus', 'active', 'dark'],
+    },
+    {
+      pattern:
+        /^hover:bg-(red|green|blue|yellow|orange|purple|cyan|gray)-(300|400|500|600|700|800)$/,
+    },
+    {
+      pattern: /^border-(red|green|blue|yellow|orange|purple|cyan|gray)-(300|400|500|600|700|800)$/,
+      variants: ['hover', 'focus'],
+    },
   ],
   theme: {
     extend: {

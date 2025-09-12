@@ -1,80 +1,57 @@
 'use client';
 import { TaskList } from '@/components/TaskList';
 import TasksListModal from '@/components/tasks/TasksListModal';
-import { getTasksByPriority } from '@/db/repositories/tasks/getTasksByPriority';
-import { getCurrentUser } from '@/utils/user';
 import { TaskByPriority } from '@/utils/validationSchemas';
-import { Roles, TaskPriorityEnum } from '@prisma/client';
+import { TaskPriorityEnum } from '@prisma/client';
 import { CallToAction } from '@/components/CallToAction';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useTasksByPriorityLevel } from '@/utils/tasks/taskAPI';
 
 export default function TasksSection() {
   const [open, setOpen] = useState(false);
-  const [urgentTasks, setUrgentTasks] = useState<TaskByPriority[]>([]);
-  const [normalTasks, setNormalTasks] = useState<TaskByPriority[]>([]);
-  const [lowPriorityTasks, setLowPriorityTasks] = useState<TaskByPriority[]>([]);
-  const [priority, setPriority] = useState<TaskPriorityEnum>(TaskPriorityEnum.NORMAL);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<TaskPriorityEnum>(TaskPriorityEnum.CRITICAL);
 
-  const handlePriorityChange = (priority: TaskPriorityEnum) => {
-    setPriority(priority);
+  const { data: criticalData, loading: criticalLoading } = useTasksByPriorityLevel('critical', {
+    pageSize: 5,
+  });
+  const { data: highData, loading: highLoading } = useTasksByPriorityLevel('high', { pageSize: 5 });
+  const { data: mediumData, loading: mediumLoading } = useTasksByPriorityLevel('medium', {
+    pageSize: 5,
+  });
+  const { data: lowData, loading: lowLoading } = useTasksByPriorityLevel('low', { pageSize: 5 });
+  const { data: holdData, loading: holdLoading } = useTasksByPriorityLevel('hold', { pageSize: 5 });
+  const handlePriorityChange = (level: TaskPriorityEnum) => {
+    setSelectedLevel(level);
     setOpen(true);
   };
 
-  // Fetch tasks based on priority
-  useEffect(() => {
-    async function fetchTasks() {
-      setIsLoading(true);
-      const user = await getCurrentUser();
-      if (user?.role?.name === Roles.SUPER_USER) {
-        try {
-          // Fetch all task types in parallel for better performance
-          const [urgentResponse, normalResponse, lowResponse] = await Promise.all([
-            getTasksByPriority(TaskPriorityEnum.URGENT),
-            getTasksByPriority(TaskPriorityEnum.NORMAL),
-            getTasksByPriority(TaskPriorityEnum.LOW_PRIORITY),
-          ]);
+  // Check if any data is still loading
+  const anyLoading = criticalLoading || highLoading || mediumLoading || lowLoading || holdLoading;
 
-          setUrgentTasks(urgentResponse.tasks || []);
-          setNormalTasks(normalResponse.tasks || []);
-          setLowPriorityTasks(lowResponse.tasks || []);
-          setError(null);
-        } catch (e) {
-          console.error('Failed to retrieve tasks:', e);
-          setError('Unable to load tasks. Please try again later.');
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    }
-    fetchTasks();
-  }, []);
+  // Calculate total tasks
+  const totalTasks =
+    (criticalData?.totalCount || 0) +
+    (highData?.totalCount || 0) +
+    (mediumData?.totalCount || 0) +
+    (lowData?.totalCount || 0) +
+    (holdData?.totalCount || 0);
 
-  // If there are no tasks at all, show a call to action
-  const noTasksAvailable =
-    !isLoading &&
-    urgentTasks.length === 0 &&
-    normalTasks.length === 0 &&
-    lowPriorityTasks.length === 0;
-
-  if (error) {
+  if (anyLoading) {
     return (
       <div>
-        <CallToAction
-          link="/taskOfferings"
-          action="Try Again"
-          title="Unable to Load Tasks"
-          description={error}
-          variant="destructive"
-          iconType="alert"
-          buttonVariant="outline"
-        />
+        <h2 className="text-2xl font-bold col-span-full mb-4">Tasks</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-gray-200 rounded-lg h-48"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
-  if (noTasksAvailable) {
+  if (totalTasks === 0) {
     return (
       <div>
         <h2 className="text-2xl font-bold col-span-full mb-4">Tasks</h2>
@@ -83,70 +60,90 @@ export default function TasksSection() {
           action="Create Task"
           title="No Tasks Available"
           description="You don't have any tasks at the moment."
-          helperText="Create your first task to get started managing work assignments."
-          variant="primary"
+          variant="default"
           iconType="plus"
-          className="w-full max-w-3xl mx-auto"
         />
       </div>
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const convertToTaskByPriority = (tasks: any[]): TaskByPriority[] => {
+    return tasks.map(task => ({
+      id: task.id,
+      title: task.title,
+      status: task.status, // Should match the expected shape
+      priority: task.priority, // Should match the expected shape
+      dueDate: task.dueDate,
+      taskCategory: task.taskCategory ?? null, // or provide a sensible default
+      description: task.description ?? '',
+      createdByUser: task.createdByUser ?? null,
+      createdByClient: task.createdByClient ?? null,
+    }));
+  };
+
   return (
     <div>
-      <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-8">
-        <h2 className="text-2xl font-bold col-span-full">Tasks</h2>
+      <h2 className="text-2xl font-bold col-span-full mb-4">Tasks by Priority</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Critical Tasks (combines URGENT + CRITICAL) */}
+        {criticalData && criticalData.totalCount > 0 && (
+          <TaskList
+            tasks={convertToTaskByPriority(criticalData.tasks)}
+            title={`Critical (${criticalData.totalCount})`}
+            icon="AlertTriangle"
+            priority={TaskPriorityEnum.CRITICAL} // For legacy compatibility
+            handlePriority={() => handlePriorityChange(TaskPriorityEnum.CRITICAL)}
+          />
+        )}
 
-        {isLoading ? (
-          // Loading state - show skeleton cards
-          <>
-            {[1, 2, 3].map(index => (
-              <div
-                key={index}
-                className="w-full max-w-md rounded-2xl border p-6 space-y-4 animate-pulse"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-1/3"></div>
-                  <div className="h-6 w-6 bg-purple-300 dark:bg-purple-800 rounded-full"></div>
-                </div>
-                <div className="space-y-2">
-                  {[1, 2, 3].map(item => (
-                    <div key={item} className="h-16 bg-gray-200 dark:bg-gray-800 rounded-lg"></div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </>
-        ) : (
-          // Render actual task lists
-          <>
-            <TaskList
-              tasks={urgentTasks}
-              title="Urgent Tasks"
-              icon="TriangleAlert"
-              priority={TaskPriorityEnum.URGENT}
-              handlePriority={handlePriorityChange}
-            />
-            <TaskList
-              tasks={normalTasks}
-              title="Normal Tasks"
-              icon="Clock"
-              priority={TaskPriorityEnum.NORMAL}
-              handlePriority={handlePriorityChange}
-            />
-            <TaskList
-              tasks={lowPriorityTasks}
-              title="Low Priority Tasks"
-              icon="CircleArrowDown"
-              priority={TaskPriorityEnum.LOW_PRIORITY}
-              handlePriority={handlePriorityChange}
-            />
-          </>
+        {/* High Priority Tasks */}
+        {highData && highData.totalCount > 0 && (
+          <TaskList
+            tasks={convertToTaskByPriority(highData.tasks)}
+            title={`High (${highData.totalCount})`}
+            icon="ArrowUp"
+            priority={TaskPriorityEnum.HIGH}
+            handlePriority={() => handlePriorityChange(TaskPriorityEnum.HIGH)}
+          />
+        )}
+
+        {/* Medium Priority Tasks (combines NORMAL + MEDIUM) */}
+        {mediumData && mediumData.totalCount > 0 && (
+          <TaskList
+            tasks={convertToTaskByPriority(mediumData.tasks)}
+            title={`Medium (${mediumData.totalCount})`}
+            icon="Minus"
+            priority={TaskPriorityEnum.MEDIUM}
+            handlePriority={() => handlePriorityChange(TaskPriorityEnum.MEDIUM)}
+          />
+        )}
+
+        {/* Low Priority Tasks (combines LOW_PRIORITY + LOW) */}
+        {lowData && lowData.totalCount > 0 && (
+          <TaskList
+            tasks={convertToTaskByPriority(lowData.tasks)}
+            title={`Low (${lowData.totalCount})`}
+            icon="ArrowDown"
+            priority={TaskPriorityEnum.LOW}
+            handlePriority={() => handlePriorityChange(TaskPriorityEnum.LOW)}
+          />
+        )}
+
+        {/* On Hold Tasks */}
+        {holdData && holdData.totalCount > 0 && (
+          <TaskList
+            tasks={convertToTaskByPriority(holdData.tasks)}
+            title={`On Hold (${holdData.totalCount})`}
+            icon="Pause"
+            priority={TaskPriorityEnum.HOLD}
+            handlePriority={() => handlePriorityChange(TaskPriorityEnum.HOLD)}
+          />
         )}
       </div>
 
-      {/* Task list modal */}
-      <TasksListModal open={open} setOpen={setOpen} priority={priority} />
+      {/* Tasks List Modal */}
+      <TasksListModal open={open} setOpen={setOpen} priority={selectedLevel} />
     </div>
   );
 }

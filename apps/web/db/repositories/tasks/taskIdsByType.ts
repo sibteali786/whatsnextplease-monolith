@@ -1,30 +1,39 @@
-"use client";
-import { DurationEnum } from "@/types";
-import { handleError } from "@/utils/errorHandler";
-import { getTaskIdsByTypeOutput } from "@/utils/validationSchemas";
-import { Roles } from "@prisma/client";
-import { z } from "zod";
+'use client';
+import { DurationEnum } from '@/types';
+import { handleError } from '@/utils/errorHandler';
+import { getTaskIdsByTypeOutput } from '@/utils/validationSchemas';
+import { Roles } from '@prisma/client';
+import { z } from 'zod';
+import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 
 type GetTaskIdsSchema = z.infer<typeof getTaskIdsByTypeOutput>;
+
 export const taskIdsByType = async (
-  type: "all" | "assigned" | "unassigned",
+  type: 'all' | 'assigned' | 'unassigned',
   role: Roles,
   searchTerm: string,
-  duration: DurationEnum,
+  duration: DurationEnum
 ): Promise<GetTaskIdsSchema> => {
   try {
-    const response = await fetch(
-      `/api/tasks/idsByType?type=${type}&searchTerm=${searchTerm}&duration=${duration}&&role=${role}`,
-    );
-    if (!response.ok) {
-      const error = new Error("Failed to fetch tasks");
-      return handleError(error, "tasksByType") as GetTaskIdsSchema;
-    }
-    const jsonData = await response.json();
+    // UPDATED: Use backend API instead of Next.js API route
+    const response = await taskApiClient.getTaskIds({
+      search: searchTerm,
+      duration,
+      // Map type to backend query parameters
+      ...(type === 'assigned' && { assignedToId: 'not-null' }),
+      ...(type === 'unassigned' && { assignedToId: null }),
+    });
 
-    const data = getTaskIdsByTypeOutput.parse(jsonData);
-    return data;
+    if (response.success) {
+      return {
+        success: true,
+        taskIds: response.taskIds,
+      };
+    } else {
+      throw new Error(response.message || 'Failed to fetch task IDs');
+    }
   } catch (error) {
-    return handleError(error, "tasksByType") as GetTaskIdsSchema;
+    console.error('Error in taskIdsByType:', error);
+    return handleError(error, 'tasksByType') as GetTaskIdsSchema;
   }
 };

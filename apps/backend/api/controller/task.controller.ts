@@ -318,6 +318,105 @@ export class TaskController {
     }
   };
 
+  /**
+   * Get task metadata (statuses and priorities)
+   */
+  private handleGetTaskMetadata = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const result = await this.taskService.getTaskMetadata();
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get tasks by priority level
+   */
+  private handleGetTasksByPriorityLevel = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { level } = req.params;
+      const cursor = req.query.cursor as string;
+      const pageSizeStr = req.query.pageSize as string;
+      const searchTerm = (req.query.search as string) || '';
+      const duration = (req.query.duration as DurationEnum) || DurationEnum.ALL;
+      const status = req.query.status as TaskStatusEnum;
+      const assignedToId = req.query.assignedToId as string;
+      const categoryId = req.query.categoryId as string;
+      const userId = req.query.userId as string;
+
+      const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
+
+      if (!['critical', 'high', 'medium', 'low', 'hold'].includes(level)) {
+        throw new BadRequestError('Invalid priority level');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.getTasksByPriorityLevel(
+        level as 'critical' | 'high' | 'medium' | 'low' | 'hold',
+        {
+          userId,
+          role: req.user.role,
+          cursor,
+          pageSize,
+          searchTerm,
+          duration,
+          status,
+          assignedToId: assignedToId === 'null' ? null : assignedToId,
+          categoryId,
+        }
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Update task status with validation
+   */
+  private handleUpdateTaskStatusWithValidation = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { taskId } = req.params;
+      const { status } = req.body;
+
+      if (!taskId || !status) {
+        throw new BadRequestError('Task ID and status are required');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.updateTaskStatusWithValidation(
+        taskId,
+        status,
+        req.user.id,
+        req.user.role
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // Publicly exposed route handlers
   getTasks = asyncHandler(this.handleGetTasks);
   getTaskById = asyncHandler(this.handleGetTaskById);
@@ -328,4 +427,7 @@ export class TaskController {
   getUnassignedTasks = asyncHandler(this.handleGetUnassignedTasks);
   getTasksCount = asyncHandler(this.handleGetTasksCount);
   updateTaskField = asyncHandler(this.handleUpdateTaskField);
+  getTaskMetadata = asyncHandler(this.handleGetTaskMetadata);
+  getTasksByPriorityLevel = asyncHandler(this.handleGetTasksByPriorityLevel);
+  updateTaskStatusWithValidation = asyncHandler(this.handleUpdateTaskStatusWithValidation);
 }

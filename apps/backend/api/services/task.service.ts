@@ -432,4 +432,160 @@ export class TaskService {
       },
     };
   }
+  /**
+   * Get all available statuses and priorities for UI dropdowns
+   */
+  async getTaskMetadata() {
+    const [statuses, priorities] = await Promise.all([
+      this.taskRepository.getAllTaskStatuses(),
+      this.taskRepository.getAllTaskPriorities(),
+    ]);
+
+    // Group priorities by level for better UX
+    const priorityLevels = {
+      critical: priorities.filter(p => ['URGENT', 'CRITICAL'].includes(p.priorityName)),
+      high: priorities.filter(p => p.priorityName === 'HIGH'),
+      medium: priorities.filter(p => ['NORMAL', 'MEDIUM'].includes(p.priorityName)),
+      low: priorities.filter(p => ['LOW_PRIORITY', 'LOW'].includes(p.priorityName)),
+      hold: priorities.filter(p => p.priorityName === 'HOLD'),
+    };
+
+    return {
+      success: true,
+      data: {
+        statuses: statuses.map(s => ({
+          id: s.id,
+          name: s.statusName,
+          displayName: s.statusName
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, l => l.toUpperCase()),
+        })),
+        priorities: priorities.map(p => ({
+          id: p.id,
+          name: p.priorityName,
+          displayName: p.priorityName
+            .replace(/_/g, ' ')
+            .toLowerCase()
+            .replace(/\b\w/g, l => l.toUpperCase()),
+          isLegacy: ['URGENT', 'NORMAL', 'LOW_PRIORITY'].includes(p.priorityName),
+        })),
+        priorityLevels,
+      },
+    };
+  }
+
+  /**
+   * Update task status with transition validation
+   */
+  async updateTaskStatusWithValidation(
+    taskId: string,
+    newStatus: TaskStatusEnum,
+    userId: string,
+    role: Roles
+  ) {
+    // Get current task
+    const currentTask = await this.taskRepository.findTaskById(taskId);
+    if (!currentTask) {
+      throw new NotFoundError('Task not found');
+    }
+
+    // Validate status transition
+    const isValidTransition = await this.taskRepository.validateStatusTransition(
+      currentTask.status.statusName,
+      newStatus
+    );
+
+    if (!isValidTransition) {
+      throw new BadRequestError(
+        `Invalid status transition from ${currentTask.status.statusName} to ${newStatus}. 
+       Please check the workflow requirements.`
+      );
+    }
+
+    // Proceed with update
+    return this.updateTaskField(taskId, 'status', newStatus, userId, role);
+  }
+
+  /**
+   * Get tasks by priority level (combines legacy and new priorities)
+   */
+  async getTasksByPriorityLevel(
+    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    params: TaskQueryParams
+  ) {
+    const {
+      userId,
+      role,
+      cursor,
+      pageSize = 10,
+      searchTerm,
+      duration,
+      status,
+      assignedToId,
+      categoryId,
+    } = params;
+
+    // Authorization check
+    if (!canViewTasks(role)) {
+      throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
+    }
+
+    // Build filters
+    const filters: TaskFilters = {
+      whereCondition: userId ? getTaskFilterCondition(userId, role) : {},
+      dateFilter: getDateFilter(duration || DurationEnum.ALL),
+      searchTerm,
+      status,
+      assignedToId,
+      categoryId,
+    };
+
+    const queryOptions: TaskQueryOptions = {
+      cursor,
+      pageSize,
+      orderBy: { id: 'asc' },
+    };
+
+    // Get tasks by priority level
+    const taskResult = await this.taskRepository.getTasksByPriorityLevel(
+      level,
+      filters,
+      queryOptions
+    );
+
+    // Get total count for this priority level
+    const priorityMapping = this.taskRepository.getPriorityLevelMapping();
+    const priorities = priorityMapping[level] || [];
+
+    const countFilters = {
+      ...filters,
+      priority: undefined, // Will be handled in count method
+    };
+
+    // Count tasks with multiple priorities
+    const totalCount = await this.taskRepository.countTasks({
+      ...countFilters,
+      whereCondition: {
+        ...countFilters.whereCondition,
+        priority: { priorityName: { in: priorities } },
+      },
+    });
+
+    // Format tasks
+    const formattedTasks = taskResult.tasks.map(task => ({
+      ...task,
+      taskSkills: task.taskSkills.map(ts => ts.skill.name),
+    }));
+
+    return {
+      success: true,
+      tasks: formattedTasks,
+      hasNextCursor: taskResult.hasNextCursor,
+      nextCursor: taskResult.nextCursor,
+      totalCount,
+      level,
+      prioritiesIncluded: priorities,
+    };
+  }
 }

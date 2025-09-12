@@ -204,6 +204,102 @@ class TaskApiClient {
 
     return response.json();
   }
+
+  /**
+   * NEW: Get all available task statuses and priorities for dropdowns
+   */
+  async getTaskMetadata() {
+    const response = await fetch(`${this.baseUrl}/tasks/metadata`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch task metadata: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * NEW: Get tasks by priority level (critical, high, medium, low, hold)
+   */
+  async getTasksByPriorityLevel(
+    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    params?: {
+      cursor?: string;
+      pageSize?: number;
+      search?: string;
+      duration?: string;
+      status?: TaskStatusEnum;
+      assignedToId?: string;
+      categoryId?: string;
+      userId?: string;
+    }
+  ) {
+    const searchParams = new URLSearchParams();
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const queryString = searchParams.toString();
+    const url = `${this.baseUrl}/tasks/priority/${level}${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch tasks by priority level: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * NEW: Update task status with workflow validation
+   */
+  async updateTaskStatusWithValidation(taskId: string, status: TaskStatusEnum) {
+    const response = await fetch(`${this.baseUrl}/tasks/${taskId}/status-transition`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to update task status: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+  /**
+   * UPDATED: Enhanced updateTaskField method
+   */
+  async updateTaskField(
+    taskId: string,
+    field: 'status' | 'priority' | 'taskCategory',
+    value: string
+  ) {
+    const response = await fetch(`${this.baseUrl}/tasks/${taskId}/field`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ field, value }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to update task field: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
 
 // Create singleton instance
