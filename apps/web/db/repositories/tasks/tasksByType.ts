@@ -17,7 +17,6 @@ export const tasksByType = async (
   duration: DurationEnum
 ): Promise<GetTaskSchema> => {
   try {
-    // UPDATED: Use backend API instead of Next.js API route
     const response = await taskApiClient.getTasks({
       cursor: cursor || undefined,
       pageSize,

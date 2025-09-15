@@ -151,7 +151,6 @@ export class TaskController {
         throw new BadRequestError('User authentication required');
       }
       const result = await this.taskService.getTaskStatistics(userId, req.user.role);
-
       res.status(200).json(result);
     } catch (error) {
       next(error);
@@ -273,7 +272,6 @@ export class TaskController {
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
-      console.log('req.query', req.query);
       const taskAssignmentStatus = req.query.taskAssignmentStatus as string;
       if (taskAssignmentStatus === 'taskAssignmentStatus') {
         const result = await this.taskService.getTaskAssignmentStatusCounts(userId, req.user.role);
@@ -298,8 +296,6 @@ export class TaskController {
               count: stat._count.id,
             })) || [],
         };
-
-        console.log('result', result);
 
         res.status(200).json(countsResponse);
       }

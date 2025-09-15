@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { CountLabel } from '@/components/common/CountLabel';
@@ -5,7 +6,7 @@ import { TaskAgentChart } from '@/components/tasks/ChartTasks';
 import { Card } from '@/components/ui/card';
 import { getCurrentUser } from '@/utils/user';
 import { taskApiClient } from '@/utils/taskApi';
-import { Roles } from '@prisma/client';
+import { Roles, TaskStatusEnum } from '@prisma/client';
 import { CircleX, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -13,6 +14,14 @@ interface TaskStatusCounts {
   IN_PROGRESS?: number;
   COMPLETED?: number;
   OVERDUE?: number;
+  NEW?: number;
+  REVIEW?: number;
+  REJECTED?: number;
+  CONTENT_IN_PROGRESS?: number;
+  TESTING?: number;
+  APPROVED?: number;
+  BLOCKED?: number;
+  ON_HOLD?: number;
 }
 
 const TaskSummaryPage = () => {
@@ -37,12 +46,35 @@ const TaskSummaryPage = () => {
         setUser(currentUser);
 
         // Get task statistics using the new API client
-        const statistics = await taskApiClient.getTaskStatistics(currentUser.id);
+        const response = await taskApiClient.getTaskStatistics(currentUser.id);
 
-        if (statistics.success) {
-          setTasksWithStatus(statistics.statusCounts || {});
+        // In your useEffect, replace the transformation logic with this:
+        if (response.success && response.statistics) {
+          const statusCounts: TaskStatusCounts = {};
+
+          // First, process tasksByStatus array to create a map
+          if (response.statistics.tasksByStatus) {
+            response.statistics.tasksByStatus.forEach((statusGroup: any) => {
+              if (statusGroup.status && statusGroup._count) {
+                const statusName = statusGroup.status.statusName as TaskStatusEnum;
+                statusCounts[statusName] = statusGroup._count.id;
+              }
+            });
+          }
+
+          // FIXED: Only override OVERDUE if we don't already have OVERDUE status tasks
+          // or if the calculated overdue count is higher
+          if (response.statistics.overdueTasks !== undefined) {
+            statusCounts.OVERDUE = Math.max(
+              statusCounts.OVERDUE || 0,
+              response.statistics.overdueTasks
+            );
+          }
+
+          console.log('Processed status counts:', statusCounts);
+          setTasksWithStatus(statusCounts);
         } else {
-          setError(statistics.message || 'Failed to fetch task statistics');
+          setError(response.message || 'Failed to fetch task statistics');
         }
       } catch (err) {
         console.error('Error fetching task summary:', err);
@@ -123,6 +155,16 @@ const TaskSummaryPage = () => {
               countSize="text-3xl"
               labelSize="lg"
               countColor="red-500"
+            />
+            <CountLabel
+              lineHeight={'normal'}
+              label={'New Tasks'}
+              count={tasksWithStatus.NEW ?? 0}
+              align="start"
+              isList={true}
+              listOpacity={30}
+              countSize="text-3xl"
+              labelSize="lg"
             />
           </div>
         </div>

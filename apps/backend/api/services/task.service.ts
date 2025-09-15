@@ -66,7 +66,6 @@ export class TaskService {
       assignedToId,
       categoryId,
     } = params;
-    console.log('TaskService getTasks params:', params);
     // Authorization check
     if (!canViewTasks(role)) {
       throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
