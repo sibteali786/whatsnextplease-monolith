@@ -120,13 +120,21 @@ enum TaskPriorityEnum {
     URGENT
     LOW_PRIORITY
     NORMAL
+
+    CRITICAL // P1 - Will block all progress
+    HIGH // P2 - Could block progress  
+    MEDIUM // P3 - Standard priority
+    LOW // P4 - Minor impact
+    HOLD // P5 - Indefinitely postponed
 }
 
 model TaskPriority {
     id           String           @id @default(uuid())
-    priorityName TaskPriorityEnum @default(NORMAL)
+    priorityName TaskPriorityEnum @unique @default(NORMAL)
     tasks        Task[]
     rates        Rate[]
+    createdAt    DateTime         @default(now())
+    updatedAt    DateTime         @updatedAt
 }
 
 enum TaskStatusEnum {
@@ -134,11 +142,19 @@ enum TaskStatusEnum {
     OVERDUE
     IN_PROGRESS
     COMPLETED
+
+    REVIEW
+    CONTENT_IN_PROGRESS //  For content creation tasks
+    TESTING //   For QA/testing phase
+    BLOCKED //  When task is blocked by dependencies
+    ON_HOLD //  Temporarily paused
+    APPROVED // Final approval received
+    REJECTED // Rejected and needs rework
 }
 
 model TaskStatus {
     id            String         @id @default(uuid())
-    statusName    TaskStatusEnum @default(NEW)
+    statusName    TaskStatusEnum @unique @default(NEW)
     tasks         Task[]
     taskHistories TaskHistory[]
     createdAt     DateTime       @default(now())

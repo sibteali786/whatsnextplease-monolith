@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from 'express';
 import { TaskAgentService } from '../services/taskAgent.service';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError } from '@wnp/types';
-import { logger } from '../utils/logger';
 
 export class TaskAgentController {
   constructor(private readonly taskAgentService: TaskAgentService = new TaskAgentService()) {}
@@ -12,7 +11,6 @@ export class TaskAgentController {
   private handleGetTaskAgentList = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const taskAgentList = await this.taskAgentService.getTaskAgentList();
-      logger.info('Fetched task agent list', { count: taskAgentList.users });
       res.status(200).json(taskAgentList);
     } catch (error) {
       next(error);

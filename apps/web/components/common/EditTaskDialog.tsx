@@ -52,9 +52,10 @@ import { fileAPI } from '@/utils/fileAPI';
 import { COOKIE_NAME } from '@/utils/constant';
 import { MultiSelect } from '../ui/multi-select';
 import { Badge } from '@/components/ui/badge';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 import CommentSection from '../comments/CommentSection';
 import { getTaskById } from '@/db/repositories/tasks/getTaskById';
+import { taskApiClient } from '@/utils/taskApi';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -101,7 +102,20 @@ const editTaskSchema = z.object({
     ),
   dueDate: z.date().nullable(),
 });
-
+interface TaskMetadata {
+  priorities: Array<{
+    id: string;
+    name: TaskPriorityEnum;
+    displayName: string;
+    isLegacy?: boolean;
+  }>;
+  statuses: Array<{
+    id: string;
+    name: TaskStatusEnum;
+    displayName: string;
+    isLegacy?: boolean;
+  }>;
+}
 type EditTaskFormValues = z.infer<typeof editTaskSchema>;
 
 interface EditTaskDialogProps {
@@ -131,6 +145,9 @@ export default function EditTaskDialog({
   >([]);
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [metadata, setMetadata] = useState<TaskMetadata | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(true);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
 
   // Permission checks based on role
   const canAssignTasks = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
@@ -155,6 +172,38 @@ export default function EditTaskDialog({
     },
     mode: 'onSubmit',
   });
+
+  /**
+   * Fetch task metadata using taskApiClient
+   * This replaces the old useTaskMetadat hook and provides better error handling
+   */
+  const fetchTaskMetadata = async () => {
+    try {
+      setMetadataLoading(true);
+      setMetadataError(null);
+
+      const metadataResponse = await taskApiClient.getTaskMetadata();
+
+      if (metadataResponse.success) {
+        setMetadata(metadataResponse.data);
+      } else {
+        throw new Error(metadataResponse.message || 'Failed to fetch task metadata');
+      }
+    } catch (error) {
+      console.error('Error fetching task metadata:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch metadata';
+      setMetadataError(errorMessage);
+
+      toast({
+        variant: 'destructive',
+        title: 'Failed to load task metadata',
+        description: errorMessage,
+        icon: <CircleX size={40} />,
+      });
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
 
   const fetchSkills = async () => {
     try {
@@ -255,8 +304,11 @@ export default function EditTaskDialog({
         setFiles(task.taskFiles);
       }
     }
-    fetchUsers();
-    fetchSkills();
+    if (open) {
+      fetchUsers();
+      fetchSkills();
+      fetchTaskMetadata();
+    }
   }, [task, open, form]);
 
   const [, startTransition] = useTransition();
@@ -582,11 +634,30 @@ export default function EditTaskDialog({
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(TaskPriorityEnum).map(value => (
-                            <SelectItem key={value} value={value}>
-                              {transformEnumValue(value)}
+                          {metadataLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading...
                             </SelectItem>
-                          ))}
+                          ) : metadataError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading priorities
+                            </SelectItem>
+                          ) : (
+                            metadata?.priorities.map(priority => (
+                              <SelectItem key={priority.id} value={priority.name}>
+                                <div className="flex items-center gap-2">
+                                  <Badge className={taskPriorityColors[priority.name]}>
+                                    {priority.displayName}
+                                  </Badge>
+                                  {priority.isLegacy && (
+                                    <Badge variant="outline" className="text-xs">
+                                      Legacy
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -625,11 +696,23 @@ export default function EditTaskDialog({
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(TaskStatusEnum).map(value => (
-                            <SelectItem key={value} value={value}>
-                              {transformEnumValue(value)}
+                          {metadataLoading ? (
+                            <SelectItem value="loading" disabled>
+                              Loading...
                             </SelectItem>
-                          ))}
+                          ) : metadataError ? (
+                            <SelectItem value="error" disabled>
+                              Error loading statuses
+                            </SelectItem>
+                          ) : (
+                            metadata?.statuses.map(status => (
+                              <SelectItem key={status.id} value={status.name}>
+                                <Badge className={taskStatusColors[status.name]}>
+                                  {status.displayName}
+                                </Badge>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </FormControl>

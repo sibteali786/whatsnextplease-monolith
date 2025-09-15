@@ -3,7 +3,7 @@
 import { COOKIE_NAME } from '@/utils/constant';
 import { getCookie } from '@/utils/utils';
 
-// Update interface to match actual API response
+// Updated interface to match backend response
 export interface TaskAgent {
   id: string;
   firstName: string;
@@ -29,7 +29,8 @@ export async function getTaskAgentIds() {
     }
 
     const data = await response.json();
-    return data.taskAgentIds || [];
+    // Fixed: backend returns 'ids', not 'taskAgentIds'
+    return data.ids || [];
   } catch (error) {
     console.error('Error fetching task agent IDs:', error);
     return [];
@@ -56,6 +57,8 @@ export async function getTaskAgents(
 
     const url = `${process.env.NEXT_PUBLIC_API_URL}/taskAgents?${queryParams.toString()}`;
 
+    console.log('Fetching task agents from:', url); // Debug log
+
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -64,7 +67,9 @@ export async function getTaskAgents(
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch task agents');
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`Failed to fetch task agents: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -72,6 +77,7 @@ export async function getTaskAgents(
       taskAgents: data.taskAgents as TaskAgent[],
       nextCursor: data.nextCursor,
       totalCount: data.totalCount,
+      hasMore: data.hasMore,
       success: true,
     };
   } catch (error) {
@@ -79,6 +85,7 @@ export async function getTaskAgents(
     return {
       taskAgents: [],
       totalCount: 0,
+      hasMore: false,
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error',
     };

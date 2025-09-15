@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { CircleX, Info, Loader2, ArrowLeft } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 import { FileSchemaType, Task, TaskFile } from '@/utils/validationSchemas';
 import { Prisma } from '@prisma/client';
 import { formatNumbers } from '@/utils/utils';

@@ -1,3 +1,5 @@
+// apps/web/app/(dashboard)/home/@taskSupervisor/@recentUnassignedTasks/page.tsx - UPDATED
+
 'use client';
 import {
   Table,
@@ -9,15 +11,16 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { taskPriorityColors, taskStatusColors } from '@/utils/commonClasses';
 import { transformEnumValue } from '@/utils/utils';
 import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/utils/user';
 import { Roles } from '@prisma/client';
-import { getUnassignedTasksOutputSchema, TaskType } from '@/utils/validationSchemas';
+import { TaskType } from '@/utils/validationSchemas';
 import { ClipboardCheck, Loader2, PlusCircle } from 'lucide-react';
 import { CallToAction } from '@/components/CallToAction';
 import { LinkButton } from '@/components/ui/LinkButton';
+import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
+import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 
 const RecentUnassignedTasksPage = () => {
   const [tasks, setTasks] = useState<TaskType[]>([]);
@@ -30,16 +33,14 @@ const RecentUnassignedTasksPage = () => {
         setIsLoading(true);
         const user = await getCurrentUser();
         if (user?.role?.name === Roles.TASK_SUPERVISOR) {
-          const response = await fetch('/api/tasks/unassignedTasks?pageSize=5');
+          // UPDATED: Use backend API instead of Next.js API route
+          const response = await taskApiClient.getUnassignedTasks(undefined, 5);
 
-          if (!response.ok) {
-            throw new Error('Failed to fetch unassigned tasks');
+          if (response.success) {
+            setTasks(response.tasks);
+          } else {
+            throw new Error(response.message || 'Failed to fetch unassigned tasks');
           }
-
-          const jsonResponse = await response.json();
-          // Validate response with Zod
-          const { tasks } = getUnassignedTasksOutputSchema.parse(jsonResponse);
-          setTasks(tasks);
         }
       } catch (error) {
         console.error('Error fetching unassigned tasks:', error);
@@ -103,7 +104,9 @@ const RecentUnassignedTasksPage = () => {
                   key={task.id}
                   className="hover:bg-muted/30 cursor-pointer transition-colors"
                 >
-                  <TableCell className="font-medium">{task.taskCategory.categoryName}</TableCell>
+                  <TableCell className="font-medium">
+                    {task.taskCategory?.categoryName || 'No Category'}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       className={`${taskPriorityColors[task.priority.priorityName]} py-1.5 px-2.5 text-xs font-medium`}

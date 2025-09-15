@@ -30,21 +30,39 @@ export class TaskController {
       if (isNaN(pageSize) || pageSize <= 0) {
         throw new BadRequestError('Invalid page size');
       }
-      // Make sure we always have a valid role value
+
       if (!req?.user?.role) {
         throw new BadRequestError('User role is required');
+      }
+
+      // FIXED: Handle cursor properly
+      let processedCursor: string | undefined = cursor;
+      if (cursor === 'undefined' || cursor === 'null' || !cursor) {
+        processedCursor = undefined;
+      }
+
+      // FIXED: Handle assignedToId properly
+      let processedAssignedToId;
+      if (assignedToId === 'null') {
+        processedAssignedToId = null; // Unassigned tasks
+      } else if (assignedToId === 'not-null') {
+        processedAssignedToId = { not: null }; // Assigned tasks
+      } else if (assignedToId && assignedToId !== 'undefined') {
+        processedAssignedToId = assignedToId; // Specific user ID
+      } else {
+        processedAssignedToId = undefined; // All tasks (no filter)
       }
 
       const result = await this.taskService.getTasks({
         userId,
         role: req.user.role,
-        cursor,
+        cursor: processedCursor,
         pageSize,
         searchTerm,
         duration,
         status,
         priority,
-        assignedToId: assignedToId === 'null' ? null : assignedToId,
+        assignedToId: processedAssignedToId,
         categoryId,
       });
 
@@ -133,7 +151,6 @@ export class TaskController {
         throw new BadRequestError('User authentication required');
       }
       const result = await this.taskService.getTaskStatistics(userId, req.user.role);
-
       res.status(200).json(result);
     } catch (error) {
       next(error);
@@ -255,20 +272,33 @@ export class TaskController {
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
-      const result = await this.taskService.getTaskStatistics(userId, req.user.role);
+      const taskAssignmentStatus = req.query.taskAssignmentStatus as string;
+      if (taskAssignmentStatus === 'taskAssignmentStatus') {
+        const result = await this.taskService.getTaskAssignmentStatusCounts(userId, req.user.role);
+        const countsResponse = {
+          success: true,
+          counts: [
+            { statusName: 'Unassigned', count: result.counts.UnassignedTasks },
+            { statusName: 'Assigned', count: result.counts.AssignedTasks },
+          ],
+        };
+        return res.status(200).json(countsResponse);
+      } else {
+        const result = await this.taskService.getTaskStatistics(userId, req.user.role);
 
-      // Transform to match existing API format
-      const countsResponse = {
-        success: true,
-        counts:
-          result?.statistics?.tasksByStatus?.map(stat => ({
-            statusId: stat.statusId,
-            statusName: stat.status?.statusName,
-            count: stat._count.id,
-          })) || [],
-      };
+        // Transform to match existing API format
+        const countsResponse = {
+          success: true,
+          counts:
+            result?.statistics?.tasksByStatus?.map(stat => ({
+              statusId: stat.statusId,
+              statusName: stat.status?.statusName,
+              count: stat._count.id,
+            })) || [],
+        };
 
-      res.status(200).json(countsResponse);
+        res.status(200).json(countsResponse);
+      }
     } catch (error) {
       next(error);
     }
@@ -318,6 +348,105 @@ export class TaskController {
     }
   };
 
+  /**
+   * Get task metadata (statuses and priorities)
+   */
+  private handleGetTaskMetadata = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const result = await this.taskService.getTaskMetadata();
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get tasks by priority level
+   */
+  private handleGetTasksByPriorityLevel = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { level } = req.params;
+      const cursor = req.query.cursor as string;
+      const pageSizeStr = req.query.pageSize as string;
+      const searchTerm = (req.query.search as string) || '';
+      const duration = (req.query.duration as DurationEnum) || DurationEnum.ALL;
+      const status = req.query.status as TaskStatusEnum;
+      const assignedToId = req.query.assignedToId as string;
+      const categoryId = req.query.categoryId as string;
+      const userId = req.query.userId as string;
+
+      const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
+
+      if (!['critical', 'high', 'medium', 'low', 'hold'].includes(level)) {
+        throw new BadRequestError('Invalid priority level');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.getTasksByPriorityLevel(
+        level as 'critical' | 'high' | 'medium' | 'low' | 'hold',
+        {
+          userId,
+          role: req.user.role,
+          cursor,
+          pageSize,
+          searchTerm,
+          duration,
+          status,
+          assignedToId: assignedToId === 'null' ? null : assignedToId,
+          categoryId,
+        }
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Update task status with validation
+   */
+  private handleUpdateTaskStatusWithValidation = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { taskId } = req.params;
+      const { status } = req.body;
+
+      if (!taskId || !status) {
+        throw new BadRequestError('Task ID and status are required');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.updateTaskStatusWithValidation(
+        taskId,
+        status,
+        req.user.id,
+        req.user.role
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // Publicly exposed route handlers
   getTasks = asyncHandler(this.handleGetTasks);
   getTaskById = asyncHandler(this.handleGetTaskById);
@@ -328,4 +457,7 @@ export class TaskController {
   getUnassignedTasks = asyncHandler(this.handleGetUnassignedTasks);
   getTasksCount = asyncHandler(this.handleGetTasksCount);
   updateTaskField = asyncHandler(this.handleUpdateTaskField);
+  getTaskMetadata = asyncHandler(this.handleGetTaskMetadata);
+  getTasksByPriorityLevel = asyncHandler(this.handleGetTasksByPriorityLevel);
+  updateTaskStatusWithValidation = asyncHandler(this.handleUpdateTaskStatusWithValidation);
 }
