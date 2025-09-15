@@ -47,14 +47,8 @@ class TaskApiClient {
    * Get tasks with filtering and pagination
    */
   async getTasks(params: TaskQueryParams = {}) {
-    const searchParams = new URLSearchParams();
-
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, String(value));
-      }
-    });
-
+    const searchParams = new URLSearchParams(params as Record<string, string>);
+    console.log('Fetching tasks with params:', params);
     const response = await fetch(`${this.baseUrl}/tasks?${searchParams.toString()}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),

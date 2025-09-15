@@ -8,7 +8,7 @@ export interface TaskFilters {
   searchTerm?: string;
   status?: TaskStatusEnum;
   priority?: TaskPriorityEnum;
-  assignedToId?: string | null;
+  assignedToId?: string | null | { not: null };
   categoryId?: string;
 }
 
@@ -44,14 +44,13 @@ export class TaskRepository {
     } = filters;
 
     const { cursor, pageSize, orderBy = { id: 'asc' } } = options;
-
     // Build comprehensive where clause
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
       ...dateFilter,
       ...(status && { status: { statusName: status } }),
       ...(priority && { priority: { priorityName: priority } }),
-      ...(assignedToId !== undefined && { assignedToId }),
+      ...(assignedToId !== undefined && { assignedToId: assignedToId }),
       ...(categoryId && { categoryId }),
       ...(searchTerm && {
         OR: [
@@ -60,7 +59,6 @@ export class TaskRepository {
         ],
       }),
     };
-
     const tasks = await this.prisma.task.findMany({
       where,
       take: pageSize + 1,
@@ -107,7 +105,6 @@ export class TaskRepository {
     if (hasNextCursor) {
       tasks.pop();
     }
-
     return {
       tasks,
       hasNextCursor,

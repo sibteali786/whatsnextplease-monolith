@@ -30,21 +30,39 @@ export class TaskController {
       if (isNaN(pageSize) || pageSize <= 0) {
         throw new BadRequestError('Invalid page size');
       }
-      // Make sure we always have a valid role value
+
       if (!req?.user?.role) {
         throw new BadRequestError('User role is required');
+      }
+
+      // FIXED: Handle cursor properly
+      let processedCursor: string | undefined = cursor;
+      if (cursor === 'undefined' || cursor === 'null' || !cursor) {
+        processedCursor = undefined;
+      }
+
+      // FIXED: Handle assignedToId properly
+      let processedAssignedToId;
+      if (assignedToId === 'null') {
+        processedAssignedToId = null; // Unassigned tasks
+      } else if (assignedToId === 'not-null') {
+        processedAssignedToId = { not: null }; // Assigned tasks
+      } else if (assignedToId && assignedToId !== 'undefined') {
+        processedAssignedToId = assignedToId; // Specific user ID
+      } else {
+        processedAssignedToId = undefined; // All tasks (no filter)
       }
 
       const result = await this.taskService.getTasks({
         userId,
         role: req.user.role,
-        cursor,
+        cursor: processedCursor,
         pageSize,
         searchTerm,
         duration,
         status,
         priority,
-        assignedToId: assignedToId === 'null' ? null : assignedToId,
+        assignedToId: processedAssignedToId,
         categoryId,
       });
 

@@ -327,12 +327,9 @@ export class TaskAgentService {
 
   /**
    * Get task agent details by ID with task counts
-   * FIXED VERSION with proper error handling
    */
   async getTaskAgentById(id: string): Promise<TaskAgentWithCounts | null> {
     try {
-      logger.info('Fetching task agent by ID', { id });
-
       const user = await prisma.user.findFirst({
         where: {
           id,
@@ -349,11 +346,8 @@ export class TaskAgentService {
       });
 
       if (!user) {
-        logger.info('User not found', { id });
         return null;
       }
-
-      logger.info('User found, fetching task counts', { user });
 
       // Get all task counts in one transaction - FIXED queries
       const taskCounts = await prisma.$transaction([
@@ -414,14 +408,6 @@ export class TaskAgentService {
         completedTasksCount,
         overdueTasksCount,
       ] = taskCounts;
-
-      logger.info('Task counts retrieved', {
-        assignedTasksCount,
-        newTasksCount,
-        inProgressTasksCount,
-        completedTasksCount,
-        overdueTasksCount,
-      });
 
       return {
         id: user.id,
