@@ -360,7 +360,21 @@ export class TaskRepository {
       tasksCreatedToday,
     };
   }
+  async getTaskAssignmentStatusCounts(whereCondition: Prisma.TaskWhereInput = {}) {
+    const [unassignedCount, assignedCount] = await Promise.all([
+      this.prisma.task.count({
+        where: { ...whereCondition, assignedToId: null }, // Unassigned tasks
+      }),
+      this.prisma.task.count({
+        where: { ...whereCondition, NOT: { assignedToId: null } }, // Assigned tasks
+      }),
+    ]);
 
+    return {
+      UnassignedTasks: unassignedCount,
+      AssignedTasks: assignedCount,
+    };
+  }
   /**
    * Find task status by name
    */

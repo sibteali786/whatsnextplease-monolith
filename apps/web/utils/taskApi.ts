@@ -151,12 +151,14 @@ class TaskApiClient {
   /**
    * Get task counts by status (legacy endpoint)
    */
-  async getTasksCount(userId?: string) {
+  async getTasksCount(userId?: string, query?: string) {
     const searchParams = new URLSearchParams();
     if (userId) {
       searchParams.append('userId', userId);
     }
-
+    if (query === 'taskAssignmentStatus') {
+      searchParams.append('taskAssignmentStatus', query);
+    }
     const response = await fetch(`${this.baseUrl}/tasks/counts?${searchParams.toString()}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),

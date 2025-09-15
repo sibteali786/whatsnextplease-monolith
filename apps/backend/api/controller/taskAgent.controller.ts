@@ -50,6 +50,7 @@ export class TaskAgentController {
         filterStatus,
         searchTerm
       );
+      console.log('TaskAgents:', taskAgents);
 
       res.status(200).json(taskAgents);
     } catch (error) {

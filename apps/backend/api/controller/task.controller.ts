@@ -255,20 +255,36 @@ export class TaskController {
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
-      const result = await this.taskService.getTaskStatistics(userId, req.user.role);
+      console.log('req.query', req.query);
+      const taskAssignmentStatus = req.query.taskAssignmentStatus as string;
+      if (taskAssignmentStatus === 'taskAssignmentStatus') {
+        const result = await this.taskService.getTaskAssignmentStatusCounts(userId, req.user.role);
+        const countsResponse = {
+          success: true,
+          counts: [
+            { statusName: 'Unassigned', count: result.counts.UnassignedTasks },
+            { statusName: 'Assigned', count: result.counts.AssignedTasks },
+          ],
+        };
+        return res.status(200).json(countsResponse);
+      } else {
+        const result = await this.taskService.getTaskStatistics(userId, req.user.role);
 
-      // Transform to match existing API format
-      const countsResponse = {
-        success: true,
-        counts:
-          result?.statistics?.tasksByStatus?.map(stat => ({
-            statusId: stat.statusId,
-            statusName: stat.status?.statusName,
-            count: stat._count.id,
-          })) || [],
-      };
+        // Transform to match existing API format
+        const countsResponse = {
+          success: true,
+          counts:
+            result?.statistics?.tasksByStatus?.map(stat => ({
+              statusId: stat.statusId,
+              statusName: stat.status?.statusName,
+              count: stat._count.id,
+            })) || [],
+        };
 
-      res.status(200).json(countsResponse);
+        console.log('result', result);
+
+        res.status(200).json(countsResponse);
+      }
     } catch (error) {
       next(error);
     }

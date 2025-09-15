@@ -356,6 +356,56 @@ export class TaskService {
     };
   }
 
+  async getAssignedTasks(role: Roles, cursor?: string, pageSize = 10) {
+    if (!canViewTasks(role)) {
+      throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
+    }
+
+    const filters: TaskFilters = {
+      whereCondition: { assignedToId: { not: null } },
+    };
+
+    const queryOptions: TaskQueryOptions = {
+      cursor,
+      pageSize,
+      orderBy: { createdAt: 'desc' },
+    };
+    const [taskResult, totalCount] = await Promise.all([
+      this.taskRepository.findTasks(filters, queryOptions),
+      this.taskRepository.countTasks(filters),
+    ]);
+    const formattedTasks = taskResult.tasks.map(task => ({
+      ...task,
+      taskSkills: task.taskSkills.map(ts => ts.skill.name),
+    }));
+    return {
+      success: true,
+      tasks: formattedTasks,
+      hasNextCursor: taskResult.hasNextCursor,
+      nextCursor: taskResult.nextCursor,
+      totalCount,
+    };
+  }
+
+  async getTaskAssignmentStatusCounts(userId: string, role: Roles) {
+    if (!canViewTasks(role)) {
+      throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
+    }
+    if (role === Roles.CLIENT) {
+      const whereCondition = getTaskFilterCondition(userId, role);
+      const counts = await this.taskRepository.getTaskAssignmentStatusCounts(whereCondition);
+      return {
+        success: true,
+        counts,
+      };
+    }
+    const counts = await this.taskRepository.getTaskAssignmentStatusCounts({});
+    return {
+      success: true,
+      counts,
+    };
+  }
+
   // Add this method to TaskService class
   /**
    * Update a single field of a task

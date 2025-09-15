@@ -11,7 +11,7 @@ import { CircleX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 
-type TasksCountType = {
+export type TasksCountType = {
   UnassignedTasks: number;
   AssignedTasks: number;
 };
@@ -31,9 +31,7 @@ const TaskSummaryPage = () => {
         if (user?.role?.name !== Roles.TASK_SUPERVISOR) {
           return null;
         }
-
-        // UPDATED: Use backend API instead of Next.js API route
-        const response = await taskApiClient.getTasksCount(user.id);
+        const response = await taskApiClient.getTasksCount(user.id, 'taskAssignmentStatus');
 
         if (response.success) {
           // Define type for count item
