@@ -110,7 +110,6 @@ export class CommentController {
       };
 
       const result = await this.commentService.getCommentsByTaskId(request);
-
       if (!result.success) {
         return res.status(400).json({
           success: false,

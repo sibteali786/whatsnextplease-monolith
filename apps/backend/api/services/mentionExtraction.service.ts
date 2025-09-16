@@ -199,12 +199,11 @@ export class MentionExtractionService {
     userRole: Roles
   ): boolean {
     // Super users and supervisors can access all tasks
-    if (userRole === Roles.SUPER_USER || userRole === Roles.TASK_SUPERVISOR) {
-      return true;
-    }
-
-    // Task agents can access assigned tasks
-    if (userRole === Roles.TASK_AGENT && task.assignedToId) {
+    if (
+      userRole === Roles.SUPER_USER ||
+      userRole === Roles.TASK_SUPERVISOR ||
+      userRole === Roles.TASK_AGENT
+    ) {
       return true;
     }
 
