@@ -14,7 +14,9 @@ export default async function TasksPage() {
     label: duration,
     value: transformEnumValue(duration),
   }));
-  if (user?.role?.name === Roles.CLIENT || user?.role?.name === Roles.TASK_AGENT) {
+
+  // Task Agents now use TaskSuperVisorList instead of UserTasks to see all tasks
+  if (user?.role?.name === Roles.CLIENT) {
     return (
       <div className="flex flex-col gap-6">
         <UserTasks
@@ -27,6 +29,8 @@ export default async function TasksPage() {
     );
   }
 
+  // Task Agents, Task Supervisors, and Super Users all use TaskSuperVisorList
+  // This gives Task Agents access to the tabbed interface (All, Assigned, Unassigned)
   return (
     <TaskSuperVisorList
       role={user?.role?.name ?? Roles.SUPER_USER}

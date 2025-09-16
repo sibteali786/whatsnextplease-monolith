@@ -13,6 +13,13 @@ export const TASK_CREATOR_ROLES = [Roles.CLIENT, Roles.TASK_SUPERVISOR, Roles.SU
 
 export const TASK_ASSIGNEE_ROLES = [Roles.TASK_AGENT] as const;
 
+// New role group for users who can see all tasks (not just assigned to them)
+export const TASK_OVERVIEW_ROLES = [
+  Roles.TASK_AGENT, // Added TASK_AGENT to allow seeing all tasks
+  Roles.TASK_SUPERVISOR,
+  Roles.SUPER_USER,
+] as const;
+
 export enum USER_CREATED_TASKS_CONTEXT {
   USER_PROFILE = 'user-profile',
   GENERAL = 'general',
@@ -31,6 +38,11 @@ export const canBeAssignedTasks = (role: Roles): boolean => {
   return TASK_ASSIGNEE_ROLES.includes(role as any);
 };
 
+// New helper function to check if role can see all tasks
+export const canViewAllTasks = (role: Roles): boolean => {
+  return TASK_OVERVIEW_ROLES.includes(role as any);
+};
+
 // Context-specific filter functions
 export const getUserProfileTaskFilter = (profileUserId: string) => {
   // For user profiles - always show tasks assigned to the profile user
@@ -40,9 +52,9 @@ export const getUserProfileTaskFilter = (profileUserId: string) => {
 export const getGeneralTaskFilter = (currentUserId: string, currentUserRole: Roles) => {
   // For general contexts (dashboards, task lists) - role-based filtering
 
-  // Task Agents and Supervisors see tasks assigned to them
+  // Task Agents and Supervisors can now see all tasks (changed behavior for TASK_AGENT)
   if (currentUserRole === Roles.TASK_AGENT || currentUserRole === Roles.TASK_SUPERVISOR) {
-    return { assignedToId: currentUserId };
+    return {}; // See all tasks instead of just assigned tasks
   }
 
   // Clients see tasks they created
@@ -50,9 +62,9 @@ export const getGeneralTaskFilter = (currentUserId: string, currentUserRole: Rol
     return { createdByClientId: currentUserId };
   }
 
-  // Super Users can see all tasks or apply custom logic
+  // Super Users can see all tasks
   if (currentUserRole === Roles.SUPER_USER) {
-    return {}; // See all tasks, or add custom logic here
+    return {}; // See all tasks
   }
 
   // Default - no tasks
