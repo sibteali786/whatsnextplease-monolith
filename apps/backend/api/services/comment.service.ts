@@ -607,12 +607,7 @@ export class CommentService {
     role: Roles
   ): boolean {
     // Super users and supervisors can access all tasks
-    if (role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR) {
-      return true;
-    }
-
-    // Task agents can access assigned tasks
-    if (role === Roles.TASK_AGENT && task.assignedToId === userId) {
+    if (role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR || role === Roles.TASK_AGENT) {
       return true;
     }
 

@@ -5,6 +5,7 @@ import { ReactNode, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import RouteProgressBar from '@/components/RoutesProgressBar';
 import { ChatProvider } from '../providers/ChatContextProvider';
+import { NotificationPermissionProvider } from '@/components/notifications/notificationPermissionProvider';
 
 // Loading fallback component
 const ShellSkeleton = () => (
@@ -36,7 +37,9 @@ const Dashboard = ({ children }: { children: ReactNode }) => {
                 enableMinimize: true,
               }}
             >
-              <div className="h-full">{children}</div>
+              <NotificationPermissionProvider>
+                <div className="h-full">{children}</div>
+              </NotificationPermissionProvider>
             </ChatProvider>
           </TooltipProvider>
         </Shell>

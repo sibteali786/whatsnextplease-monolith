@@ -76,6 +76,13 @@ async function main() {
     { priorityName: TaskPriorityEnum.URGENT },
     { priorityName: TaskPriorityEnum.NORMAL },
     { priorityName: TaskPriorityEnum.LOW_PRIORITY },
+
+    // New priority system
+    { priorityName: TaskPriorityEnum.CRITICAL },
+    { priorityName: TaskPriorityEnum.HIGH },
+    { priorityName: TaskPriorityEnum.MEDIUM },
+    { priorityName: TaskPriorityEnum.LOW },
+    { priorityName: TaskPriorityEnum.HOLD },
   ];
 
   for (const priorityData of taskPrioritiesData) {
@@ -92,6 +99,15 @@ async function main() {
     { statusName: TaskStatusEnum.IN_PROGRESS },
     { statusName: TaskStatusEnum.COMPLETED },
     { statusName: TaskStatusEnum.OVERDUE },
+
+    // New statuses
+    { statusName: TaskStatusEnum.REVIEW },
+    { statusName: TaskStatusEnum.CONTENT_IN_PROGRESS },
+    { statusName: TaskStatusEnum.TESTING },
+    { statusName: TaskStatusEnum.BLOCKED },
+    { statusName: TaskStatusEnum.ON_HOLD },
+    { statusName: TaskStatusEnum.APPROVED },
+    { statusName: TaskStatusEnum.REJECTED },
   ];
 
   for (const statusData of taskStatusesData) {

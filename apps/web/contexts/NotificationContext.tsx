@@ -15,9 +15,12 @@ interface NotificationContextType {
   markAsRead: (id: string) => Promise<void>;
   markingRead: string[];
   markAllAsRead: () => Promise<void>;
-  isConnected: boolean;
+  sseConnected: boolean;
+  pushEnabled: boolean;
   reconnectIn: number;
+  isConnected: boolean; // Backward compatibility
   manualReconnect: () => void;
+  refreshNotifications: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -34,28 +37,25 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [markingRead, setMarkingRead] = useState<string[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  const [sseConnected, setSseConnected] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const [reconnectIn, setReconnectIn] = useState(0);
 
+  // SSE connection management
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const maxRetries = 3; // Maximum retry attempts
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryCount = useRef(0);
+  const maxRetries = 3;
+  const isPageVisible = useRef(!document.hidden);
 
   const { toast } = useToast();
 
   // Update unread count whenever notifications change
   useEffect(() => {
     const count = notifications.filter(n => n.status === NotificationStatus.UNREAD).length;
-    console.log('Unread count calculation:', {
-      totalNotifications: notifications.length,
-      unreadNotifications: notifications.filter(n => n.status === NotificationStatus.UNREAD),
-      newUnreadCount: count,
-      previousUnreadCount: unreadCount,
-    });
     setUnreadCount(count);
-  }, [notifications, unreadCount]);
+  }, [notifications]);
 
   const getCookie = useCallback((name: string) => {
     const value = `; ${document.cookie}`;
@@ -63,6 +63,270 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     if (parts.length === 2) return parts.pop()?.split(';').shift();
   }, []);
 
+  // Refresh notifications from API
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const response = await fetchNotifications(userId, role);
+      setNotifications(response.notifications);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to refresh notifications:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
+    }
+  }, [userId, role]);
+
+  // Clean up SSE connection
+  const cleanupSSE = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setSseConnected(false);
+    setReconnectIn(0);
+  }, []);
+
+  // Create SSE connection with simplified retry logic
+  const createSSEConnection = useCallback(() => {
+    if (!userId || !isPageVisible.current) {
+      console.log('Skipping SSE connection - page not visible or no userId');
+      return;
+    }
+
+    // Don't retry beyond max attempts
+    if (retryCount.current >= maxRetries) {
+      console.log('SSE max retries reached, relying on push notifications');
+      return;
+    }
+
+    const token = getCookie(COOKIE_NAME);
+    if (!token) {
+      console.error('No authentication token found');
+      return;
+    }
+
+    cleanupSSE();
+
+    try {
+      const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}`;
+      console.log(`Creating SSE connection (attempt ${retryCount.current + 1}/${maxRetries})`);
+
+      const eventSource = new EventSource(sseUrl);
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        console.log('SSE connection established');
+        setSseConnected(true);
+        setError(null);
+        retryCount.current = 0; // Reset retry count on success
+      };
+
+      eventSource.onmessage = event => {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Handle ping messages
+          if (data.type === 'ping' || data.type === 'connected') {
+            return;
+          }
+
+          // Handle new notifications
+          if (data.type && data.message) {
+            const newNotification: NotificationResponse = {
+              id: data.id || `sse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              type: data.type,
+              message: data.message,
+              status: NotificationStatus.UNREAD,
+              data: data.data || null,
+              userId: data.userId || userId,
+              clientId: data.clientId || null,
+              createdAt: data.createdAt || new Date().toISOString(),
+              updatedAt: data.updatedAt || new Date().toISOString(),
+            };
+
+            setNotifications(prev => [newNotification, ...prev]);
+
+            // Show toast only if page is visible
+            if (isPageVisible.current) {
+              toast({
+                title: 'New Notification',
+                description: data.message,
+                variant: 'default',
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error parsing SSE message:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.error('SSE connection error');
+        setSseConnected(false);
+
+        // Only retry if page is visible and within retry limit
+        if (isPageVisible.current && retryCount.current < maxRetries) {
+          const delay = Math.min(2000 * Math.pow(2, retryCount.current), 30000);
+          console.log(`SSE reconnecting in ${delay}ms`);
+
+          // Start countdown
+          setReconnectIn(delay);
+          countdownIntervalRef.current = setInterval(() => {
+            setReconnectIn(prev => {
+              const newValue = Math.max(0, prev - 1000);
+              if (newValue === 0 && countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              return newValue;
+            });
+          }, 1000);
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            setReconnectIn(0);
+            retryCount.current++;
+            createSSEConnection();
+          }, delay);
+        } else {
+          console.log('SSE giving up, push notifications will handle delivery');
+          setReconnectIn(0);
+        }
+      };
+    } catch (err) {
+      console.error('Error creating SSE connection:', err);
+      setSseConnected(false);
+    }
+  }, [userId, getCookie, cleanupSSE, toast]);
+
+  // Handle page visibility changes with delayed disconnection
+  useEffect(() => {
+    let disconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const handleVisibilityChange = () => {
+      const wasVisible = isPageVisible.current;
+      isPageVisible.current = !document.hidden;
+
+      if (!wasVisible && isPageVisible.current) {
+        // Page became visible - clear any pending disconnect and reconnect
+        if (disconnectTimeout) {
+          clearTimeout(disconnectTimeout);
+          disconnectTimeout = null;
+        }
+        if (!sseConnected) {
+          console.log('Page became visible and SSE disconnected, reconnecting');
+          retryCount.current = 0; // Reset retry count
+          createSSEConnection();
+        } else {
+          console.log('Page became visible but SSE still connected, no action needed');
+        }
+        refreshNotifications();
+      } else if (wasVisible && !isPageVisible.current) {
+        // Page became hidden - schedule disconnect after delay
+        console.log('Page became hidden, scheduling SSE disconnect in 30 seconds');
+
+        disconnectTimeout = setTimeout(() => {
+          if (!isPageVisible.current) {
+            console.log('Page still hidden after 30s, closing SSE connection');
+            cleanupSSE();
+          }
+          disconnectTimeout = null;
+        }, 30000); // 30 second delay before disconnecting
+      }
+    };
+
+    const handleFocus = () => {
+      // Browser window gained focus - ensure SSE is connected
+      if (!sseConnected && isPageVisible.current) {
+        console.log('Window focused, ensuring SSE connection');
+        createSSEConnection();
+      }
+    };
+
+    const handleBlur = () => {
+      // Browser window lost focus - but don't disconnect immediately
+      console.log('Window blurred, but keeping SSE connection for now');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      if (disconnectTimeout) {
+        clearTimeout(disconnectTimeout);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [createSSEConnection, cleanupSSE, refreshNotifications, sseConnected]);
+
+  // Check for push notification support
+  useEffect(() => {
+    const checkPushSupport = async () => {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+          setPushEnabled(!!subscription);
+        } catch (err) {
+          console.log('Push notifications not available');
+          setPushEnabled(false);
+        }
+      }
+    };
+
+    checkPushSupport();
+  }, []);
+
+  // Load initial notifications
+  useEffect(() => {
+    const loadInitialNotifications = async () => {
+      try {
+        const response = await fetchNotifications(userId, role);
+        setNotifications(response.notifications);
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch initial notifications:', err);
+        setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userId && role) {
+      loadInitialNotifications();
+    }
+  }, [userId, role]);
+
+  // Initialize SSE connection
+  useEffect(() => {
+    if (userId && isPageVisible.current) {
+      createSSEConnection();
+    }
+    return cleanupSSE;
+  }, [userId, createSSEConnection, cleanupSSE]);
+
+  // Manual reconnect function
+  const manualReconnect = useCallback(() => {
+    console.log('Manual reconnect triggered');
+    retryCount.current = 0;
+    setReconnectIn(0);
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    createSSEConnection();
+  }, [createSSEConnection]);
+
+  // Mark notification as read
   const markAsRead = async (id: string) => {
     try {
       setMarkingRead(prev => [...prev, id]);
@@ -82,271 +346,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     }
   };
 
-  // Clean up function
-  const cleanup = useCallback(() => {
-    if (eventSourceRef.current) {
-      console.log('Closing existing EventSource connection');
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    if (countdownIntervalRef.current) {
-      clearTimeout(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
-    }
-  }, []);
-
-  // Load initial notifications
-  useEffect(() => {
-    const loadInitialNotifications = async () => {
-      try {
-        console.log(`Fetching notifications for: ${userId} ${role}`);
-        const response = await fetchNotifications(userId, role);
-        setNotifications(response.notifications);
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch initial notifications:', err);
-        setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (userId && role) {
-      loadInitialNotifications();
-    }
-  }, [userId, role]);
-
-  // Setup SSE connection with improved error handling
-  const createEventSource = useCallback(() => {
-    if (!userId) {
-      console.warn('Cannot create EventSource: userId is missing');
-      return;
-    }
-
-    // Don't retry if max retries exceeded
-    if (retryCount >= maxRetries) {
-      console.warn('Max retry attempts reached. Stopping reconnection attempts.');
-      toast({
-        title: 'Connection Failed',
-        description: 'Unable to connect to notification service. Please refresh the page.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const token = getCookie(COOKIE_NAME);
-    if (!token) {
-      console.error('No authentication token found');
-      setError(new Error('Authentication token not found'));
-      return;
-    }
-
-    // Clean up any existing connections
-    cleanup();
-
-    try {
-      const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}`;
-      console.log('Creating new EventSource connection to:', sseUrl);
-
-      const eventSource = new EventSource(sseUrl);
-      eventSourceRef.current = eventSource;
-
-      console.log(`Initial EventSource readyState: ${eventSource.readyState}`);
-
-      eventSource.onopen = event => {
-        console.log('EventSource connection opened:', event);
-        console.log(`EventSource onopen fired, readyState: ${eventSource.readyState}`);
-
-        setIsConnected(true);
-        setRetryCount(0); // Reset retry count on successful connection
-        setReconnectIn(0);
-        setError(null);
-
-        if (retryCount > 0) {
-          toast({
-            title: 'Connected',
-            description: 'Notification service reconnected successfully',
-            variant: 'success',
-          });
-        }
-      };
-
-      eventSource.onmessage = event => {
-        try {
-          console.log('SSE message received:', event.data);
-          const data = JSON.parse(event.data);
-
-          // Handle different message types
-          if (data.type === 'ping' || data.type === 'connected') {
-            console.log('Received ping/connection message:', data);
-            return;
-          }
-
-          // Handle actual notifications - ensure it matches your notification structure
-          if (data.type && data.message) {
-            console.log('Adding new notification:', data);
-
-            // Create notification object matching your NotificationResponse interface
-            const newNotification: NotificationResponse = {
-              id: data.id || `sse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              type: data.type,
-              message: data.message,
-              status: NotificationStatus.UNREAD, // Ensure new notifications are UNREAD
-              data: data.data || null,
-              userId: data.userId || userId,
-              clientId: data.clientId || null,
-              createdAt: data.createdAt || new Date().toISOString(),
-              updatedAt: data.updatedAt || new Date().toISOString(),
-            };
-
-            console.log('Created notification object:', newNotification);
-            console.log('Previous notifications count:', notifications.length);
-
-            setNotifications(prev => {
-              const updated = [newNotification, ...prev];
-              console.log('Updated notifications count:', updated.length);
-              console.log(
-                'New unread count should be:',
-                updated.filter(n => n.status === NotificationStatus.UNREAD).length
-              );
-              return updated;
-            });
-
-            // Show toast for new notifications
-            toast({
-              title: 'New Notification',
-              description: data.message,
-              variant: 'default',
-            });
-          }
-        } catch (err) {
-          console.error('Error parsing SSE message:', err, 'Raw data:', event.data);
-        }
-      };
-
-      eventSource.onerror = error => {
-        console.error('EventSource error occurred:', error);
-        console.log(`EventSource readyState on error: ${eventSource.readyState}`);
-
-        setIsConnected(false);
-
-        // Only attempt reconnection if connection was lost (not if it never connected)
-        if (eventSource.readyState === EventSource.CLOSED && retryCount < maxRetries) {
-          console.log('EventSource closed, attempting reconnection...');
-
-          // Calculate exponential backoff with jitter
-          const baseDelay = 1000; // 1 second
-          const maxDelay = 30000; // 30 seconds
-          let delay = Math.min(baseDelay * Math.pow(2, retryCount), maxDelay);
-
-          // Add jitter (±25%) to prevent thundering herd
-          const jitter = delay * 0.25 * (Math.random() - 0.5);
-          delay = Math.max(1000, delay + jitter);
-
-          console.log(
-            `SSE connection lost. Reconnecting in ${(delay / 1000).toFixed(1)} seconds... (attempt ${retryCount + 1}/${maxRetries})`
-          );
-
-          // Show toast after a few failed attempts
-          if (retryCount >= 2) {
-            toast({
-              title: 'Connection Lost',
-              description: `Attempting to reconnect... (${retryCount + 1}/${maxRetries})`,
-              variant: 'default',
-            });
-          }
-
-          // Start countdown for UI
-          let remainingTime = delay;
-          setReconnectIn(remainingTime);
-
-          const updateCountdown = () => {
-            remainingTime -= 1000;
-            setReconnectIn(Math.max(0, remainingTime));
-
-            if (remainingTime > 0) {
-              countdownIntervalRef.current = setTimeout(updateCountdown, 1000);
-            }
-          };
-
-          countdownIntervalRef.current = setTimeout(updateCountdown, 1000);
-
-          // Schedule reconnection
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (countdownIntervalRef.current) {
-              clearTimeout(countdownIntervalRef.current);
-              countdownIntervalRef.current = null;
-            }
-
-            setRetryCount(prev => {
-              const newCount = prev + 1;
-              console.log(`Incrementing retry count from ${prev} to ${newCount}`);
-              return newCount;
-            });
-          }, delay);
-        } else {
-          console.log(
-            'Not attempting reconnection - max retries reached or connection never established'
-          );
-        }
-      };
-
-      // Handle page visibility changes to reconnect when page becomes visible
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible' && !isConnected && retryCount < maxRetries) {
-          console.log('Page became visible, attempting to reconnect...');
-          setRetryCount(0); // Reset retry count on manual reconnect
-          createEventSource();
-        }
-      };
-
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-
-      // Cleanup function for this specific EventSource
-      return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        cleanup();
-      };
-    } catch (err) {
-      console.error('Error creating EventSource:', err);
-      setError(err instanceof Error ? err : new Error('Failed to create SSE connection'));
-      setIsConnected(false);
-    }
-  }, [userId, retryCount, toast, getCookie, cleanup, maxRetries]); // Removed isConnected and notifications from dependencies
-
-  // Initialize SSE connection
-  useEffect(() => {
-    if (userId) {
-      const cleanupFn = createEventSource();
-      return cleanupFn;
-    }
-
-    return cleanup;
-  }, [userId, createEventSource, cleanup]);
-
-  // Handle retry logic separately to avoid infinite loops
-  useEffect(() => {
-    if (retryCount > 0 && retryCount < maxRetries) {
-      console.log(`Retry effect triggered with count: ${retryCount}`);
-      // The actual retry is handled in the setTimeout in onError
-      // This effect is just for logging/debugging
-    }
-  }, [retryCount, maxRetries]);
-
-  // Manual reconnect function
-  const manualReconnect = useCallback(() => {
-    console.log('Manual reconnect triggered');
-    setRetryCount(0);
-    setReconnectIn(0);
-    createEventSource();
-  }, [createEventSource]);
-
+  // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
       await markAllAsReadNotifications(userId, role);
@@ -370,12 +370,25 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     }
   };
 
-  // Cleanup on unmount
+  // Listen for push notification events (when page is in background)
   useEffect(() => {
-    return () => {
-      cleanup();
+    const handlePushNotification = () => {
+      // Refresh notifications when we receive a push notification
+      // This helps sync state when notifications arrive via push while page was hidden
+      if (isPageVisible.current) {
+        refreshNotifications();
+      }
     };
-  }, [cleanup]);
+
+    // Listen for service worker messages about received push notifications
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
+          handlePushNotification();
+        }
+      });
+    }
+  }, [refreshNotifications]);
 
   return (
     <NotificationContext.Provider
@@ -387,9 +400,12 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         markAsRead,
         markingRead,
         markAllAsRead,
-        isConnected,
+        sseConnected,
+        pushEnabled,
         reconnectIn,
+        isConnected: sseConnected || pushEnabled, // Backward compatibility
         manualReconnect,
+        refreshNotifications,
       }}
     >
       {children}
