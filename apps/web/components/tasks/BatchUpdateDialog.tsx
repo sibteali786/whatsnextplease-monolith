@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, CalendarIcon, Loader2, UserX } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Loader2, UserX, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 import { TaskTable } from '@/utils/validationSchemas';
@@ -194,7 +194,13 @@ export function BatchUpdateDialog({
               if (hasMultipleAssignees || isMixed) {
                 return (
                   <div className="bg-muted/30 p-3 rounded-md text-sm space-y-2">
-                    <div className="font-medium">Current Assignment:</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Current Assignment:</span>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Info className="h-3 w-3" />
+                        <span>From selected tasks only</span>
+                      </div>
+                    </div>
                     {Object.entries(assigneeGroups).map(([id, data]) => (
                       <div key={id} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -228,48 +234,60 @@ export function BatchUpdateDialog({
               return null;
             })()}
 
-            <Select
-              value={selectedValue || 'none'}
-              onValueChange={value => setSelectedValue(value === 'none' ? '' : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select assignment option" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">
-                  <div className="flex items-center gap-2">
-                    <UserX className="h-4 w-4 text-muted-foreground" />
-                    <span>Unassigned</span>
-                  </div>
-                </SelectItem>
-                {users.map(user => (
-                  <SelectItem key={user.id} value={user.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={user.avatarUrl || undefined} />
-                          <AvatarFallback className="text-xs">
-                            {user.firstName[0]}
-                            {user.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>
-                          {user.firstName} {user.lastName}
-                        </span>
-                      </div>
-                      {user.currentTasksCount !== undefined && (
-                        <Badge
-                          variant={user.currentTasksCount > 8 ? 'destructive' : 'secondary'}
-                          className="text-xs ml-2"
-                        >
-                          {user.currentTasksCount} task{user.currentTasksCount !== 1 ? 's' : ''}
-                        </Badge>
-                      )}
+            {/* Assignment Options with Explanatory Header */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium">Assign to:</span>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Info className="h-3 w-3" />
+                  <span>Numbers show total workload</span>
+                </div>
+              </div>
+
+              <Select
+                value={selectedValue || 'none'}
+                onValueChange={value => setSelectedValue(value === 'none' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select assignment option" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    <div className="flex items-center gap-2">
+                      <UserX className="h-4 w-4 text-muted-foreground" />
+                      <span>Unassigned</span>
                     </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={user.avatarUrl || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {user.firstName[0]}
+                              {user.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>
+                            {user.firstName} {user.lastName}
+                          </span>
+                        </div>
+                        {user.currentTasksCount !== undefined && (
+                          <Badge
+                            variant={user.currentTasksCount > 8 ? 'destructive' : 'secondary'}
+                            className="text-xs ml-2"
+                            title={`Total current workload: ${user.currentTasksCount} tasks`}
+                          >
+                            {user.currentTasksCount} total
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Workload warning */}
             {selectedValue &&
@@ -277,14 +295,19 @@ export function BatchUpdateDialog({
               (() => {
                 const selectedUser = users.find(u => u.id === selectedValue);
                 if (selectedUser?.currentTasksCount && selectedUser.currentTasksCount > 8) {
+                  const newTotal = selectedUser.currentTasksCount + selectedTasks.length;
                   return (
                     <div className="bg-orange-50 border border-orange-200 p-3 rounded-md text-sm">
                       <div className="flex items-center gap-2 text-orange-800">
                         <AlertTriangle className="h-4 w-4" />
-                        <span>
-                          High workload: {selectedUser.firstName} {selectedUser.lastName} already
-                          has {selectedUser.currentTasksCount} tasks
-                        </span>
+                        <div>
+                          <div className="font-medium">High workload warning</div>
+                          <div className="text-xs mt-1">
+                            {selectedUser.firstName} {selectedUser.lastName} currently has{' '}
+                            {selectedUser.currentTasksCount} tasks. Adding {selectedTasks.length}{' '}
+                            more will bring total to {newTotal} tasks.
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -301,7 +324,7 @@ export function BatchUpdateDialog({
                   return (
                     <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
                       <strong>Preview:</strong> Will unassign {assigned.length} task
-                      {assigned.length > 1 ? 's' : ''}
+                      {assigned.length > 1 ? 's' : ''} (making them unassigned)
                     </div>
                   );
                 }
