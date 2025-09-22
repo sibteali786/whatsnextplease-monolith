@@ -25,21 +25,22 @@ import {
 } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, CalendarIcon, Info } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Info, UserX } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import FileUploadArea from '@/components/common/FileUploadArea';
-import { FileWithMetadataFE, UserAssigneeSchema } from '@/utils/validationSchemas';
+import { FileWithMetadataFE } from '@/utils/validationSchemas';
 import { z } from 'zod';
 import { useState } from 'react';
-import { createTaskSchema } from './CreateTaskContainer';
+import { createTaskSchema, UserWithTaskCount } from './CreateTaskContainer';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Badge } from '../ui/badge';
 
 interface CreateTaskFormProps {
   form: UseFormReturn<z.infer<typeof createTaskSchema>>;
   onSubmit: (data: z.infer<typeof createTaskSchema>) => void;
   skills: { id: string; name: string }[];
-  users: UserAssigneeSchema[];
+  users: UserWithTaskCount[];
   canAssignTasks?: boolean;
   taskCategories: { id: string; categoryName: string }[];
 }
@@ -52,6 +53,8 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   taskCategories,
 }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
+  const selectedAssigneeId = form.watch('assignedToId');
+
   const groupSkillsByCategory = (
     skills: { id: string; name: string; skillCategory?: { categoryName: string } }[]
   ) => {
@@ -226,41 +229,106 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
             name="assignedToId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Assigned Task Agent</FormLabel>
-                <FormControl>
-                  <Select
-                    onValueChange={value => field.onChange(value === 'none' ? '' : value)}
-                    value={field.value || 'none'}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <span className="text-muted-foreground">No Assignee</span>
-                      </SelectItem>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          <div className="flex items-center">
-                            <Avatar className="h-8 w-8 rounded-lg">
-                              <AvatarImage
-                                src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                alt={user.firstName ?? 'avatar'}
-                                className="rounded-full"
-                              />
-                              <AvatarFallback className="rounded-full">
-                                {user.firstName
-                                  ? user.firstName.substring(0, 2).toUpperCase()
-                                  : 'CN'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Assigned Task Agent</FormLabel>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Info className="h-3 w-3" />
+                      <span>Numbers show current workload</span>
+                    </div>
+                  </div>
+
+                  <FormControl>
+                    <Select
+                      onValueChange={value => field.onChange(value === 'none' ? '' : value)}
+                      value={field.value || 'none'}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Assignee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <div className="flex items-center gap-2">
+                            <UserX className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">No Assignee</span>
                           </div>
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
+                        {users.map(user => (
+                          <SelectItem key={user.id} value={user.id}>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6 rounded-lg">
+                                  <AvatarImage
+                                    src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                    alt={user.firstName ?? 'avatar'}
+                                    className="rounded-full"
+                                  />
+                                  <AvatarFallback className="rounded-full text-xs">
+                                    {user.firstName
+                                      ? user.firstName.substring(0, 2).toUpperCase()
+                                      : 'CN'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                              </div>
+                              {user.currentTasksCount !== undefined && (
+                                <Badge
+                                  variant={user.currentTasksCount > 8 ? 'destructive' : 'secondary'}
+                                  className="text-xs ml-2"
+                                  title={`Current workload: ${user.currentTasksCount} tasks`}
+                                >
+                                  {user.currentTasksCount} total
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+
+                  {/* Workload Warning */}
+                  {selectedAssigneeId &&
+                    selectedAssigneeId !== '' &&
+                    (() => {
+                      const selectedUser = users.find(u => u.id === selectedAssigneeId);
+                      if (selectedUser?.currentTasksCount && selectedUser.currentTasksCount > 8) {
+                        const newTotal = selectedUser.currentTasksCount + 1; // Adding 1 new task
+                        return (
+                          <div className="bg-orange-50 border border-orange-200 p-3 rounded-md text-sm">
+                            <div className="flex items-center gap-2 text-orange-800">
+                              <AlertTriangle className="h-4 w-4" />
+                              <div>
+                                <div className="font-medium">High workload warning</div>
+                                <div className="text-xs mt-1">
+                                  {selectedUser.firstName} {selectedUser.lastName} currently has{' '}
+                                  {selectedUser.currentTasksCount} tasks. Adding this task will
+                                  bring their total to {newTotal} tasks.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                  {/* Assignment Preview */}
+                  {selectedAssigneeId &&
+                    selectedAssigneeId !== '' &&
+                    (() => {
+                      const selectedUser = users.find(u => u.id === selectedAssigneeId);
+                      if (selectedUser) {
+                        return (
+                          <div className="text-sm text-muted-foreground bg-green-50 border border-green-200 p-3 rounded-md">
+                            <strong>Preview:</strong> This task will be assigned to{' '}
+                            {selectedUser.firstName} {selectedUser.lastName}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                </div>
                 <FormMessage />
               </FormItem>
             )}

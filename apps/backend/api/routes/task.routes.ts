@@ -76,6 +76,8 @@ router.get('/metadata', authMiddleware, controller.getTaskMetadata);
  */
 router.get('/priority/:level', authMiddleware, controller.getTasksByPriorityLevel);
 
+router.get('/user/:userId/count', authMiddleware, controller.getUserTaskCount);
+
 /**
  * @route PATCH /tasks/:taskId/status-transition
  * @desc Update task status with workflow validation
