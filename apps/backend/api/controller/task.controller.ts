@@ -5,7 +5,23 @@ import { TaskService, BatchUpdateRequest, BatchDeleteRequest } from '../services
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError } from '@wnp/types';
 import { DurationEnum } from '@wnp/types';
-import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
+import { TaskStatusEnum, TaskPriorityEnum, Roles } from '@prisma/client';
+import z from 'zod';
+import prisma from '../config/db';
+import { logger } from '../utils/logger';
+
+const getUserTaskCountSchema = z.object({
+  userId: z.string().uuid('Invalid user ID format'),
+});
+
+// Query parameter schema for filtering
+const querySchema = z.object({
+  includeCompleted: z
+    .string()
+    .optional()
+    .transform(val => val === 'true'),
+  statusFilter: z.array(z.nativeEnum(TaskStatusEnum)).optional(),
+});
 
 export class TaskController {
   constructor(private readonly taskService: TaskService = new TaskService()) {}
@@ -447,6 +463,191 @@ export class TaskController {
     }
   };
 
+  /**
+   * Get current task count for a specific user
+   * @param req Express request object
+   * @param res Express response object
+   */
+  handleGetUserTaskCount = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Validate request parameters
+      const { userId } = getUserTaskCountSchema.parse(req.params);
+      const { includeCompleted = false, statusFilter } = querySchema.parse(req.query);
+
+      // Get current user from auth middleware
+      const currentUser = req.user;
+      if (!currentUser) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+      }
+
+      // Check if current user has permission to view task counts
+      const allowedRoles = [
+        Roles.SUPER_USER,
+        Roles.TASK_SUPERVISOR,
+        Roles.DISTRICT_MANAGER,
+        Roles.TERRITORY_MANAGER,
+      ] as const;
+      const canViewTaskCounts =
+        currentUser.role &&
+        allowedRoles.includes(currentUser.role as (typeof allowedRoles)[number]);
+
+      // Users can always view their own task count
+      const isOwnTaskCount = currentUser.id === userId;
+
+      if (!canViewTaskCounts && !isOwnTaskCount) {
+        return res.status(403).json({
+          success: false,
+          message: "You do not have permission to view this user's task count",
+        });
+      }
+
+      // Verify the target user exists
+      const targetUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          role: {
+            select: { name: true },
+          },
+        },
+      });
+
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      // Build the where condition for task filtering
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const whereCondition: any = {
+        assignedToId: userId,
+      };
+
+      // If not including completed tasks, exclude them
+      if (!includeCompleted) {
+        whereCondition.status = {
+          statusName: {
+            notIn: [TaskStatusEnum.COMPLETED, TaskStatusEnum.REJECTED],
+          },
+        };
+      }
+
+      // Apply status filter if provided
+      if (statusFilter && statusFilter.length > 0) {
+        whereCondition.status = {
+          statusName: {
+            in: statusFilter,
+          },
+        };
+      }
+
+      // Get task counts
+      const [totalTasks, activeTasks, tasksByStatus] = await Promise.all([
+        // Total tasks assigned to user
+        prisma.task.count({
+          where: { assignedToId: userId },
+        }),
+
+        // Active tasks (non-completed/cancelled)
+        prisma.task.count({
+          where: whereCondition,
+        }),
+
+        // Tasks grouped by status
+        prisma.task.groupBy({
+          by: ['statusId'],
+          where: { assignedToId: userId },
+          _count: { id: true },
+        }),
+      ]);
+
+      // Get status names for the grouped results
+      const statusIds = tasksByStatus.map(item => item.statusId);
+      const statuses = await prisma.taskStatus.findMany({
+        where: { id: { in: statusIds } },
+        select: { id: true, statusName: true },
+      });
+
+      // Create status count mapping
+      const statusCounts = tasksByStatus.reduce(
+        (acc, item) => {
+          const status = statuses.find(s => s.id === item.statusId);
+          if (status) {
+            acc[status.statusName] = item._count.id;
+          }
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      // Log the request for auditing
+      logger.info(
+        {
+          action: 'get_user_task_count',
+          requestedBy: currentUser.id,
+          targetUser: userId,
+          taskCounts: {
+            total: totalTasks,
+            active: activeTasks,
+          },
+        },
+        'User task count retrieved'
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          userId,
+          userInfo: {
+            firstName: targetUser.firstName,
+            lastName: targetUser.lastName,
+            role: targetUser.role?.name,
+          },
+          taskCounts: {
+            totalTasks,
+            activeTasksCount: activeTasks,
+            byStatus: statusCounts,
+          },
+          metadata: {
+            includeCompleted,
+            statusFilter: statusFilter || [],
+            lastUpdated: new Date().toISOString(),
+          },
+        },
+      });
+    } catch (error) {
+      logger.error(
+        {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          userId: req.params.userId,
+          requestedBy: req.user?.id,
+        },
+        'Error getting user task count'
+      );
+
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid request parameters',
+          errors: error.errors,
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error while fetching user task count',
+      });
+    }
+  };
+
   // Publicly exposed route handlers
   getTasks = asyncHandler(this.handleGetTasks);
   getTaskById = asyncHandler(this.handleGetTaskById);
@@ -460,4 +661,5 @@ export class TaskController {
   getTaskMetadata = asyncHandler(this.handleGetTaskMetadata);
   getTasksByPriorityLevel = asyncHandler(this.handleGetTasksByPriorityLevel);
   updateTaskStatusWithValidation = asyncHandler(this.handleUpdateTaskStatusWithValidation);
+  getUserTaskCount = asyncHandler(this.handleGetUserTaskCount);
 }

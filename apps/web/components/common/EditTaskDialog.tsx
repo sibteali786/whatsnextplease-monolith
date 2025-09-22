@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CalendarIcon, CheckCircle, CircleX, Info } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, CheckCircle, CircleX, Info, UserX } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -102,6 +102,7 @@ const editTaskSchema = z.object({
     ),
   dueDate: z.date().nullable(),
 });
+
 interface TaskMetadata {
   priorities: Array<{
     id: string;
@@ -116,7 +117,13 @@ interface TaskMetadata {
     isLegacy?: boolean;
   }>;
 }
+
 type EditTaskFormValues = z.infer<typeof editTaskSchema>;
+
+// Extended user interface to include task count
+interface UserWithTaskCount extends UserAssigneeSchema {
+  currentTasksCount?: number;
+}
 
 interface EditTaskDialogProps {
   open: boolean;
@@ -138,7 +145,7 @@ export default function EditTaskDialog({
   onTaskUpdate,
 }: EditTaskDialogProps) {
   const { toast } = useToast();
-  const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
+  const [users, setUsers] = useState<UserWithTaskCount[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
   const [skills, setSkills] = useState<
     { id: string; name: string; skillCategory: { categoryName: string } }[]
@@ -172,6 +179,79 @@ export default function EditTaskDialog({
     },
     mode: 'onSubmit',
   });
+  const selectedAssigneeId = form.watch('assignedToId');
+
+  /**
+   * Function to fetch current task counts for users
+   */
+  const fetchUserTaskCounts = async (
+    usersList: UserAssigneeSchema[]
+  ): Promise<UserWithTaskCount[]> => {
+    try {
+      // Fetch task counts for all users in parallel
+      const usersWithCounts = await Promise.all(
+        usersList.map(async user => {
+          try {
+            // Call the backend to get current task count for this user
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/tasks/user/${user.id}/count`,
+              {
+                headers: {
+                  Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+
+            if (response.ok) {
+              const responseData = await response.json();
+              console.log(
+                `Task count response for ${user.firstName} ${user.lastName}:`,
+                responseData
+              );
+
+              // Extract the active task count from the nested structure
+              const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
+
+              return {
+                ...user,
+                currentTasksCount: activeTasksCount,
+              };
+            } else {
+              // If API fails, return user without count
+              console.warn(
+                `Failed to fetch task count for user ${user.id}. Status: ${response.status}`
+              );
+              return {
+                ...user,
+                currentTasksCount: 0,
+              };
+            }
+          } catch (error) {
+            console.warn(`Error fetching task count for user ${user.id}:`, error);
+            return {
+              ...user,
+              currentTasksCount: 0,
+            };
+          }
+        })
+      );
+
+      console.log(
+        'Users with task counts:',
+        usersWithCounts.map(u => ({
+          name: `${u.firstName} ${u.lastName}`,
+          taskCount: u.currentTasksCount,
+        }))
+      );
+
+      return usersWithCounts;
+    } catch (error) {
+      console.error('Error fetching user task counts:', error);
+      // Return original users without counts if there's an error
+      return usersList.map(user => ({ ...user, currentTasksCount: 0 }));
+    }
+  };
 
   /**
    * Fetch task metadata using taskApiClient
@@ -260,7 +340,9 @@ export default function EditTaskDialog({
     try {
       const response = await usersList(role ?? Roles.TASK_SUPERVISOR);
       if (response.success) {
-        setUsers(response.users);
+        // Fetch task counts for users and update state
+        const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
+        setUsers(usersWithTaskCounts);
       }
       if (!response.success) {
         toast({
@@ -737,48 +819,153 @@ export default function EditTaskDialog({
               </FormItem>
             )}
 
-            {/* Assignment - Conditional editing */}
+            {/* Assignment - Conditional editing with workload display */}
             {canAssignTasks ? (
               <FormField
                 control={form.control}
                 name="assignedToId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assigned Task Agent</FormLabel>
-                    <FormControl>
-                      <Select
-                        onValueChange={value => field.onChange(value === 'none' ? '' : value)}
-                        value={field.value || 'none'}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Assignee" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            <span className="text-muted-foreground">No Assignee</span>
-                          </SelectItem>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex items-center">
-                                <Avatar className="h-8 w-8 rounded-lg">
-                                  <AvatarImage
-                                    src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                    alt={user.firstName ?? 'avatar'}
-                                    className="rounded-full"
-                                  />
-                                  <AvatarFallback className="rounded-full">
-                                    {user.firstName
-                                      ? user.firstName.substring(0, 2).toUpperCase()
-                                      : 'CN'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="ml-2">{`${user.firstName} ${user.lastName}`}</span>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <FormLabel>Assigned Task Agent</FormLabel>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Info className="h-3 w-3" />
+                          <span>Numbers show current workload</span>
+                        </div>
+                      </div>
+
+                      <FormControl>
+                        <Select
+                          onValueChange={value => field.onChange(value === 'none' ? '' : value)}
+                          value={field.value || 'none'}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Assignee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <div className="flex items-center gap-2">
+                                <UserX className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">No Assignee</span>
                               </div>
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
+                            {users.map(user => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6 rounded-lg">
+                                      <AvatarImage
+                                        src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                        alt={user.firstName ?? 'avatar'}
+                                        className="rounded-full"
+                                      />
+                                      <AvatarFallback className="rounded-full text-xs">
+                                        {user.firstName
+                                          ? user.firstName.substring(0, 2).toUpperCase()
+                                          : 'CN'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                                  </div>
+                                  {user.currentTasksCount !== undefined && (
+                                    <Badge
+                                      variant={
+                                        user.currentTasksCount > 8 ? 'destructive' : 'secondary'
+                                      }
+                                      className="text-xs ml-2"
+                                      title={`Current workload: ${user.currentTasksCount} tasks`}
+                                    >
+                                      {user.currentTasksCount} total
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+
+                      {/* Workload Warning */}
+                      {selectedAssigneeId &&
+                        selectedAssigneeId !== '' &&
+                        (() => {
+                          const selectedUser = users.find(u => u.id === selectedAssigneeId);
+                          const currentAssignee = task.assignedTo;
+                          const isReassignment =
+                            currentAssignee && currentAssignee.id !== selectedAssigneeId;
+                          const taskCountAdjustment = isReassignment ? 0 : 1; // If reassigning, no net increase
+
+                          if (
+                            selectedUser?.currentTasksCount &&
+                            selectedUser.currentTasksCount > 8
+                          ) {
+                            const newTotal = selectedUser.currentTasksCount + taskCountAdjustment;
+                            return (
+                              <div className="bg-orange-50 border border-orange-200 p-3 rounded-md text-sm">
+                                <div className="flex items-center gap-2 text-orange-800">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <div>
+                                    <div className="font-medium">High workload warning</div>
+                                    <div className="text-xs mt-1">
+                                      {selectedUser.firstName} {selectedUser.lastName} currently has{' '}
+                                      {selectedUser.currentTasksCount} tasks.
+                                      {isReassignment
+                                        ? ` Reassigning this task will maintain their current workload.`
+                                        : ` Assigning this task will bring their total to ${newTotal} tasks.`}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
+                      {/* Assignment Preview */}
+                      {selectedAssigneeId &&
+                        selectedAssigneeId !== '' &&
+                        (() => {
+                          const selectedUser = users.find(u => u.id === selectedAssigneeId);
+                          const currentAssignee = task.assignedTo;
+
+                          if (selectedUser) {
+                            if (currentAssignee && currentAssignee.id === selectedAssigneeId) {
+                              return (
+                                <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
+                                  <strong>Current Assignment:</strong> This task is already assigned
+                                  to {selectedUser.firstName} {selectedUser.lastName}
+                                </div>
+                              );
+                            } else if (currentAssignee) {
+                              return (
+                                <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 p-3 rounded-md">
+                                  <strong>Reassignment:</strong> Will reassign from{' '}
+                                  {currentAssignee.firstName} {currentAssignee.lastName} to{' '}
+                                  {selectedUser.firstName} {selectedUser.lastName}
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div className="text-sm text-muted-foreground bg-green-50 border border-green-200 p-3 rounded-md">
+                                  <strong>New Assignment:</strong> This task will be assigned to{' '}
+                                  {selectedUser.firstName} {selectedUser.lastName}
+                                </div>
+                              );
+                            }
+                          }
+                          return null;
+                        })()}
+
+                      {/* Unassignment Preview */}
+                      {(selectedAssigneeId === '' || selectedAssigneeId === 'none') &&
+                        task.assignedTo && (
+                          <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
+                            <strong>Unassignment:</strong> Will remove assignment from{' '}
+                            {task.assignedTo.firstName} {task.assignedTo.lastName}
+                          </div>
+                        )}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

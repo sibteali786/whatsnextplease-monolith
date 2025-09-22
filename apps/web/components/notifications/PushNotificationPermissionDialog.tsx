@@ -82,7 +82,7 @@ export const NotificationPermissionDialog: React.FC<NotificationPermissionDialog
   ];
 
   return (
-    <AlertDialog open={open} onOpenChange={() => {}}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-[max-content]">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-xl">

@@ -60,6 +60,11 @@ interface CreateTaskContainerProps {
   fetchTasks?: () => Promise<void>;
 }
 
+// Extended user interface to include task count
+export interface UserWithTaskCount extends UserAssigneeSchema {
+  currentTasksCount?: number;
+}
+
 export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   open,
   setOpen,
@@ -70,7 +75,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   const [, setUser] = useState<UserState>();
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
-  const [users, setUsers] = useState<UserAssigneeSchema[]>([]);
+  const [users, setUsers] = useState<UserWithTaskCount[]>([]);
   const [canAssignTasks, setCanAssignTasks] = useState(false);
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
   const [, setFormWasCancelled] = useState(false);
@@ -113,6 +118,77 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       setFormWasCancelled(false);
     }
   }, [open, form, taskCategories, lastSubmissionWasSuccessful, isFirstOpen]);
+
+  // Function to fetch current task counts for users
+  const fetchUserTaskCounts = async (
+    usersList: UserAssigneeSchema[]
+  ): Promise<UserWithTaskCount[]> => {
+    try {
+      // Fetch task counts for all users in parallel
+      const usersWithCounts = await Promise.all(
+        usersList.map(async user => {
+          try {
+            // Call the backend to get current task count for this user
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/tasks/user/${user.id}/count`,
+              {
+                headers: {
+                  Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+
+            if (response.ok) {
+              const responseData = await response.json();
+              console.log(
+                `Task count response for ${user.firstName} ${user.lastName}:`,
+                responseData
+              );
+
+              // Extract the active task count from the nested structure
+              const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
+
+              return {
+                ...user,
+                currentTasksCount: activeTasksCount,
+              };
+            } else {
+              // If API fails, return user without count
+              console.warn(
+                `Failed to fetch task count for user ${user.id}. Status: ${response.status}`
+              );
+              return {
+                ...user,
+                currentTasksCount: 0,
+              };
+            }
+          } catch (error) {
+            console.warn(`Error fetching task count for user ${user.id}:`, error);
+            return {
+              ...user,
+              currentTasksCount: 0,
+            };
+          }
+        })
+      );
+
+      // Log the final result for debugging
+      console.log(
+        'Users with task counts:',
+        usersWithCounts.map(u => ({
+          name: `${u.firstName} ${u.lastName}`,
+          taskCount: u.currentTasksCount,
+        }))
+      );
+
+      return usersWithCounts;
+    } catch (error) {
+      console.error('Error fetching user task counts:', error);
+      // Return original users without counts if there's an error
+      return usersList.map(user => ({ ...user, currentTasksCount: 0 }));
+    }
+  };
 
   // Fetch skills dynamically
   useEffect(() => {
@@ -192,7 +268,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
               currentLoggedInUser?.role?.name ?? Roles.TASK_SUPERVISOR
             );
             if (response.success) {
-              setUsers(response.users);
+              // Fetch task counts for users and update state
+              const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
+              setUsers(usersWithTaskCounts);
             } else if (response.message !== 'Not authorized') {
               // Only show error toast if it's not an authorization issue
               toast({

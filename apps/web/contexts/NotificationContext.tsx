@@ -18,7 +18,6 @@ interface NotificationContextType {
   sseConnected: boolean;
   pushEnabled: boolean;
   reconnectIn: number;
-  isConnected: boolean; // Backward compatibility
   manualReconnect: () => void;
   refreshNotifications: () => Promise<void>;
 }
@@ -43,8 +42,8 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
   // SSE connection management
   const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconnectTimeoutRef = useRef<number | null>(null);
+  const countdownIntervalRef = useRef<number | null>(null);
   const retryCount = useRef(0);
   const maxRetries = 3;
   const isPageVisible = useRef(!document.hidden);
@@ -81,11 +80,11 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    if (reconnectTimeoutRef.current) {
+    if (reconnectTimeoutRef.current !== null) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    if (countdownIntervalRef.current) {
+    if (countdownIntervalRef.current !== null) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
@@ -175,10 +174,9 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         if (isPageVisible.current && retryCount.current < maxRetries) {
           const delay = Math.min(2000 * Math.pow(2, retryCount.current), 30000);
           console.log(`SSE reconnecting in ${delay}ms`);
-
           // Start countdown
           setReconnectIn(delay);
-          countdownIntervalRef.current = setInterval(() => {
+          countdownIntervalRef.current = window.setInterval(() => {
             setReconnectIn(prev => {
               const newValue = Math.max(0, prev - 1000);
               if (newValue === 0 && countdownIntervalRef.current) {
@@ -189,7 +187,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
             });
           }, 1000);
 
-          reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectTimeoutRef.current = window.setTimeout(() => {
             setReconnectIn(0);
             retryCount.current++;
             createSSEConnection();
@@ -403,7 +401,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         sseConnected,
         pushEnabled,
         reconnectIn,
-        isConnected: sseConnected || pushEnabled, // Backward compatibility
         manualReconnect,
         refreshNotifications,
       }}
