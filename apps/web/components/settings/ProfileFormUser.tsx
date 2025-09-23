@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Camera, Eye, EyeOff, Info, Loader2, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +32,7 @@ import { UserWithRole } from './types';
 // Profile update schema
 const profileSchema = z.object({
   personalInfo: z.object({
+    bio: z.string().optional(),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
@@ -114,6 +116,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
     resolver: zodResolver(profileSchema),
     defaultValues: {
       personalInfo: {
+        bio: initialData.bio || '',
         firstName: initialData.firstName,
         lastName: initialData.lastName,
         email: initialData.email,
@@ -158,6 +161,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
               lastName: user.lastName,
               email: user.email,
               phone: user.phone || '',
+              bio: user.bio || '',
               username: user.username,
               designation: user.designation || '',
             },
@@ -195,6 +199,9 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
       const changesInOriginalUser: Partial<z.infer<typeof profileData>> = {};
 
       // Compare personal info
+      if (trimmedData.personalInfo.bio !== originalUser.bio) {
+        changesInOriginalUser.bio = trimmedData.personalInfo.bio;
+      }
       if (trimmedData.personalInfo.firstName !== originalUser.firstName) {
         changesInOriginalUser.firstName = trimmedData.personalInfo.firstName;
       }
@@ -389,6 +396,22 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                   Profile to save changes
                 </p>
               )}
+
+              <FormField
+                control={form.control}
+                name="personalInfo.bio"
+                disabled={!isPersonalEditing}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>BIO</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} readOnly={!isPersonalEditing} rows={6} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

@@ -38,6 +38,7 @@ model Role {
 
 model User {
     id                   String               @id @default(uuid())
+    bio                  String?
     firstName            String
     lastName             String
     username             String               @unique
@@ -87,6 +88,7 @@ model Client {
     id                   String             @id @default(uuid())
     email                String             @unique
     username             String             @unique
+    bio                  String?
     passwordHash         String
     country              String?            @default("US")
     companyName          String
