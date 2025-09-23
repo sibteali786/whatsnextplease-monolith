@@ -45,7 +45,7 @@ export class NotificationDeliveryService {
         {
           recipientId: recipient.id,
           hasActiveConnection,
-          activeClientsCount: sseManager.getActiveClientsCount(),
+          activeClientsCount: sseManager.getTotalConnectionCount(),
         },
         'SSE Manager state before send'
       );
@@ -267,8 +267,8 @@ export class NotificationDeliveryService {
    */
   getDeliveryStats() {
     return {
-      activeSSEConnections: sseManager.getActiveClientsCount(),
-      activeClients: sseManager.getActiveClients(),
+      activeSSEConnections: sseManager.getTotalConnectionCount(),
+      activeClients: sseManager.getActiveUsers(),
     };
   }
 }
