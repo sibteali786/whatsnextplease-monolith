@@ -27,9 +27,11 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 const clientProfileSchema = z.object({
   personalInfo: z.object({
+    bio: z.string().optional(),
     contactName: z.string().min(1, 'Contact name is required'),
     companyName: z.string().min(1, 'Company name is required'),
     website: z.union([z.string().url(), z.literal('')]),
@@ -65,6 +67,7 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
     resolver: zodResolver(clientProfileSchema),
     defaultValues: {
       personalInfo: {
+        bio: initialData.bio || '',
         contactName: initialData.contactName ?? '',
         companyName: initialData.companyName,
         website: initialData.website || '',
@@ -102,6 +105,7 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
           setOriginalClient(client);
           form.reset({
             personalInfo: {
+              bio: client.bio || '',
               contactName: client.contactName ?? '',
               companyName: client.companyName,
               website: client.website || '',
@@ -166,6 +170,9 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
       }
       if (trimmedData.personalInfo.email !== originalClient.email) {
         changes.email = trimmedData.personalInfo.email;
+      }
+      if (trimmedData.personalInfo.bio !== originalClient.bio) {
+        changes.bio = trimmedData.personalInfo.bio;
       }
       if (trimmedData.personalInfo.phone !== originalClient.phone) {
         changes.phone = trimmedData.personalInfo.phone;
@@ -335,6 +342,20 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
               </div>
 
               {/* Form Fields */}
+              <FormField
+                control={form.control}
+                name="personalInfo.bio"
+                disabled={!isPersonalEditing}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>BIO</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} readOnly={!isPersonalEditing} rows={6} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
