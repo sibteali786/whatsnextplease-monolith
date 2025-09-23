@@ -19,6 +19,7 @@ import { BadRequestError } from '@wnp/types';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { NotificationPayload } from '../services/notificationDelivery.service';
 import { env } from '../config/environment';
+import { logger } from '../utils/logger';
 
 export class NotificationController {
   constructor(
@@ -32,6 +33,22 @@ export class NotificationController {
     _next: NextFunction
   ): Promise<void> => {
     const userId = req.params.userId;
+    const { tabId } = req.query;
+
+    if (!userId) {
+      res.status(400).json({ error: 'User ID is required' });
+      return;
+    }
+
+    logger.info(
+      {
+        userId,
+        tabId,
+        userAgent: req.headers['user-agent'],
+        ip: req.ip,
+      },
+      'SSE subscription request received'
+    );
 
     // Set proper SSE headers
     res.writeHead(200, {
@@ -43,15 +60,23 @@ export class NotificationController {
       'Access-Control-Allow-Headers': 'Cache-Control',
     });
 
-    // Send initial connection confirmation
-    res.write('data: {"type":"connected","message":"SSE connection established"}\n\n');
+    const connectionId = `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    sseManager.addClient(userId, res);
+    // Add client to SSE manager with tab support
+    sseManager.addClient(userId, res, connectionId, tabId as string);
 
-    // Handle client disconnect
-    req.on('close', () => {
-      console.log(`SSE client disconnected: ${userId}`);
-      sseManager.removeClient(userId);
+    // Handle client disconnect events
+    const cleanup = () => {
+      logger.info({ userId, connectionId, tabId }, 'SSE client disconnected');
+      sseManager.removeClient(userId, connectionId);
+    };
+
+    req.on('close', cleanup);
+    req.on('aborted', cleanup);
+    res.on('close', cleanup);
+    res.on('error', error => {
+      logger.error({ userId, connectionId, tabId, error }, 'SSE connection error');
+      cleanup();
     });
   };
 

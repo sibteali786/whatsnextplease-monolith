@@ -1,3 +1,4 @@
+// apps/web/contexts/NotificationContext.tsx
 import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { NotificationResponse } from '@wnp/types';
 import { fetchNotifications } from '@/db/repositories/notifications/getNotifications';
@@ -20,6 +21,8 @@ interface NotificationContextType {
   reconnectIn: number;
   manualReconnect: () => void;
   refreshNotifications: () => Promise<void>;
+  tabId: string;
+  connectionId: string | null;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -30,6 +33,17 @@ interface NotificationProviderProps {
   role: string;
 }
 
+// Generate unique tab ID for this browser tab
+const generateTabId = (): string => {
+  // Try to get existing tab ID from sessionStorage (unique per tab)
+  let tabId = sessionStorage.getItem('wnp_tab_id');
+  if (!tabId) {
+    tabId = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('wnp_tab_id', tabId);
+  }
+  return tabId;
+};
+
 export const NotificationProvider = ({ children, userId, role }: NotificationProviderProps) => {
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -39,13 +53,17 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   const [sseConnected, setSseConnected] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [reconnectIn, setReconnectIn] = useState(0);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
+
+  // Generate stable tab ID for this tab session
+  const tabId = useRef(generateTabId());
 
   // SSE connection management
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const countdownIntervalRef = useRef<number | null>(null);
   const retryCount = useRef(0);
-  const maxRetries = 3;
+  const maxRetries = 5; // Increased for better reliability with multi-tab
   const isPageVisible = useRef(!document.hidden);
 
   const { toast } = useToast();
@@ -89,39 +107,43 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
       countdownIntervalRef.current = null;
     }
     setSseConnected(false);
+    setConnectionId(null);
     setReconnectIn(0);
   }, []);
 
-  // Create SSE connection with simplified retry logic
+  // Create SSE connection with multi-tab support
   const createSSEConnection = useCallback(() => {
     if (!userId || !isPageVisible.current) {
-      console.log('Skipping SSE connection - page not visible or no userId');
+      console.log(`[Tab:${tabId.current}] Skipping SSE connection - page not visible or no userId`);
       return;
     }
 
     // Don't retry beyond max attempts
     if (retryCount.current >= maxRetries) {
-      console.log('SSE max retries reached, relying on push notifications');
+      console.log(`[Tab:${tabId.current}] SSE max retries reached, relying on push notifications`);
       return;
     }
 
     const token = getCookie(COOKIE_NAME);
     if (!token) {
-      console.error('No authentication token found');
+      console.error(`[Tab:${tabId.current}] No authentication token found`);
       return;
     }
 
     cleanupSSE();
 
     try {
-      const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}`;
-      console.log(`Creating SSE connection (attempt ${retryCount.current + 1}/${maxRetries})`);
+      // Include tabId in SSE URL for backend identification
+      const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}&tabId=${tabId.current}`;
+      console.log(
+        `[Tab:${tabId.current}] Creating SSE connection (attempt ${retryCount.current + 1}/${maxRetries})`
+      );
 
       const eventSource = new EventSource(sseUrl);
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
-        console.log('SSE connection established');
+        console.log(`[Tab:${tabId.current}] SSE connection established`);
         setSseConnected(true);
         setError(null);
         retryCount.current = 0; // Reset retry count on success
@@ -131,8 +153,20 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         try {
           const data = JSON.parse(event.data);
 
+          // Handle connection confirmation
+          if (data.type === 'connected') {
+            setConnectionId(data.connectionId);
+            console.log(
+              `[Tab:${tabId.current}] Connection confirmed with ID: ${data.connectionId}`
+            );
+            return;
+          }
+
           // Handle ping messages
-          if (data.type === 'ping' || data.type === 'connected') {
+          if (data.type === 'ping') {
+            console.debug(
+              `[Tab:${tabId.current}] Received ping from connection: ${data.connectionId}`
+            );
             return;
           }
 
@@ -150,9 +184,24 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
               updatedAt: data.updatedAt || new Date().toISOString(),
             };
 
-            setNotifications(prev => [newNotification, ...prev]);
+            console.log(
+              `[Tab:${tabId.current}] Received notification via connection: ${data.connectionId}`
+            );
 
-            // Show toast only if page is visible
+            // Use functional update to avoid stale closure
+            setNotifications(prev => {
+              // Check if notification already exists to avoid duplicates
+              const exists = prev.some(n => n.id === newNotification.id);
+              if (exists) {
+                console.log(
+                  `[Tab:${tabId.current}] Duplicate notification ignored: ${newNotification.id}`
+                );
+                return prev;
+              }
+              return [newNotification, ...prev];
+            });
+
+            // Show toast only if page is visible and this is the active tab
             if (isPageVisible.current) {
               toast({
                 title: 'New Notification',
@@ -162,18 +211,19 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
             }
           }
         } catch (err) {
-          console.error('Error parsing SSE message:', err);
+          console.error(`[Tab:${tabId.current}] Error parsing SSE message:`, err);
         }
       };
 
-      eventSource.onerror = () => {
-        console.error('SSE connection error');
+      eventSource.onerror = event => {
+        console.error(`[Tab:${tabId.current}] SSE connection error:`, event);
         setSseConnected(false);
 
         // Only retry if page is visible and within retry limit
         if (isPageVisible.current && retryCount.current < maxRetries) {
           const delay = Math.min(2000 * Math.pow(2, retryCount.current), 30000);
-          console.log(`SSE reconnecting in ${delay}ms`);
+          console.log(`[Tab:${tabId.current}] SSE reconnecting in ${delay}ms`);
+
           // Start countdown
           setReconnectIn(delay);
           countdownIntervalRef.current = window.setInterval(() => {
@@ -193,17 +243,19 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
             createSSEConnection();
           }, delay);
         } else {
-          console.log('SSE giving up, push notifications will handle delivery');
+          console.log(
+            `[Tab:${tabId.current}] SSE giving up, push notifications will handle delivery`
+          );
           setReconnectIn(0);
         }
       };
     } catch (err) {
-      console.error('Error creating SSE connection:', err);
+      console.error(`[Tab:${tabId.current}] Error creating SSE connection:`, err);
       setSseConnected(false);
     }
   }, [userId, getCookie, cleanupSSE, toast]);
 
-  // Handle page visibility changes with delayed disconnection
+  // Handle page visibility changes with improved tab management
   useEffect(() => {
     let disconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -212,49 +264,62 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
       isPageVisible.current = !document.hidden;
 
       if (!wasVisible && isPageVisible.current) {
-        // Page became visible - clear any pending disconnect and reconnect
+        // Page became visible
+        console.log(`[Tab:${tabId.current}] Page became visible`);
+
         if (disconnectTimeout) {
           clearTimeout(disconnectTimeout);
           disconnectTimeout = null;
         }
+
         if (!sseConnected) {
-          console.log('Page became visible and SSE disconnected, reconnecting');
+          console.log(`[Tab:${tabId.current}] Page visible and SSE disconnected, reconnecting`);
           retryCount.current = 0; // Reset retry count
           createSSEConnection();
-        } else {
-          console.log('Page became visible but SSE still connected, no action needed');
         }
+
+        // Always refresh notifications when tab becomes visible
         refreshNotifications();
       } else if (wasVisible && !isPageVisible.current) {
-        // Page became hidden - schedule disconnect after delay
-        console.log('Page became hidden, scheduling SSE disconnect in 30 seconds');
+        // Page became hidden - schedule disconnect after longer delay for multi-tab scenarios
+        console.log(
+          `[Tab:${tabId.current}] Page became hidden, scheduling SSE disconnect in 60 seconds`
+        );
 
         disconnectTimeout = setTimeout(() => {
           if (!isPageVisible.current) {
-            console.log('Page still hidden after 30s, closing SSE connection');
+            console.log(
+              `[Tab:${tabId.current}] Page still hidden after 60s, closing SSE connection`
+            );
             cleanupSSE();
           }
           disconnectTimeout = null;
-        }, 30000); // 30 second delay before disconnecting
+        }, 60000); // Increased to 60 seconds for better multi-tab experience
       }
     };
 
     const handleFocus = () => {
-      // Browser window gained focus - ensure SSE is connected
+      console.log(`[Tab:${tabId.current}] Window focused`);
       if (!sseConnected && isPageVisible.current) {
-        console.log('Window focused, ensuring SSE connection');
+        console.log(`[Tab:${tabId.current}] Window focused, ensuring SSE connection`);
         createSSEConnection();
       }
     };
 
     const handleBlur = () => {
-      // Browser window lost focus - but don't disconnect immediately
-      console.log('Window blurred, but keeping SSE connection for now');
+      console.log(`[Tab:${tabId.current}] Window blurred, but keeping SSE connection for now`);
+    };
+
+    // Handle tab/window closing
+    const handleBeforeUnload = () => {
+      console.log(`[Tab:${tabId.current}] Tab/window closing, cleaning up SSE`);
+      cleanupSSE();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('blur', handleBlur);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       if (disconnectTimeout) {
@@ -263,8 +328,37 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [createSSEConnection, cleanupSSE, refreshNotifications, sseConnected]);
+
+  // Cross-tab communication for notification sync
+  useEffect(() => {
+    const channel = new BroadcastChannel('wnp_notifications');
+
+    // Listen for notifications from other tabs
+    channel.onmessage = event => {
+      if (event.data.type === 'NOTIFICATION_RECEIVED' && event.data.tabId !== tabId.current) {
+        console.log(`[Tab:${tabId.current}] Received notification sync from another tab`);
+        // Another tab received a notification, sync our state
+        refreshNotifications();
+      } else if (event.data.type === 'MARK_AS_READ' && event.data.tabId !== tabId.current) {
+        // Another tab marked notification as read, update our state
+        const { notificationId } = event.data;
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification.id === notificationId
+              ? { ...notification, status: NotificationStatus.READ }
+              : notification
+          )
+        );
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, [refreshNotifications]);
 
   // Check for push notification support
   useEffect(() => {
@@ -275,7 +369,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
           const subscription = await registration.pushManager.getSubscription();
           setPushEnabled(!!subscription);
         } catch (err) {
-          console.log('Push notifications not available');
+          console.log(`[Tab:${tabId.current}] Push notifications not available`);
           setPushEnabled(false);
         }
       }
@@ -287,12 +381,13 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   // Load initial notifications
   useEffect(() => {
     const loadInitialNotifications = async () => {
+      console.log(`[Tab:${tabId.current}] Loading initial notifications`);
       try {
         const response = await fetchNotifications(userId, role);
         setNotifications(response.notifications);
         setError(null);
       } catch (err) {
-        console.error('Failed to fetch initial notifications:', err);
+        console.error(`[Tab:${tabId.current}] Failed to fetch initial notifications:`, err);
         setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
       } finally {
         setIsLoading(false);
@@ -307,6 +402,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   // Initialize SSE connection
   useEffect(() => {
     if (userId && isPageVisible.current) {
+      console.log(`[Tab:${tabId.current}] Initializing SSE connection`);
       createSSEConnection();
     }
     return cleanupSSE;
@@ -314,7 +410,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
   // Manual reconnect function
   const manualReconnect = useCallback(() => {
-    console.log('Manual reconnect triggered');
+    console.log(`[Tab:${tabId.current}] Manual reconnect triggered`);
     retryCount.current = 0;
     setReconnectIn(0);
     if (countdownIntervalRef.current) {
@@ -324,7 +420,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     createSSEConnection();
   }, [createSSEConnection]);
 
-  // Mark notification as read
+  // Mark notification as read with cross-tab sync
   const markAsRead = async (id: string) => {
     try {
       setMarkingRead(prev => [...prev, id]);
@@ -337,6 +433,15 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
             : notification
         )
       );
+
+      // Broadcast to other tabs
+      const channel = new BroadcastChannel('wnp_notifications');
+      channel.postMessage({
+        type: 'MARK_AS_READ',
+        notificationId: id,
+        tabId: tabId.current,
+      });
+      channel.close();
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to mark as read'));
     } finally {
@@ -344,7 +449,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     }
   };
 
-  // Mark all notifications as read
+  // Mark all notifications as read with cross-tab sync
   const markAllAsRead = async () => {
     try {
       await markAllAsReadNotifications(userId, role);
@@ -354,6 +459,15 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
           status: NotificationStatus.READ,
         }))
       );
+
+      // Broadcast to other tabs
+      const channel = new BroadcastChannel('wnp_notifications');
+      channel.postMessage({
+        type: 'MARK_ALL_AS_READ',
+        tabId: tabId.current,
+      });
+      channel.close();
+
       toast({
         title: 'Success',
         description: 'All notifications marked as read',
@@ -368,17 +482,15 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     }
   };
 
-  // Listen for push notification events (when page is in background)
+  // Listen for push notification events
   useEffect(() => {
     const handlePushNotification = () => {
-      // Refresh notifications when we receive a push notification
-      // This helps sync state when notifications arrive via push while page was hidden
       if (isPageVisible.current) {
+        console.log(`[Tab:${tabId.current}] Refreshing notifications due to push event`);
         refreshNotifications();
       }
     };
 
-    // Listen for service worker messages about received push notifications
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', event => {
         if (event.data && event.data.type === 'PUSH_NOTIFICATION_RECEIVED') {
@@ -403,6 +515,8 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         reconnectIn,
         manualReconnect,
         refreshNotifications,
+        tabId: tabId.current,
+        connectionId,
       }}
     >
       {children}
