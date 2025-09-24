@@ -71,10 +71,17 @@ export const formatNumbers = (number: string): string => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const trimWhitespace = <T extends Record<string, any>>(obj: T): T => {
   return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [
-      key,
-      typeof value === 'string' ? value.trim() : value,
-    ])
+    Object.entries(obj).map(([key, value]) => {
+      if (typeof value === 'string') {
+        return [key, value.trim()];
+      } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        // Recursively handle nested objects
+        return [key, trimWhitespace(value)];
+      } else {
+        // Return arrays, null, and other types as-is
+        return [key, value];
+      }
+    })
   ) as T;
 };
 

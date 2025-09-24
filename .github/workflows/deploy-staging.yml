@@ -1,0 +1,151 @@
+name: Deploy Backend to Staging
+
+# Trigger on pushes and pull requests to staging branch
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - 'apps/backend/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-staging.yml'
+  pull_request:
+    branches:
+      - staging
+    paths:
+      - 'apps/backend/**'
+      - 'Dockerfile'
+    types: [closed]
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: staging-deployment
+  cancel-in-progress: true
+
+jobs:
+  # Job to build and deploy to staging
+  deploy-staging:
+    # Only run on push to staging or when PR is merged
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+
+    # Set environment variables for the job
+    environment:
+      name: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Get ECR Repository URI
+        id: ecr-repo
+        run: |
+          STACK_NAME="WnpBackendStack-development"
+          ECR_REPO=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?ExportName=='ECRRepositoryURI-development'].OutputValue" \
+            --output text)
+
+          if [ -z "$ECR_REPO" ]; then
+            echo "Error: Could not retrieve ECR repository URL"
+            exit 1
+          fi
+
+          echo "repository=$ECR_REPO" >> $GITHUB_OUTPUT
+          echo "Using ECR repository: $ECR_REPO"
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: private
+
+      - name: Create environment-specific .env file for Docker build
+        run: |
+          cd apps/backend
+
+          # Create .env file with all environment-specific variables
+          # This uses the consolidated environment secret from GitHub
+          echo "${{ secrets.ENV_DEVELOPMENT }}" > .env
+
+          # Verify the .env file was created (without showing contents)
+          echo "✅ Environment file created with $(wc -l < .env) lines"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.ecr-repo.outputs.repository }}:latest
+            ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}
+            ${{ steps.ecr-repo.outputs.repository }}:staging-${{ github.run_number }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=development
+
+      - name: Clean up temporary files
+        if: always()
+        run: |
+          rm -f apps/backend/.env
+
+      - name: Update ECS Service
+        id: ecs-deploy
+        run: |
+          echo "Updating ECS service for staging environment..."
+
+          aws ecs update-service \
+            --cluster wnp-backend-cluster-development \
+            --service wnp-backend-service-development \
+            --force-new-deployment \
+            --region us-east-1
+
+          echo "ECS service update initiated"
+
+          # Wait for the service to reach a stable state
+          echo "Waiting for service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster wnp-backend-cluster-development \
+            --services wnp-backend-service-development \
+            --region us-east-1 \
+            --cli-read-timeout 900 \
+            --cli-connect-timeout 60
+
+      - name: Verify Deployment
+        run: |
+          echo "Checking service status..."
+          aws ecs describe-services \
+            --cluster wnp-backend-cluster-development \
+            --services wnp-backend-service-development \
+            --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount}' \
+            --output table
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ Staging deployment completed successfully!"
+          echo "🚀 Image deployed: ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}"
+          echo "📦 Build number: staging-${{ github.run_number }}"
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Staging deployment failed!"
+          echo "Please check the logs and verify your AWS configuration."
