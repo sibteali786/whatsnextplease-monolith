@@ -159,37 +159,42 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
       const changes: Partial<z.infer<typeof clientProfileData>> = {};
 
       // Handle client-specific fields
-      if (trimmedData.personalInfo.contactName !== originalClient.contactName) {
-        changes.contactName = trimmedData.personalInfo.contactName;
+      if (trimmedData?.personalInfo) {
+        if (trimmedData.personalInfo.contactName !== originalClient.contactName) {
+          changes.contactName = trimmedData.personalInfo.contactName;
+        }
+        if (trimmedData.personalInfo.companyName !== originalClient.companyName) {
+          changes.companyName = trimmedData.personalInfo.companyName;
+        }
+        if (trimmedData.personalInfo.website !== originalClient.website) {
+          changes.website = trimmedData.personalInfo.website;
+        }
+        if (trimmedData.personalInfo.email !== originalClient.email) {
+          changes.email = trimmedData.personalInfo.email;
+        }
+        if (trimmedData.personalInfo.bio !== originalClient.bio) {
+          changes.bio = trimmedData.personalInfo.bio;
+        }
+        if (trimmedData.personalInfo.phone !== originalClient.phone) {
+          changes.phone = trimmedData.personalInfo.phone;
+        }
+        if (trimmedData.personalInfo.username !== originalClient.username) {
+          changes.username = trimmedData.personalInfo.username;
+        }
       }
-      if (trimmedData.personalInfo.companyName !== originalClient.companyName) {
-        changes.companyName = trimmedData.personalInfo.companyName;
+
+      if (trimmedData?.address) {
+        if (trimmedData.address.country !== originalClient.country) {
+          changes.country = trimmedData.address.country;
+        }
+        if (trimmedData.address.city !== originalClient.city) {
+          changes.city = trimmedData.address.city;
+        }
+        if (trimmedData.address.postalCode !== originalClient.zipCode) {
+          changes.zipCode = trimmedData.address.postalCode;
+        }
       }
-      if (trimmedData.personalInfo.website !== originalClient.website) {
-        changes.website = trimmedData.personalInfo.website;
-      }
-      if (trimmedData.personalInfo.email !== originalClient.email) {
-        changes.email = trimmedData.personalInfo.email;
-      }
-      if (trimmedData.personalInfo.bio !== originalClient.bio) {
-        changes.bio = trimmedData.personalInfo.bio;
-      }
-      if (trimmedData.personalInfo.phone !== originalClient.phone) {
-        changes.phone = trimmedData.personalInfo.phone;
-      }
-      if (trimmedData.personalInfo.username !== originalClient.username) {
-        changes.username = trimmedData.personalInfo.username;
-      }
-      if (trimmedData.address.country !== originalClient.country) {
-        changes.country = trimmedData.address.country;
-      }
-      if (trimmedData.address.city !== originalClient.city) {
-        changes.city = trimmedData.address.city;
-      }
-      if (trimmedData.address.postalCode !== originalClient.zipCode) {
-        changes.zipCode = trimmedData.address.postalCode;
-      }
-      if (trimmedData.password.newPassword) {
+      if (trimmedData?.password?.newPassword) {
         changes.passwordHash = trimmedData.password.newPassword;
       }
 

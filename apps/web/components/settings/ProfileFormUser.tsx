@@ -219,12 +219,13 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
   const onSubmit = async (data: UserProfileFormValues) => {
     try {
       if (!originalUser) return;
+      console.log(data);
       const trimmedData = trimWhitespace(data);
       // Track what's actually changed
       const changesInOriginalUser: Partial<z.infer<typeof profileData>> = {};
-
+      console.log(trimmedData);
       // Compare personal info
-      if (trimmedData.personalInfo) {
+      if (trimmedData?.personalInfo) {
         if (trimmedData.personalInfo.bio !== originalUser.bio) {
           changesInOriginalUser.bio = trimmedData.personalInfo.bio;
         }
@@ -249,7 +250,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
       }
 
       // Compare address with safe access
-      if (trimmedData.address) {
+      if (trimmedData?.address) {
         if (trimmedData.address.country !== originalUser.country) {
           changesInOriginalUser.country = trimmedData.address.country;
         }
@@ -260,7 +261,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
           changesInOriginalUser.zipCode = trimmedData.address.postalCode;
         }
       }
-      if (trimmedData.password?.newPassword) {
+      if (trimmedData?.password?.newPassword) {
         changesInOriginalUser.passwordHash = trimmedData.password.newPassword;
       }
 

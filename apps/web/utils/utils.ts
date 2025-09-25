@@ -72,13 +72,28 @@ export const formatNumbers = (number: string): string => {
 export const trimWhitespace = <T extends Record<string, any>>(obj: T): T => {
   return Object.fromEntries(
     Object.entries(obj).map(([key, value]) => {
+      // Handle strings - trim whitespace
       if (typeof value === 'string') {
         return [key, value.trim()];
-      } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        // Recursively handle nested objects
+      }
+      // Handle Date objects - return as-is (BEFORE checking for object)
+      else if (value instanceof Date) {
+        return [key, value];
+      }
+      // Handle arrays - return as-is
+      else if (Array.isArray(value)) {
+        return [key, value];
+      }
+      // Handle other special objects - return as-is
+      else if (value instanceof RegExp || value instanceof File || value instanceof Blob) {
+        return [key, value];
+      }
+      // Handle plain objects - process recursively
+      else if (value !== null && typeof value === 'object') {
         return [key, trimWhitespace(value)];
-      } else {
-        // Return arrays, null, and other types as-is
+      }
+      // Handle primitives (number, boolean, null, undefined) - return as-is
+      else {
         return [key, value];
       }
     })
