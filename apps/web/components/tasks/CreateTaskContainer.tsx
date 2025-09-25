@@ -352,7 +352,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       if (totalHours === null) {
         throw new Error('Invalid time format');
       }
-
       const formattedData = {
         ...trimmedData,
         id: taskId,
