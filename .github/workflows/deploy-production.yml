@@ -1,0 +1,161 @@
+name: Deploy Backend to Production
+
+# Trigger on pushes and pull requests to main branch
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/backend/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-production.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/backend/**'
+      - 'Dockerfile'
+    types: [closed]
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
+
+jobs:
+  # Job to build and deploy to production
+  deploy-production:
+    # Only run on push to main or when PR is merged
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+
+    # Set environment variables for the job
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Get ECR Repository URI
+        id: ecr-repo
+        run: |
+          STACK_NAME="WnpBackendStack-production"
+          ECR_REPO=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?ExportName=='ECRRepositoryURI-production'].OutputValue" \
+            --output text)
+
+          if [ -z "$ECR_REPO" ]; then
+            echo "Error: Could not retrieve ECR repository URL"
+            exit 1
+          fi
+
+          echo "repository=$ECR_REPO" >> $GITHUB_OUTPUT
+          echo "Using ECR repository: $ECR_REPO"
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          registry-type: private
+
+      - name: Create environment-specific .env file for Docker build
+        run: |
+          cd apps/backend
+
+          # Create .env file with all production environment variables
+          # This uses the consolidated production environment secret from GitHub
+          echo "${{ secrets.ENV_PRODUCTION }}" > .env
+
+          # Verify the .env file was created (without showing contents)
+          echo "✅ Production environment file created with $(wc -l < .env) lines"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          platforms: linux/amd64
+          tags: |
+            ${{ steps.ecr-repo.outputs.repository }}:latest
+            ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}
+            ${{ steps.ecr-repo.outputs.repository }}:production-${{ github.run_number }}
+            ${{ steps.ecr-repo.outputs.repository }}:v${{ github.run_number }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+      - name: Clean up temporary files
+        if: always()
+        run: |
+          rm -f apps/backend/.env
+
+      - name: Update ECS Service
+        id: ecs-deploy
+        run: |
+          echo "Updating ECS service for production environment..."
+
+          aws ecs update-service \
+            --cluster wnp-backend-cluster-production \
+            --service wnp-backend-service-production \
+            --force-new-deployment \
+            --region us-east-1
+
+          echo "ECS service update initiated"
+
+          # Wait for the service to reach a stable state (longer timeout for production)
+          echo "Waiting for production service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster wnp-backend-cluster-production \
+            --services wnp-backend-service-production \
+            --region us-east-1 \
+            --cli-read-timeout 1200 \
+            --cli-connect-timeout 60
+
+      - name: Verify Deployment
+        run: |
+          echo "Checking production service status..."
+          aws ecs describe-services \
+            --cluster wnp-backend-cluster-production \
+            --services wnp-backend-service-production \
+            --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount,TaskDefinition:taskDefinition}' \
+            --output table
+
+      - name: Run Production Health Check
+        run: |
+          echo "Running production health check..."
+          # Add your production health check URL here
+          # curl -f https://your-production-domain.com/health || exit 1
+          echo "Health check placeholder - add your production URL"
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ Production deployment completed successfully!"
+          echo "🚀 Image deployed: ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}"
+          echo "📦 Build number: production-${{ github.run_number }}"
+          echo "🏷️  Version tag: v${{ github.run_number }}"
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Production deployment failed!"
+          echo "Please check the logs and verify your AWS configuration."
+          echo "Consider rolling back to previous stable version."
