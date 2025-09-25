@@ -1,11 +1,28 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
 import { z } from 'zod';
 import { logger } from '../utils/logger';
 
+// Simple OS-based port detection
+const getDefaultPort = (): string => {
+  // Check if PORT is explicitly set in environment
+  if (process.env.PORT) {
+    return process.env.PORT;
+  }
+
+  // Production always uses 3000
+  if (process.env.NODE_ENV === 'production') {
+    return '3000';
+  }
+
+  // macOS uses 5001, others use 5000
+  return os.platform() === 'darwin' ? '5001' : '5000';
+};
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('5000'),
+  PORT: z.string().transform(Number).default(getDefaultPort()),
   DATABASE_URL: z.string(),
   VAPID_PUBLIC_KEY: z.string(),
   VAPID_PRIVATE_KEY: z.string(),
@@ -23,6 +40,21 @@ class EnvironmentService {
     dotenv.config({ path: path.resolve(__dirname, '../../.env') });
     try {
       this.config = envSchema.parse(process.env);
+
+      // Log OS-specific port selection
+      if (process.env.NODE_ENV === 'development') {
+        const platform = os.platform();
+        const platformName =
+          platform === 'darwin'
+            ? 'macOS'
+            : platform === 'win32'
+              ? 'Windows'
+              : platform === 'linux'
+                ? 'Linux'
+                : platform;
+        logger.info(`Detected ${platformName} - using port ${this.config.PORT}`);
+      }
+
       logger.info('Environment variables loaded and validated successfully');
     } catch (error) {
       if (error instanceof z.ZodError) {

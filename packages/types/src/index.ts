@@ -102,6 +102,7 @@ export type UpdateProfilePictureDto = z.infer<typeof UpdateProfilePictureSchema>
 
 export const UpdateProfileSchema = z.object({
   id: z.string(),
+  bio: z.string().optional(),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().email().optional(),
@@ -136,6 +137,7 @@ export const UpdateClientProfileSchema = z.object({
   id: z.string(),
   username: z.string().optional(),
   phone: z.string().optional(),
+  bio: z.string().optional(),
   avatarUrl: z.string().url().optional(),
   passwordHash: z
     .string()

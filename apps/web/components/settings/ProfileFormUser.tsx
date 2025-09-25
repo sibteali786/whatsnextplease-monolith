@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Camera, Eye, EyeOff, Info, Loader2, Pencil } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -28,17 +29,45 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { UserWithRole } from './types';
 
-// Profile update schema
+export const commonProfileSchemaFields = {
+  email: z.string().email('Invalid email address'),
+  username: z.string().optional(),
+  phone: z
+    .string()
+    .optional()
+    .refine(
+      data => {
+        // Only validate if phone number is provided and not empty
+        if (!data || data.trim() === '') return true;
+        return isValidPhoneNumber(data);
+      },
+      {
+        message: 'Invalid phone number format',
+      }
+    ),
+};
+
+// ProfileFormUser.tsx - Updated schema
 const profileSchema = z.object({
   personalInfo: z.object({
+    bio: z.string().optional(),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Invalid email address'),
     username: z.string().optional(),
     phone: z
       .string()
-      .refine(isValidPhoneNumber, { message: 'Invalid phone number' })
-      .or(z.literal('')),
+      .optional()
+      .refine(
+        data => {
+          // Only validate if phone number is provided and not empty
+          if (!data || data.trim() === '') return true;
+          return isValidPhoneNumber(data);
+        },
+        {
+          message: 'Please enter a valid phone number or leave empty',
+        }
+      ),
     designation: z.string().optional(),
   }),
   password: z
@@ -50,9 +79,7 @@ const profileSchema = z.object({
           data => {
             if (!data) return true;
             const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_]).{6,20}$/;
-            if (data) {
-              return passwordRegex.test(data) && data.length >= 6 && data.length <= 20;
-            }
+            return passwordRegex.test(data) && data.length >= 6 && data.length <= 20;
           },
           {
             message:
@@ -114,6 +141,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
     resolver: zodResolver(profileSchema),
     defaultValues: {
       personalInfo: {
+        bio: initialData.bio || '',
         firstName: initialData.firstName,
         lastName: initialData.lastName,
         email: initialData.email,
@@ -158,6 +186,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
               lastName: user.lastName,
               email: user.email,
               phone: user.phone || '',
+              bio: user.bio || '',
               username: user.username,
               designation: user.designation || '',
             },
@@ -195,36 +224,43 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
       const changesInOriginalUser: Partial<z.infer<typeof profileData>> = {};
 
       // Compare personal info
-      if (trimmedData.personalInfo.firstName !== originalUser.firstName) {
-        changesInOriginalUser.firstName = trimmedData.personalInfo.firstName;
-      }
-      if (trimmedData.personalInfo.lastName !== originalUser.lastName) {
-        changesInOriginalUser.lastName = trimmedData.personalInfo.lastName;
-      }
-      if (trimmedData.personalInfo.email !== originalUser.email) {
-        changesInOriginalUser.email = trimmedData.personalInfo.email;
-      }
-      if (trimmedData.personalInfo.username !== originalUser.username) {
-        changesInOriginalUser.username = trimmedData.personalInfo.username;
-      }
-      if (trimmedData.personalInfo.designation !== originalUser.designation) {
-        changesInOriginalUser.designation = trimmedData.personalInfo.designation;
-      }
-      if (trimmedData.personalInfo.phone !== originalUser.phone) {
-        changesInOriginalUser.phone = trimmedData.personalInfo.phone;
-      }
-
-      if (trimmedData.address.country !== originalUser.country) {
-        changesInOriginalUser.country = trimmedData.address.country;
-      }
-      if (trimmedData.address.city !== originalUser.city) {
-        changesInOriginalUser.city = trimmedData.address.city;
-      }
-      if (trimmedData.address.postalCode !== originalUser.zipCode) {
-        changesInOriginalUser.zipCode = trimmedData.address.postalCode;
+      if (trimmedData.personalInfo) {
+        if (trimmedData.personalInfo.bio !== originalUser.bio) {
+          changesInOriginalUser.bio = trimmedData.personalInfo.bio;
+        }
+        if (trimmedData.personalInfo.firstName !== originalUser.firstName) {
+          changesInOriginalUser.firstName = trimmedData.personalInfo.firstName;
+        }
+        if (trimmedData.personalInfo.lastName !== originalUser.lastName) {
+          changesInOriginalUser.lastName = trimmedData.personalInfo.lastName;
+        }
+        if (trimmedData.personalInfo.email !== originalUser.email) {
+          changesInOriginalUser.email = trimmedData.personalInfo.email;
+        }
+        if (trimmedData.personalInfo.username !== originalUser.username) {
+          changesInOriginalUser.username = trimmedData.personalInfo.username;
+        }
+        if (trimmedData.personalInfo.designation !== originalUser.designation) {
+          changesInOriginalUser.designation = trimmedData.personalInfo.designation;
+        }
+        if (trimmedData.personalInfo.phone !== originalUser.phone) {
+          changesInOriginalUser.phone = trimmedData.personalInfo.phone;
+        }
       }
 
-      if (trimmedData.password.newPassword) {
+      // Compare address with safe access
+      if (trimmedData.address) {
+        if (trimmedData.address.country !== originalUser.country) {
+          changesInOriginalUser.country = trimmedData.address.country;
+        }
+        if (trimmedData.address.city !== originalUser.city) {
+          changesInOriginalUser.city = trimmedData.address.city;
+        }
+        if (trimmedData.address.postalCode !== originalUser.zipCode) {
+          changesInOriginalUser.zipCode = trimmedData.address.postalCode;
+        }
+      }
+      if (trimmedData.password?.newPassword) {
         changesInOriginalUser.passwordHash = trimmedData.password.newPassword;
       }
 
@@ -389,6 +425,22 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                   Profile to save changes
                 </p>
               )}
+
+              <FormField
+                control={form.control}
+                name="personalInfo.bio"
+                disabled={!isPersonalEditing}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>BIO</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} readOnly={!isPersonalEditing} rows={6} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}

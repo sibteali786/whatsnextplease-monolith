@@ -28,8 +28,17 @@ export const commonProfileSchemaFields = {
   username: z.string().optional(),
   phone: z
     .string()
-    .refine(isValidPhoneNumber, { message: 'Invalid phone number' })
-    .or(z.literal('')),
+    .optional()
+    .refine(
+      data => {
+        // Only validate if phone number is provided and not empty
+        if (!data || data.trim() === '') return true;
+        return isValidPhoneNumber(data);
+      },
+      {
+        message: 'Please enter a valid phone number or leave empty',
+      }
+    ),
 };
 
 export const addressSchema = z.object({
