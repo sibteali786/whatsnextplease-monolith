@@ -1,12 +1,12 @@
-name: Deploy Backend to Production
+name: Deploy to Production (with Migrations)
 
-# Trigger on pushes and pull requests to main branch
 on:
   push:
     branches:
       - main
     paths:
       - 'apps/backend/**'
+      - 'apps/web/prisma/migrations/**'
       - 'Dockerfile'
       - '.github/workflows/deploy-production.yml'
   pull_request:
@@ -14,22 +14,56 @@ on:
       - main
     paths:
       - 'apps/backend/**'
+      - 'apps/web/prisma/migrations/**'
       - 'Dockerfile'
     types: [closed]
 
-# Ensure only one deployment runs at a time
 concurrency:
   group: production-deployment
   cancel-in-progress: true
 
 jobs:
-  # Job to build and deploy to production
-  deploy-production:
-    # Only run on push to main or when PR is merged
+  # First job: Run database migrations
+  migrations:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
 
-    # Set environment variables for the job
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run backend migrations
+        working-directory: ./apps/backend
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run frontend migrations
+        working-directory: ./apps/web
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Notify migrations complete
+        run: echo "✅ Database migrations completed successfully"
+
+  # Second job: Deploy to production (depends on migrations)
+  deploy-production:
+    needs: migrations
+    runs-on: ubuntu-latest
     environment:
       name: production
 
@@ -64,7 +98,6 @@ jobs:
           echo "Using ECR repository: $ECR_REPO"
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
         with:
           registry-type: private
@@ -72,12 +105,7 @@ jobs:
       - name: Create environment-specific .env file for Docker build
         run: |
           cd apps/backend
-
-          # Create .env file with all production environment variables
-          # This uses the consolidated production environment secret from GitHub
           echo "${{ secrets.ENV_PRODUCTION }}" > .env
-
-          # Verify the .env file was created (without showing contents)
           echo "✅ Production environment file created with $(wc -l < .env) lines"
 
       - name: Set up Docker Buildx
@@ -108,7 +136,6 @@ jobs:
           rm -f apps/backend/.env
 
       - name: Update ECS Service
-        id: ecs-deploy
         run: |
           echo "Updating ECS service for production environment..."
 
@@ -120,7 +147,6 @@ jobs:
 
           echo "ECS service update initiated"
 
-          # Wait for the service to reach a stable state (longer timeout for production)
           echo "Waiting for production service to stabilize..."
           aws ecs wait services-stable \
             --cluster wnp-backend-cluster-production \
@@ -138,24 +164,16 @@ jobs:
             --query 'services[0].{Status:status,RunningCount:runningCount,DesiredCount:desiredCount,TaskDefinition:taskDefinition}' \
             --output table
 
-      - name: Run Production Health Check
-        run: |
-          echo "Running production health check..."
-          # Add your production health check URL here
-          # curl -f https://your-production-domain.com/health || exit 1
-          echo "Health check placeholder - add your production URL"
-
       - name: Notify Success
         if: success()
         run: |
           echo "✅ Production deployment completed successfully!"
           echo "🚀 Image deployed: ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}"
           echo "📦 Build number: production-${{ github.run_number }}"
-          echo "🏷️  Version tag: v${{ github.run_number }}"
+          echo "🏷️ Version tag: v${{ github.run_number }}"
 
       - name: Notify Failure
         if: failure()
         run: |
           echo "❌ Production deployment failed!"
           echo "Please check the logs and verify your AWS configuration."
-          echo "Consider rolling back to previous stable version."
