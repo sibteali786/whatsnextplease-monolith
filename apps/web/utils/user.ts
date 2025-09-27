@@ -4,13 +4,15 @@ import { redirect } from 'next/navigation';
 import { getUserFromToken } from './authTools';
 import { cache } from 'react';
 import { COOKIE_NAME } from './constant';
-import { Roles } from '@prisma/client';
+import { Roles, UserSkill } from '@prisma/client';
 export interface UserState {
   id: string;
   name?: string;
   username: string;
   email: string;
   avatarUrl: string | null;
+  userSkills?: UserSkill[];
+  bio: string | null;
   role: {
     name: Roles | undefined;
   } | null;
