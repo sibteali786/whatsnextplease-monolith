@@ -26,6 +26,7 @@ import {
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteEntity } from '@/utils/entityActions';
+import { EditUserModal } from '@/components/users/EditUserModal';
 
 // Define the user schema using Zod
 export const UserSchema = z.object({
@@ -117,6 +118,7 @@ const DeleteUserDialog = ({
 };
 
 // Separate React component for the cell actions
+// Update the UserActionCell component in columns.tsx
 const UserActionCell = ({
   user,
   refreshData,
@@ -125,11 +127,12 @@ const UserActionCell = ({
   refreshData: () => Promise<void>;
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const userName = `${user.firstName} ${user.lastName}`;
 
   const handleDeleteUser = async () => {
     await deleteEntity('user', user.id);
-    await refreshData(); // Refresh data after deletion
+    await refreshData();
   };
 
   return (
@@ -155,8 +158,7 @@ const UserActionCell = ({
           <DropdownMenuItem
             onClick={e => {
               e.stopPropagation();
-              console.log(`Edit User: ${user.id}`);
-              // TODO: Implement edit functionality
+              setShowEditModal(true);
             }}
           >
             <Pencil className="mr-2 h-4 w-4" />
@@ -174,6 +176,13 @@ const UserActionCell = ({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <EditUserModal
+        user={user}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={refreshData}
+      />
 
       <DeleteUserDialog
         isOpen={showDeleteDialog}
