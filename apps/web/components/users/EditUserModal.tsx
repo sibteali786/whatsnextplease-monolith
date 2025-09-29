@@ -19,14 +19,13 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, RefreshCw } from 'lucide-react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
-import { useState } from 'react';
+import { useState, useEffect, MutableRefObject } from 'react';
 import { User } from '@/app/(dashboard)/users/columns';
 import { getCookie, getPasswordStrength } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Separator } from '@/components/ui/separator';
 
-// Schema for editing user as Super User
 const editUserSchema = z
   .object({
     firstName: z.string().min(1, 'First name is required'),
@@ -45,13 +44,12 @@ const editUserSchema = z
     address: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
-    // Password fields
     newPassword: z
       .string()
       .optional()
       .refine(
         data => {
-          if (!data || data.trim() === '') return true; // Allow empty (no password change)
+          if (!data || data.trim() === '') return true;
           const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[\W_]).{6,20}$/;
           return passwordRegex.test(data) && data.length >= 6 && data.length <= 20;
         },
@@ -64,7 +62,6 @@ const editUserSchema = z
   })
   .refine(
     data => {
-      // If newPassword is provided, confirmPassword must match
       if (data.newPassword && data.newPassword.trim() !== '') {
         return data.newPassword === data.confirmPassword;
       }
@@ -83,52 +80,52 @@ interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => Promise<void>;
+  modalStateRef: MutableRefObject<boolean>;
 }
 
-/**
- * Generates a cryptographically secure random password that meets all requirements:
- * - 12-16 characters long (within 6-20 range)
- * - At least one uppercase letter
- * - At least one lowercase letter
- * - At least one number
- * - At least one special character
- */
 const generateStrongPassword = (): string => {
   const lowercase = 'abcdefghijklmnopqrstuvwxyz';
   const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const numbers = '0123456789';
   const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
 
-  // Random length between 12-16 characters for good security
   const length = 12 + Math.floor(Math.random() * 5);
 
-  // Ensure at least one of each required character type
   let password = '';
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += special[Math.floor(Math.random() * special.length)];
 
-  // Fill the rest with random characters from all sets
   const allChars = lowercase + uppercase + numbers + special;
   for (let i = password.length; i < length; i++) {
     password += allChars[Math.floor(Math.random() * allChars.length)];
   }
 
-  // Shuffle the password to avoid predictable patterns
   return password
     .split('')
     .sort(() => Math.random() - 0.5)
     .join('');
 };
 
-export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModalProps) {
+export function EditUserModal({
+  user,
+  isOpen,
+  onClose,
+  onSuccess,
+  modalStateRef,
+}: EditUserModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Update modal state when this modal opens/closes
+  useEffect(() => {
+    modalStateRef.current = isOpen;
+  }, [isOpen, modalStateRef]);
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
@@ -148,23 +145,18 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
   const handleGeneratePassword = async () => {
     setIsGenerating(true);
 
-    // Small delay for UX feedback
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const generatedPassword = generateStrongPassword();
 
-    // Set both password fields
     form.setValue('newPassword', generatedPassword);
     form.setValue('confirmPassword', generatedPassword);
 
-    // Update password strength
     setPasswordStrength(getPasswordStrength(generatedPassword));
 
-    // Show the password temporarily
     setShowPassword(true);
     setShowConfirmPassword(true);
 
-    // Copy to clipboard
     try {
       await navigator.clipboard.writeText(generatedPassword);
       toast({
@@ -174,7 +166,6 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
         variant: 'success',
       });
     } catch (error) {
-      // Fallback if clipboard API fails
       toast({
         title: 'Password Generated',
         description: `A strong password has been generated. Please copy it manually from the field. ${error}`,
@@ -188,12 +179,9 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
   const onSubmit = async (data: EditUserFormValues) => {
     setIsSubmitting(true);
     try {
-      // Only send changed fields
       const changedFields: Partial<EditUserFormValues & { passwordHash?: string }> = {};
 
-      // Check basic fields
       (Object.keys(data) as Array<keyof EditUserFormValues>).forEach(key => {
-        // Skip password fields in this loop
         if (key === 'newPassword' || key === 'confirmPassword') return;
 
         if (data[key] !== user[key]) {
@@ -201,12 +189,10 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
         }
       });
 
-      // Handle password separately - only include if provided
       if (data.newPassword && data.newPassword.trim() !== '') {
         changedFields.passwordHash = data.newPassword;
       }
 
-      // Remove confirmPassword from payload
       delete changedFields.confirmPassword;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (changedFields as any).newPassword;
@@ -246,7 +232,7 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
 
       await onSuccess();
       onClose();
-      form.reset(); // Reset form to clear password fields
+      form.reset();
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
@@ -261,7 +247,7 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
 
   const handleOpenChange = (open: boolean) => {
     if (!open && !isSubmitting) {
-      form.reset(); // Reset form when closing
+      form.reset();
       setPasswordStrength(0);
       setShowPassword(false);
       setShowConfirmPassword(false);
@@ -276,14 +262,10 @@ export function EditUserModal({ user, isOpen, onClose, onSuccess }: EditUserModa
           e.stopPropagation();
         }}
         onPointerDownOutside={e => {
-          if (isSubmitting) {
-            e.preventDefault();
-          }
+          e.preventDefault();
         }}
         onInteractOutside={e => {
-          if (isSubmitting) {
-            e.preventDefault();
-          }
+          e.preventDefault();
         }}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
       >

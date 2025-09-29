@@ -23,12 +23,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useEffect, MutableRefObject } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteEntity } from '@/utils/entityActions';
 import { EditUserModal } from '@/components/users/EditUserModal';
 
-// Define the user schema using Zod
 export const UserSchema = z.object({
   id: z.string(),
   role: z.string().nullable(),
@@ -41,23 +40,28 @@ export const UserSchema = z.object({
   email: z.string().email(),
 });
 
-// Type generated from Zod schema
 export type User = z.infer<typeof UserSchema>;
 
-// Delete user confirmation dialog component
 const DeleteUserDialog = ({
   isOpen,
   setIsOpen,
   userName,
   onDelete,
+  modalStateRef,
 }: {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   userName: string;
   onDelete: () => Promise<void>;
+  modalStateRef: MutableRefObject<boolean>;
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+
+  // Update modal state when dialog opens/closes
+  useEffect(() => {
+    modalStateRef.current = isOpen;
+  }, [isOpen, modalStateRef]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -83,7 +87,7 @@ const DeleteUserDialog = ({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogContent>
+      <AlertDialogContent onClick={e => e.stopPropagation()}>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete User</AlertDialogTitle>
           <AlertDialogDescription>
@@ -117,18 +121,23 @@ const DeleteUserDialog = ({
   );
 };
 
-// Separate React component for the cell actions
-// Update the UserActionCell component in columns.tsx
 const UserActionCell = ({
   user,
   refreshData,
+  modalStateRef,
 }: {
   user: User;
   refreshData: () => Promise<void>;
+  modalStateRef: MutableRefObject<boolean>;
 }) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const userName = `${user.firstName} ${user.lastName}`;
+
+  // Update modal state whenever any modal opens/closes
+  useEffect(() => {
+    modalStateRef.current = showDeleteDialog || showEditModal;
+  }, [showDeleteDialog, showEditModal, modalStateRef]);
 
   const handleDeleteUser = async () => {
     await deleteEntity('user', user.id);
@@ -144,7 +153,7 @@ const UserActionCell = ({
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={e => {
@@ -182,6 +191,7 @@ const UserActionCell = ({
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         onSuccess={refreshData}
+        modalStateRef={modalStateRef}
       />
 
       <DeleteUserDialog
@@ -189,13 +199,17 @@ const UserActionCell = ({
         setIsOpen={setShowDeleteDialog}
         userName={userName}
         onDelete={handleDeleteUser}
+        modalStateRef={modalStateRef}
       />
     </>
   );
 };
 
-// Factory function to create columns with delete functionality
-export const createColumns = (refreshData: () => Promise<void>): ColumnDef<User>[] => {
+// Updated factory function to accept modalStateRef
+export const createColumns = (
+  refreshData: () => Promise<void>,
+  modalStateRef: MutableRefObject<boolean>
+): ColumnDef<User>[] => {
   return [
     {
       id: 'select',
@@ -328,13 +342,19 @@ export const createColumns = (refreshData: () => Promise<void>): ColumnDef<User>
     {
       id: 'actions',
       cell: ({ row }) => {
-        // Instead of using useState directly in the cell function,
-        // we render a proper React component that can use hooks
-        return <UserActionCell user={row.original} refreshData={refreshData} />;
+        return (
+          <UserActionCell
+            user={row.original}
+            refreshData={refreshData}
+            modalStateRef={modalStateRef}
+          />
+        );
       },
     },
   ];
 };
 
 // Export default columns (for backward compatibility)
-export const columns: ColumnDef<User>[] = createColumns(async () => {});
+export const columns: ColumnDef<User>[] = createColumns(async () => {}, {
+  current: false,
+} as MutableRefObject<boolean>);
