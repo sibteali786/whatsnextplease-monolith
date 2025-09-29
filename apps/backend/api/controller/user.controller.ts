@@ -398,6 +398,64 @@ export class UserController {
       next(error);
     }
   };
+  private handleUpdateUserById = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const updatingUserId = req.user?.id;
+
+      if (!updatingUserId) {
+        throw new UnauthorizedError('User not authenticated');
+      }
+
+      // Prevent users from being downgraded to CLIENT role
+      if (req.body.roleId) {
+        const newRole = await prisma.role.findUnique({
+          where: { id: req.body.roleId },
+        });
+
+        if (newRole?.name === Roles.CLIENT) {
+          throw new BadRequestError('Cannot assign CLIENT role through this interface');
+        }
+      }
+
+      await checkIfUserExists(id);
+
+      // Validate with partial schema (all fields optional)
+      const parsedData = UpdateProfileSchema.partial().parse(req.body);
+
+      // If password is being updated, hash it
+      let updateData = parsedData;
+      if (parsedData.passwordHash) {
+        const hashedPassword = await hashPW(parsedData.passwordHash);
+        updateData = {
+          ...updateData,
+          passwordHash: hashedPassword,
+        };
+      }
+
+      const updatedUser = await this.userService.updateProfile({
+        ...updateData,
+        id,
+      });
+
+      // Log audit trail
+      await prisma.auditLog.create({
+        data: {
+          action: `User ${id} updated by SUPER_USER ${updatingUserId}`,
+          userId: updatingUserId,
+          timestamp: new Date(),
+        },
+      });
+
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      next(error);
+    }
+  };
 
   getUserSkills = asyncHandler(this.handleGetUserSkills);
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
@@ -409,4 +467,5 @@ export class UserController {
   getAvailableRoles = asyncHandler(this.getAvailableRolesHandler);
   getCurrentUser = asyncHandler(this.handleGetCurrentUser);
   searchUsersForMentions = asyncHandler(this.searchUsersForMentionsHandler);
+  updateUserById = asyncHandler(this.handleUpdateUserById);
 }

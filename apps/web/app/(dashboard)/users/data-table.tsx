@@ -7,7 +7,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -23,7 +23,6 @@ import { User, createColumns } from './columns';
 import { useUserStore } from '@/store/useUserStore';
 import { CustomTooltip } from '@/components/CustomTooltip';
 
-// Define a generic type for the DataTable
 interface DataTableProps {
   fetchData: (
     cursor: string | null,
@@ -36,7 +35,6 @@ interface DataTableProps {
   userIds: string[];
 }
 
-// Modify DataTable component to accept any data type
 export function DataTable({ fetchData, userIds }: DataTableProps) {
   const [data, setData] = useState<User[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -48,6 +46,12 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
   const [rowSelection, setRowSelection] = useState({});
   const router = useRouter();
   const { setSelectedUser } = useUserStore();
+
+  // Track if a modal/dialog is currently open
+  const isModalOpenRef = useRef(false);
+
+  // Track the last click time to prevent rapid clicks
+  const lastClickTimeRef = useRef(0);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -65,10 +69,9 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
     fetchItems();
   }, [cursor, pageSize]);
 
-  // Create columns with refresh data callback
-  const columns = createColumns(fetchItems);
+  // Create columns with refresh data callback and modal state ref
+  const columns = createColumns(fetchItems, isModalOpenRef);
 
-  // Calculate total number of pages
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const table = useReactTable({
@@ -89,6 +92,24 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
       rowSelection,
     },
   });
+
+  const handleRowClick = (user: User) => {
+    // Prevent navigation if:
+    // 1. A modal is open
+    // 2. Click happened too recently (debounce)
+    const now = Date.now();
+    if (isModalOpenRef.current || now - lastClickTimeRef.current < 300) {
+      return;
+    }
+
+    lastClickTimeRef.current = now;
+
+    setSelectedUser({
+      id: user.id ?? '',
+      name: `${user.firstName} ${user.lastName}`,
+    });
+    router.push(`/users/${user.id}`);
+  };
 
   return (
     <>
@@ -128,13 +149,7 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
                 >
                   <TableRow
                     key={row.id}
-                    onClick={() => {
-                      setSelectedUser({
-                        id: row.original.id ?? '',
-                        name: `${row.original.firstName} ${row.original.lastName}`,
-                      });
-                      router.push(`/users/${row.original.id}`);
-                    }}
+                    onClick={() => handleRowClick(row.original)}
                     className="cursor-pointer"
                   >
                     {row.getVisibleCells().map(cell => (
@@ -155,7 +170,6 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      {/* Integrate Pagination */}
       <div className="flex flex-row my-2">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} of{' '}

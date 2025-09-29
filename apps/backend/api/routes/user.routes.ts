@@ -48,6 +48,8 @@ router.delete(
 );
 router.get('/me', verifyToken, controller.getCurrentUser);
 
+router.patch('/:id', permissionMiddleware, controller.updateUserById);
+
 router.get('/skills/:userId', verifyToken, controller.getUserSkills);
 /**
  * PUT /users/:userId/role

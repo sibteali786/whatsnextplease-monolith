@@ -50,6 +50,8 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
         firstName: true,
         lastName: true,
         avatarUrl: true,
+        bio: true,
+        userSkills: true,
         role: {
           select: {
             id: true,
@@ -71,6 +73,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
           contactName: true,
           avatarUrl: true,
           email: true,
+          bio: true,
           role: {
             select: {
               id: true,
@@ -88,6 +91,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
         username: client.username,
         email: client.email,
         avatarUrl: client.avatarUrl,
+        bio: client.bio,
         role: {
           id: client.role?.id,
           name: client.role?.name,
@@ -101,6 +105,8 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
       username: user.username,
       email: user.email,
       avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      userSkills: user.userSkills,
       role: {
         id: user.role?.id,
         name: user.role?.name,
