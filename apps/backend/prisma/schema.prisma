@@ -37,12 +37,12 @@ model Role {
 }
 
 model User {
-    id                   String               @id @default(uuid())
+    id                   String                   @id @default(uuid())
     bio                  String?
     firstName            String
     lastName             String
-    username             String               @unique
-    email                String               @unique
+    username             String                   @unique
+    email                String                   @unique
     passwordHash         String
     country              String?
     phone                String?
@@ -52,23 +52,26 @@ model User {
     zipCode              String?
     avatarUrl            String?
     roleId               String?
-    role                 Role?                @relation(fields: [roleId], references: [id])
+    role                 Role?                    @relation(fields: [roleId], references: [id])
     designation          String?
     userSkills           UserSkill[]
-    tasksCreated         Task[]               @relation("TasksCreatedByUser")
-    tasksAssigned        Task[]               @relation("TaskAssignedTo")
+    tasksCreated         Task[]                   @relation("TasksCreatedByUser")
+    tasksAssigned        Task[]                   @relation("TaskAssignedTo")
     messagesSent         Message[]
     messageParticipants  MessageParticipant[]
     auditLogs            AuditLog[]
     notifications        Notification[]
-    files                File[]               @relation("UserFiles")
+    files                File[]                   @relation("UserFiles")
     userTerritories      UserTerritory[]
     userSchedules        UserSchedule[]
-    TaskHistory          TaskHistory[]        @relation("TaskHistoryChangedBy")
-    createdAt            DateTime             @default(now())
-    updatedAt            DateTime             @updatedAt
+    TaskHistory          TaskHistory[]            @relation("TaskHistoryChangedBy")
+    createdAt            DateTime                 @default(now())
+    updatedAt            DateTime                 @updatedAt
     PushSubscription     PushSubscription[]
-    taskCommentsAuthored TaskComment[]        @relation("TaskCommentsAuthoredByUser")
+    taskCommentsAuthored TaskComment[]            @relation("TaskCommentsAuthoredByUser")
+    emailVerified        Boolean                  @default(false)
+    emailVerifiedAt      DateTime?
+    verificationTokens   EmailVerificationToken[]
 }
 
 model UserSkill {
@@ -85,12 +88,12 @@ model UserSkill {
 //// =========================================
 
 model Client {
-    id                   String             @id @default(uuid())
-    email                String             @unique
-    username             String             @unique
+    id                   String                   @id @default(uuid())
+    email                String                   @unique
+    username             String                   @unique
     bio                  String?
     passwordHash         String
-    country              String?            @default("US")
+    country              String?                  @default("US")
     companyName          String
     contactName          String?
     phone                String?
@@ -100,18 +103,41 @@ model Client {
     city                 String?
     state                String?
     zipCode              String?
-    tasksCreated         Task[]             @relation("TasksCreatedByClient")
+    tasksCreated         Task[]                   @relation("TasksCreatedByClient")
     clientBilling        ClientBilling?
-    files                File[]             @relation("ClientFiles")
-    createdAt            DateTime           @default(now())
-    updatedAt            DateTime           @updatedAt
+    files                File[]                   @relation("ClientFiles")
+    createdAt            DateTime                 @default(now())
+    updatedAt            DateTime                 @updatedAt
     Invoice              Invoice[]
     avatarUrl            String?
     roleId               String?
-    role                 Role?              @relation(fields: [roleId], references: [id])
+    role                 Role?                    @relation(fields: [roleId], references: [id])
     notifications        Notification[]
     PushSubscription     PushSubscription[]
-    taskCommentsAuthored TaskComment[]      @relation("TaskCommentsAuthoredByClient")
+    taskCommentsAuthored TaskComment[]            @relation("TaskCommentsAuthoredByClient")
+    emailVerified        Boolean                  @default(false)
+    emailVerifiedAt      DateTime?
+    verificationTokens   EmailVerificationToken[]
+}
+
+model EmailVerificationToken {
+    id        String   @id @default(uuid())
+    token     String   @unique
+    expiresAt DateTime
+
+    userId String?
+    user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    clientId String?
+    client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([token])
+    @@index([userId])
+    @@index([clientId])
+    @@index([expiresAt])
 }
 
 //// =========================================
