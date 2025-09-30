@@ -20,12 +20,15 @@ import { TaskTable } from '@/utils/validationSchemas';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { DurationEnum } from '@/types';
 import { LinkButton } from '@/components/ui/LinkButton';
-
+import { useRouter } from 'next/navigation';
 const IncomingTasksPage = () => {
+  const router = useRouter();
   const [tasks, setTasks] = useState<TaskTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const handleRowClick = (taskID: string) => {
+    router.push(`/taskOfferings/${taskID}`);
+  };
   useEffect(() => {
     const fetchTasks = async () => {
       setLoading(true);
@@ -33,12 +36,13 @@ const IncomingTasksPage = () => {
         const user = await getCurrentUser();
         if (user?.role?.name === Roles.TASK_AGENT) {
           const response = await tasksByType(
-            'assigned',
+            'my-tasks',
             Roles.TASK_AGENT,
             null,
             5,
             '',
-            DurationEnum.ALL
+            DurationEnum.ALL,
+            user.id
           );
 
           if (response.success) {
@@ -120,6 +124,7 @@ const IncomingTasksPage = () => {
               <TableRow
                 key={task.id}
                 className="hover:bg-muted/30 cursor-pointer transition-colors"
+                onClick={() => handleRowClick(task.id)}
               >
                 <TableCell className="font-medium">{task.taskCategory.categoryName}</TableCell>
                 <TableCell>

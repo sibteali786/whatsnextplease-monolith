@@ -40,7 +40,9 @@ export const TaskSuperVisorList = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [totalCount, setTotalCount] = useState<number | undefined>(0);
   const [pageIndex, setPageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'assigned' | 'unassigned'>('unassigned');
+  const [activeTab, setActiveTab] = useState<'all' | 'assigned' | 'unassigned' | 'my-tasks'>(
+    'unassigned'
+  );
   const [error, setError] = useState<string | null>(null);
   const { toast, dismiss } = useToast();
   const { setCreatedTask } = useCreatedTask();
@@ -107,7 +109,15 @@ export const TaskSuperVisorList = ({
     setLoading(true);
     setError(null);
     try {
-      const response = await tasksByType(activeTab, role, cursor, pageSize, searchTerm, duration);
+      const response = await tasksByType(
+        activeTab,
+        role,
+        cursor,
+        pageSize,
+        searchTerm,
+        duration,
+        userId
+      );
       const responseIds = await taskIdsByType(activeTab, role, searchTerm, duration);
 
       if (response && responseIds && response.success && responseIds.success) {
@@ -269,10 +279,10 @@ export const TaskSuperVisorList = ({
       </div>
 
       <Tabs
-        defaultValue="unassigned"
+        defaultValue={'unassigned'}
         className="w-full"
         onValueChange={value => {
-          setActiveTab(value as 'all' | 'assigned' | 'unassigned');
+          setActiveTab(value as 'all' | 'assigned' | 'unassigned' | 'my-tasks');
           setCursor(null);
         }}
       >
@@ -286,6 +296,11 @@ export const TaskSuperVisorList = ({
           <TabsTrigger value="assigned" className="text-sm">
             Assigned
           </TabsTrigger>
+          {role === Roles.TASK_AGENT && (
+            <TabsTrigger value="my-tasks" className="text-sm">
+              My Tasks
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="all">{renderContent()}</TabsContent>
@@ -293,6 +308,7 @@ export const TaskSuperVisorList = ({
         <TabsContent value="unassigned">{renderContent()}</TabsContent>
 
         <TabsContent value="assigned">{renderContent()}</TabsContent>
+        <TabsContent value="my-tasks">{renderContent()}</TabsContent>
       </Tabs>
     </div>
   );

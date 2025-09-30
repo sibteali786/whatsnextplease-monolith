@@ -209,7 +209,7 @@ const TopBar = () => {
   const isTaskOfferingsActive = pathname === '/taskOfferings';
 
   return (
-    <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10 ">
+    <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10">
       <div className="flex-grow">
         <div className="relative ml-auto flex-1 md:grow-0">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground ml-2" />

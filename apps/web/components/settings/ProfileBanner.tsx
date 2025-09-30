@@ -4,7 +4,9 @@ import { UserCircle2 } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-export default function ProfileBanner() {
+import { UserState } from '@/utils/user';
+import { Roles } from '@prisma/client';
+export default function ProfileBanner({ user }: { user: UserState }) {
   const router = useRouter();
   const handleUpdateProfile = () => {
     router.push('/settings/myprofile');
@@ -18,7 +20,9 @@ export default function ProfileBanner() {
         <div className="flex-col gap-1">
           <h2 className="text-lg font-semibold"> Finish Your Profile</h2>
           <p className="text-sm text-muted-foreground">
-            Please update your profile to ensure a seamless integration with our system.
+            {user?.role?.name === Roles.CLIENT
+              ? 'Please update your avatar and bio to ensure a seamless integration with our system.'
+              : 'Please update your avatar, bio and skills to ensure a seamless integration with our system.'}
           </p>
         </div>
       </div>

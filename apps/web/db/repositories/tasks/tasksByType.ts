@@ -9,12 +9,13 @@ import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 type GetTaskSchema = z.infer<typeof getTasksOutputSchema>;
 
 export const tasksByType = async (
-  type: 'all' | 'assigned' | 'unassigned',
+  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
   role: Roles,
   cursor: string | null,
   pageSize: number,
   searchTerm: string,
-  duration: DurationEnum
+  duration: DurationEnum,
+  userId?: string
 ): Promise<GetTaskSchema> => {
   try {
     const response = await taskApiClient.getTasks({
@@ -25,6 +26,7 @@ export const tasksByType = async (
       // Map type to backend query parameters
       ...(type === 'assigned' && { assignedToId: 'not-null' }),
       ...(type === 'unassigned' && { assignedToId: null }),
+      ...(type === 'my-tasks' && { assignedToId: userId }),
     });
 
     if (response.success) {
