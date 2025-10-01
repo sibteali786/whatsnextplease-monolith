@@ -105,8 +105,22 @@ jobs:
       - name: Create environment-specific .env file for Docker build
         run: |
           cd apps/backend
-          echo "${{ secrets.ENV_PRODUCTION }}" > .env
-          echo "✅ Production environment file created with $(wc -l < .env) lines"
+
+          # Create .env file using heredoc (handles quotes and special characters)
+          cat > .env << 'EOF'
+          ${{ secrets.ENV_PRODUCTION }}
+          EOF
+
+          # Verify the .env file was created
+          echo "Environment file created with $(wc -l < .env) lines"
+
+          # Verify key variables exist (without showing values)
+          if grep -q "AWS_REGION" .env && grep -q "SES_FROM_EMAIL" .env; then
+            echo "Required environment variables present"
+          else
+            echo "Missing required environment variables"
+            exit 1
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
