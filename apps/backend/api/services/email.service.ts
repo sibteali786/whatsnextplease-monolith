@@ -162,7 +162,7 @@ export class EmailService {
               
               <p style="color: #666; font-size: 14px;">
                 Or copy and paste this link into your browser:<br>
-                <a href="${verificationUrl}" class="link">${verificationUrl}</a>
+                <a href="${verificationUrl}" class="link">Verify Email</a>
               </p>
               
               <p style="color: #666; font-size: 14px; margin-top: 30px;">
