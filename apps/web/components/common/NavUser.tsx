@@ -11,6 +11,7 @@ import {
 } from '../ui/dropdown-menu';
 import { signout, UserState } from '@/utils/user';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
+import { useRouter } from 'next/navigation';
 
 interface NavUserProps {
   user: UserState;
@@ -38,6 +39,7 @@ const SecureAvatar = ({
 };
 
 export const NavUser: React.FC<NavUserProps> = ({ user }) => {
+  const router = useRouter();
   return (
     <div>
       <DropdownMenu>
@@ -67,11 +69,11 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/settings/myprofile')}>
               <BadgeCheck className="mr-2" />
               Account
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
               <CreditCard className="mr-2" />
               Billing
             </DropdownMenuItem>

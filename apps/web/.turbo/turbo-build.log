@@ -1,36 +1,242 @@
 
-
-> web@0.1.0 build /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web
+> web@0.1.0 build D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web
 > npx prisma generate && pnpm run build:cdk && npx prisma migrate deploy && next build
 
-[1G[0K⠙[1G[0K[2mEnvironment variables loaded from .env[22m
-[2mPrisma schema loaded from prisma/schema.prisma[22m
-
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
 
-✔ Generated [1mPrisma Client[22m (v6.15.0)[2m to ./../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/@prisma/client[22m in 597ms
+✔ Generated Prisma Client (v6.15.0) to .\..\..\node_modules\.pnpm\@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 666ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
 
-[1G[0K⠙[1G[0K[1mnpm[22m [96mnotice[39m
-[1mnpm[22m [96mnotice[39m New [31mmajor[39m version of npm available! [31m10.9.2[39m -> [34m11.6.0[39m
-[1mnpm[22m [96mnotice[39m Changelog: [34mhttps://github.com/npm/cli/releases/tag/v11.6.0[39m
-[1mnpm[22m [96mnotice[39m To update run: [4mnpm install -g npm@11.6.0[24m
-[1mnpm[22m [96mnotice[39m
-[1G[0K⠙[1G[0K
-> web@0.1.0 build:cdk /Users/syedsibtealibaqar/Documents/whatsnextplease-monolith/apps/web
+
+> web@0.1.0 build:cdk D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web
 > npm --prefix cdk run build
 
 
 > cdk@0.1.0 build
 > tsc
 
-[1G[0K[1G[0K⠙[1G[0K[1G[0K⠙[1G[0K[2mEnvironment variables loaded from .env[22m
-[2mPrisma schema loaded from prisma/schema.prisma[22m
-[2mDatasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "192.168.100.120:5432"[22m
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:5433"
 
-[1m[31mError: [39m[22mP1001: Can't reach database server at `192.168.100.120:5432`
+35 migrations found in prisma/migrations
 
-Please make sure your database server is running at `192.168.100.120:5432`.
-[1G[0K⠙[1G[0K[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 1.[39m
+
+No pending migrations to apply.
+  ▲ Next.js 14.2.15
+  - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+
+[1m[33mwarn[39m[22m - The safelist pattern `/^hover:bg-(red|green|blue|yellow|orange|purple|cyan|gray)-(300|400|500|600|700|800)$/` doesn't match any Tailwind CSS classes.
+[1m[33mwarn[39m[22m - Fix this pattern or remove it from your `safelist` configuration.
+[1m[33mwarn[39m[22m - https://tailwindcss.com/docs/content-configuration#safelisting-classes
+ ⚠ Compiled with warnings
+
+../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/@prisma/client/runtime/wasm-engine-edge.js
+A Node.js API is used (setImmediate at line: 11) which is not supported in the Edge Runtime.
+Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+
+Import trace for requested module:
+../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/@prisma/client/runtime/wasm-engine-edge.js
+../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/.prisma/client/wasm.js
+../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/.prisma/client/default.js
+../../node_modules/.pnpm/@prisma+client@6.15.0_prisma@6.15.0_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3/node_modules/@prisma/client/default.js
+
+   Linting and checking validity of types ...
+
+./app/(dashboard)/clients/data-table.tsx
+61:6  Warning: React Hook useEffect has a missing dependency: 'fetchClients'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/settings/permissions/page.tsx
+106:6  Warning: React Hook useEffect has missing dependencies: 'fetchUsersWithRoles', 'pagination.limit', and 'searchTerm'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/taskAgents/task-agent-table.tsx
+71:6  Warning: React Hook useEffect has a missing dependency: 'fetchAgents'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/users/data-table.tsx
+70:6  Warning: React Hook useEffect has a missing dependency: 'fetchItems'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/(dashboard)/users/[userId]/page.tsx
+57:6  Warning: React Hook useEffect has a missing dependency: 'refreshTaskStats'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/chat/ChatNotificationsIndicator.tsx
+201:6  Warning: React Hook useEffect has a missing dependency: 'createMessageHandler'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/clients/billing-table.tsx
+64:6  Warning: React Hook useEffect has a missing dependency: 'fetchInvoices'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/clients/ClientHistoryList.tsx
+43:6  Warning: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/clients/ClientTaskList.tsx
+43:6  Warning: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/comments/CommentSection.tsx
+61:6  Warning: React Hook useEffect has a missing dependency: 'loadComments'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+87:6  Warning: React Hook useEffect has a missing dependency: 'loadComments'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/comments/EditorToolbar.tsx
+68:9  Warning: The 'toggleLink' function makes the dependencies of useEffect Hook (at line 119) change on every render. To fix this, wrap the definition of 'toggleLink' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+
+./components/common/EditTaskDialog.tsx
+394:6  Warning: React Hook useEffect has missing dependencies: 'fetchSkills', 'fetchTaskMetadata', and 'fetchUsers'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/files/FilePreviewModal.tsx
+292:6  Warning: React Hook useEffect has a missing dependency: 'currentFile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/settings/ProfileFormClient.tsx
+140:6  Warning: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/settings/ProfileFormUser.tsx
+217:6  Warning: React Hook useEffect has missing dependencies: 'toast' and 'token'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/tasks/CreateTaskContainer.tsx
+120:6  Warning: React Hook useEffect has a missing dependency: 'getDefaultValues'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+307:6  Warning: React Hook useEffect has missing dependencies: 'form', 'router', and 'toast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/tasks/TasksListModal.tsx
+67:6  Warning: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/tasks/TaskSuperVisorList.tsx
+143:6  Warning: React Hook useCallback has a missing dependency: 'userId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/TopBar.tsx
+194:6  Warning: React Hook useEffect has a missing dependency: 'createMessageHandler'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/users/UserTasks.tsx
+115:6  Warning: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/31) ...
+   Generating static pages (7/31) 
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:491:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.11.0
+ ⨯ Static worker exited with code: 1 and signal: null
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:491:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.11.0
+ ⨯ Static worker exited with code: 1 and signal: null
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:491:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.11.0
+ ⨯ Static worker exited with code: 1 and signal: null
+Current user API error: n [Error]: Dynamic server usage: Route /api/auth/current-user couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
+    at l (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\chunks\8797.js:1:37158)
+    at p (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\chunks\4729.js:1:33516)
+    at p (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\app\api\auth\current-user\route.js:1:1242)
+    at D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36963
+    at D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
+    at D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.3_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
+  description: "Route /api/auth/current-user couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
+  digest: 'DYNAMIC_SERVER_USAGE'
+}
+   Generating static pages (15/31) 
+   Generating static pages (23/31) 
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:491:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.11.0
+ ✓ Generating static pages (31/31)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ƒ /                                    337 B          87.8 kB
+├ ○ /_not-found                          880 B          88.3 kB
+├ ƒ /api/auth/current-user               0 B                0 B
+├ ○ /api/skills                          0 B                0 B
+├ ƒ /api/task/doesTaskExists             0 B                0 B
+├ ƒ /api/tasks/idsByType                 0 B                0 B
+├ ƒ /api/tasks/tasksCount                0 B                0 B
+├ ƒ /api/tasks/taskType                  0 B                0 B
+├ ƒ /api/tasks/unassignedTasks           0 B                0 B
+├ ƒ /api/user/doesUserExists             0 B                0 B
+├ ƒ /api/users/taskAgentList             0 B                0 B
+├ ƒ /clients                             7.91 kB         172 kB
+├ ƒ /clients/[clientId]                  6.01 kB         753 kB
+├ ƒ /clients/addclient                   2.02 kB         277 kB
+├ ƒ /home                                3.69 kB         247 kB
+├ ƒ /messages                            1.75 kB         100 kB
+├ ƒ /notifications/me                    10.1 kB         166 kB
+├ ƒ /settings/billing                    197 B          87.6 kB
+├ ƒ /settings/myprofile                  12.2 kB         285 kB
+├ ƒ /settings/notifications              8.46 kB         127 kB
+├ ƒ /settings/permissions                8.27 kB         131 kB
+├ ƒ /settings/picklists                  24.1 kB         714 kB
+├ ○ /signin                              9.42 kB         158 kB
+├ ○ /signup                              4.02 kB         174 kB
+├ ƒ /skills                              1.53 kB         209 kB
+├ ƒ /taskAgents                          11.3 kB         154 kB
+├ ƒ /taskOfferings                       5.95 kB         767 kB
+├ ƒ /taskOfferings/(.)taskId             943 B           668 kB
+├ ƒ /taskOfferings/[taskId]              641 B           667 kB
+├ ƒ /users                               13.9 kB         305 kB
+├ ƒ /users/[userId]                      5.06 kB         883 kB
+└ ƒ /users/adduser                       2.69 kB         285 kB
++ First Load JS shared by all            87.4 kB
+  ├ chunks/216d3138-7afcefe73bd1383a.js  53.6 kB
+  ├ chunks/3844-7c9ccc1ab55a30f5.js      31.7 kB
+  └ other shared chunks (total)          2.03 kB
+
+
+ƒ Middleware                             79.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

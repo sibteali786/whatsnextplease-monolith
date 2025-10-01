@@ -24,7 +24,6 @@ export default function DashboardLayout({
     };
     fetchDependencies();
   }, []);
-  console.log('user', user);
   const showBanner =
     user?.role?.name === Roles.CLIENT
       ? !user?.avatarUrl || !user?.bio
@@ -32,7 +31,7 @@ export default function DashboardLayout({
 
   return (
     <div>
-      {user && showBanner && <ProfileBanner />}
+      {user && showBanner && <ProfileBanner user={user} />}
       <div>{user?.role?.name === Roles.TASK_SUPERVISOR ? taskSupervisor : null}</div>
       <div>{user?.role?.name === Roles.SUPER_USER ? superUser : null}</div>
       <div>{user?.role?.name === Roles.TASK_AGENT ? taskAgent : null}</div>

@@ -13,7 +13,7 @@ const Shell = async ({ children }: { children: ReactNode }) => {
       </aside>
       <div className="w-[calc(100vw-280px)] px-10 overflow-auto dark:bg-background bg-backgroundPrimary">
         <TopBar />
-        <main className=" mt-16 h-full">{children}</main>
+        <main className="mt-16 h-full">{children}</main>
       </div>
     </div>
   );
