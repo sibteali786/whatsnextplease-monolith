@@ -14,11 +14,11 @@ interface EmailOptions {
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private isDevelopment: boolean;
-
+  private useAwsSes: boolean;
   constructor() {
     this.isDevelopment = process.env.NODE_ENV !== 'production';
-
-    if (this.isDevelopment) {
+    this.useAwsSes = process.env.USE_AWS_SES === 'true';
+    if (this.isDevelopment && !this.useAwsSes) {
       // Local development: Use console logging or local SMTP (MailHog)
       this.transporter = nodemailer.createTransport({
         host: 'localhost',
