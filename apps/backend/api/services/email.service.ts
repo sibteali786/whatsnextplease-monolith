@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import nodemailer from 'nodemailer';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { env } from '../config/environment';
@@ -55,15 +56,10 @@ export class EmailService {
     }
   }
 
-  async sendVerificationEmail(
-    email: string,
-    token: string,
-    userName: string,
-    userType: 'user' | 'client'
-  ): Promise<void> {
+  async sendVerificationEmail(email: string, token: string, userName: string): Promise<void> {
     const verificationUrl = `${env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
 
-    const html = this.getVerificationEmailTemplate(userName, verificationUrl, userType);
+    const html = this.getVerificationEmailTemplate(userName, verificationUrl);
     const text = this.getVerificationEmailText(userName, verificationUrl);
 
     await this.sendEmail({
@@ -88,17 +84,7 @@ export class EmailService {
     });
   }
 
-  private getVerificationEmailTemplate(
-    userName: string,
-    verificationUrl: string,
-    userType: 'user' | 'client'
-  ): string {
-    const greeting = userType === 'client' ? `Hi ${userName} team!` : `Hi ${userName}!`;
-
-    const message =
-      userType === 'client'
-        ? 'Thanks for choosing our platform for your business.'
-        : "Thanks for signing up. We're excited to have you on board!";
+  private getVerificationEmailTemplate(userName: string, verificationUrl: string): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -164,9 +150,9 @@ export class EmailService {
             </div>
             
             <div class="content">
-              <h2 style="color: #333; margin-top: 0;">${greeting}!</h2>
+              <h2 style="color: #333; margin-top: 0;">Hi ${userName}!</h2>
               
-              ${message}
+              <p>Thanks for signing up. We're excited to have you on board!</p>
               
               <p>To get started, please verify your email address by clicking the button below:</p>
               
@@ -216,13 +202,11 @@ If you didn't create an account with us, please ignore this email.
     `.trim();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getPasswordResetEmailTemplate(userName: string, resetUrl: string): string {
-    // Similar structure - implement when needed for forgot password
+    // TODO: Implement for forgot password feature
     return `<!-- Password reset template -->`;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getPasswordResetEmailText(userName: string, resetUrl: string): string {
     return `Password reset text...`;
   }

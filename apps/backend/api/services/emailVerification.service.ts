@@ -3,10 +3,11 @@ import prisma from '../config/db';
 import { emailService } from './email.service';
 import { logger } from '../utils/logger';
 import { BadRequestError, NotFoundError, TooManyRequestsError } from '@wnp/types';
+import { Roles } from '@prisma/client';
 
 interface CreateVerificationTokenParams {
   entityId: string;
-  entityType: 'user' | 'client';
+  entityRole: Roles;
   email: string;
   name: string;
 }
@@ -24,11 +25,11 @@ export class EmailVerificationService {
    * Create and send verification token
    */
   async createAndSendVerificationToken(params: CreateVerificationTokenParams): Promise<void> {
-    const { entityId, entityType, email, name } = params;
+    const { entityId, entityRole, email, name } = params;
 
     try {
       // Check rate limiting
-      await this.checkRateLimit(entityId, entityType);
+      await this.checkRateLimit(entityId, entityRole);
 
       // Generate token
       const rawToken = crypto.randomBytes(32).toString('hex');
@@ -39,23 +40,23 @@ export class EmailVerificationService {
       expiresAt.setHours(expiresAt.getHours() + this.TOKEN_EXPIRY_HOURS);
 
       // Invalidate any existing tokens for this user
-      await this.invalidateExistingTokens(entityId, entityType);
+      await this.invalidateExistingTokens(entityId, entityRole);
 
       // Create new token
       await prisma.emailVerificationToken.create({
         data: {
           token: hashedToken,
           expiresAt,
-          [entityType === 'user' ? 'userId' : 'clientId']: entityId,
+          [entityRole !== Roles.CLIENT ? 'userId' : 'clientId']: entityId,
         },
       });
 
-      // Send email
-      await emailService.sendVerificationEmail(email, rawToken, name, entityType);
+      // Send email (removed userType parameter)
+      await emailService.sendVerificationEmail(email, rawToken, name);
 
-      logger.info({ entityId, entityType, email }, 'Verification email sent successfully');
+      logger.info({ entityId, entityRole, email }, 'Verification email sent successfully');
     } catch (error) {
-      logger.error({ error, entityId, entityType }, 'Failed to create verification token');
+      logger.error({ error, entityId, entityRole }, 'Failed to create verification token');
       throw error;
     }
   }
@@ -63,13 +64,13 @@ export class EmailVerificationService {
   /**
    * Verify email using token
    */
+
   async verifyEmail(params: VerifyEmailParams): Promise<{ success: boolean; message: string }> {
     const { token } = params;
 
     try {
       const hashedToken = this.hashToken(token);
 
-      // Find token
       const tokenRecord = await prisma.emailVerificationToken.findUnique({
         where: { token: hashedToken },
         include: {
@@ -82,16 +83,14 @@ export class EmailVerificationService {
         throw new NotFoundError('Invalid verification token');
       }
 
-      // Check expiry
       if (tokenRecord.expiresAt < new Date()) {
-        // Delete expired token
-        await prisma.emailVerificationToken.delete({
+        // ✅ Use deleteMany - won't throw if already deleted
+        await prisma.emailVerificationToken.deleteMany({
           where: { id: tokenRecord.id },
         });
         throw new BadRequestError('Verification token has expired. Please request a new one.');
       }
 
-      // Determine entity type
       const entity = tokenRecord.user || tokenRecord.client;
       const entityType = tokenRecord.user ? 'user' : 'client';
 
@@ -99,10 +98,9 @@ export class EmailVerificationService {
         throw new NotFoundError('Associated user or client not found');
       }
 
-      // Check if already verified
       if (entity.emailVerified) {
-        // Delete token even if already verified
-        await prisma.emailVerificationToken.delete({
+        // ✅ Use deleteMany - won't throw if already deleted
+        await prisma.emailVerificationToken.deleteMany({
           where: { id: tokenRecord.id },
         });
         return {
@@ -130,13 +128,13 @@ export class EmailVerificationService {
         });
       }
 
-      // Delete token (single-use)
-      await prisma.emailVerificationToken.delete({
+      // ✅ Use deleteMany - won't throw if already deleted
+      await prisma.emailVerificationToken.deleteMany({
         where: { id: tokenRecord.id },
       });
 
       logger.info(
-        { entityId: entity.id, entityType, email: entity.email },
+        { entityId: entity.id, entityRole: entityType, email: entity.email },
         'Email verified successfully'
       );
 
@@ -151,16 +149,56 @@ export class EmailVerificationService {
   }
 
   /**
-   * Resend verification email
+   * ✅ NEW: Resend verification email for authenticated user
    */
-  async resendVerificationEmail(email: string): Promise<void> {
+  async resendVerificationEmailForUser(userId: string, userRole: Roles): Promise<void> {
+    try {
+      // Find user or client by ID
+      const user =
+        userRole !== Roles.CLIENT ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+      const client =
+        userRole === Roles.CLIENT
+          ? await prisma.client.findUnique({ where: { id: userId } })
+          : null;
+
+      const entity = user || client;
+
+      if (!entity) {
+        throw new NotFoundError('User not found');
+      }
+
+      if (entity.emailVerified) {
+        throw new BadRequestError('Email already verified');
+      }
+
+      const name = user
+        ? `${user.firstName} ${user.lastName}`
+        : client?.contactName || client?.companyName || 'there';
+
+      await this.createAndSendVerificationToken({
+        entityId: entity.id,
+        entityRole: userRole,
+        email: entity.email,
+        name,
+      });
+    } catch (error) {
+      logger.error({ error, userId, userRole }, 'Failed to resend verification email');
+      throw error;
+    }
+  }
+
+  /**
+   * LEGACY: Resend verification email by email address (for backward compatibility)
+   * This is kept for edge cases but not recommended
+   */
+  async resendVerificationEmailByEmail(email: string): Promise<void> {
     try {
       // Find user or client by email
       const user = await prisma.user.findUnique({ where: { email } });
       const client = await prisma.client.findUnique({ where: { email } });
 
       const entity = user || client;
-      const entityType = user ? 'user' : 'client';
+      const entityRole = user ? 'user' : 'client';
 
       if (!entity) {
         throw new NotFoundError('No account found with this email address');
@@ -176,7 +214,7 @@ export class EmailVerificationService {
 
       await this.createAndSendVerificationToken({
         entityId: entity.id,
-        entityType: entityType as 'user' | 'client',
+        entityRole: entityRole as Roles,
         email: entity.email,
         name,
       });
@@ -189,10 +227,10 @@ export class EmailVerificationService {
   /**
    * Check rate limiting for verification emails
    */
-  private async checkRateLimit(entityId: string, entityType: 'user' | 'client'): Promise<void> {
+  private async checkRateLimit(entityId: string, entityRole: Roles): Promise<void> {
     const recentTokens = await prisma.emailVerificationToken.findMany({
       where: {
-        [entityType === 'user' ? 'userId' : 'clientId']: entityId,
+        [entityRole !== Roles.CLIENT ? 'userId' : 'clientId']: entityId,
         createdAt: {
           gte: new Date(Date.now() - this.RESEND_COOLDOWN_MINUTES * 60 * 1000),
         },
@@ -210,13 +248,10 @@ export class EmailVerificationService {
   /**
    * Invalidate existing tokens
    */
-  private async invalidateExistingTokens(
-    entityId: string,
-    entityType: 'user' | 'client'
-  ): Promise<void> {
+  private async invalidateExistingTokens(entityId: string, entityRole: Roles): Promise<void> {
     await prisma.emailVerificationToken.deleteMany({
       where: {
-        [entityType === 'user' ? 'userId' : 'clientId']: entityId,
+        [entityRole !== Roles.CLIENT ? 'userId' : 'clientId']: entityId,
       },
     });
   }
