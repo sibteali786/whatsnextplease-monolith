@@ -28,6 +28,8 @@ const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string(),
   WEB_PUSH_EMAIL: z.string().email(),
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  SES_FROM_EMAIL: z.string().email(),
+  SES_FROM_NAME: z.string().min(1),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;

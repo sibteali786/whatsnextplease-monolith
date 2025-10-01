@@ -32,7 +32,6 @@ export const createTokenForUser = (id: string, username: string, role: Roles) =>
 };
 
 export const getUserFromToken = async (token: { name: string; value: string }) => {
-  //TODO: handle token expired error and maybe modify error handler to better handle errors
   try {
     const payload = jwt.verify(token.value, SECRET) as {
       id: string;
@@ -47,6 +46,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
         id: true,
         username: true,
         email: true,
+        emailVerified: true,
         firstName: true,
         lastName: true,
         avatarUrl: true,
@@ -73,6 +73,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
           contactName: true,
           avatarUrl: true,
           email: true,
+          emailVerified: true,
           bio: true,
           role: {
             select: {
@@ -90,6 +91,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
         name: client.contactName ?? client.username,
         username: client.username,
         email: client.email,
+        emailVerified: client.emailVerified,
         avatarUrl: client.avatarUrl,
         bio: client.bio,
         role: {
@@ -104,6 +106,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
       name: user.firstName + ' ' + user.lastName,
       username: user.username,
       email: user.email,
+      emailVerified: user.emailVerified,
       avatarUrl: user.avatarUrl,
       bio: user.bio,
       userSkills: user.userSkills,
@@ -149,10 +152,15 @@ export const signin = async ({ username, password }: { username: string; passwor
       const token = createTokenForUser(
         matchUser.id,
         matchUser.username,
-        matchUser?.role ? matchUser?.role?.name : Roles.TASK_AGENT // Use user's role from DB
+        matchUser?.role ? matchUser?.role?.name : Roles.TASK_AGENT
       );
       const { passwordHash, ...user } = matchUser;
-      return { token, user, message: 'Signed in successfully' };
+      return {
+        token,
+        user,
+        message: 'Signed in successfully',
+        emailVerified: matchUser.emailVerified,
+      };
     }
 
     // If no user found, check Client table
@@ -190,13 +198,14 @@ export const signin = async ({ username, password }: { username: string; passwor
       };
     }
 
-    const token = createTokenForUser(
-      matchClient.id,
-      matchClient.username,
-      Roles.CLIENT // Directly assign CLIENT role for client sign-in
-    );
+    const token = createTokenForUser(matchClient.id, matchClient.username, Roles.CLIENT);
     const { passwordHash, ...client } = matchClient;
-    return { token, client, message: 'Signed in successfully' };
+    return {
+      token,
+      client,
+      message: 'Signed in successfully',
+      emailVerified: matchClient.emailVerified,
+    };
   } catch (error) {
     logger.error(error, 'SignIn Error');
     return {
@@ -216,14 +225,16 @@ export const signup = async ({
   firstName,
   lastName,
   companyName,
-  role, // Pass "Client" for clients or a valid role for users (e.g., "SuperUser", "TaskAgent")
+  contactName,
+  role,
 }: {
   email: string;
   password: string;
   username: string;
-  firstName?: string; // Optional for clients
-  lastName?: string; // Optional for clients
-  companyName?: string; // Optional for users
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+  contactName?: string;
   role: Roles;
 }) => {
   try {
@@ -279,6 +290,8 @@ export const signup = async ({
           email,
           passwordHash: hashedPassword,
           companyName: companyName ?? '',
+          contactName: contactName ?? '',
+          emailVerified: false,
           role: { connect: { name: Roles.CLIENT } },
         },
         include: {
@@ -291,7 +304,20 @@ export const signup = async ({
       });
 
       const token = createTokenForUser(client.id, client.username, Roles.CLIENT);
-      return { client, token, message: 'Client signed up successfully' };
+
+      // ✅ Send verification email via backend API (non-blocking)
+      await sendVerificationEmail({
+        entityId: client.id,
+        entityRole: Roles.CLIENT,
+        email: client.email,
+        name: client.contactName || client.companyName,
+      });
+
+      return {
+        client,
+        token,
+        message: 'Client signed up successfully. Please check your email to verify your account.',
+      };
     }
 
     // Create a new user
@@ -302,6 +328,7 @@ export const signup = async ({
         passwordHash: hashedPassword,
         firstName: firstName ?? '',
         lastName: lastName ?? '',
+        emailVerified: false,
         role: { connect: { name: role } },
       },
       include: {
@@ -314,7 +341,20 @@ export const signup = async ({
     });
 
     const token = createTokenForUser(user.id, user.username, role);
-    return { user, token, message: 'User signed up successfully' };
+
+    // ✅ Send verification email via backend API (non-blocking)
+    await sendVerificationEmail({
+      entityId: user.id,
+      entityRole: role,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+    });
+
+    return {
+      user,
+      token,
+      message: 'User signed up successfully. Please check your email to verify your account.',
+    };
   } catch (error) {
     console.error('Signup Error:', error);
     return {
@@ -326,6 +366,46 @@ export const signup = async ({
     };
   }
 };
+
+// Helper function to send verification email via backend API
+async function sendVerificationEmail({
+  entityId,
+  entityRole,
+  email,
+  name,
+}: {
+  entityId: string;
+  entityRole: Roles;
+  email: string;
+  name: string;
+}): Promise<void> {
+  try {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+    const response = await fetch(`${backendUrl}/auth/send-verification-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        entityId,
+        entityRole,
+        email,
+        name,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to send verification email');
+    }
+
+    logger.info({ entityId, entityRole }, 'Verification email sent successfully');
+  } catch (error) {
+    logger.error({ error, entityId, entityRole }, 'Failed to send verification email via API');
+    throw error;
+  }
+}
 
 export const hashPW = (password: string) => {
   return bcrypt.hash(password, 10);
@@ -344,7 +424,6 @@ export const checkIfUserExists = async ({
   username: string;
   password: string;
 }) => {
-  // Check if username or email already exists
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ username: username }, { email: email }],
@@ -362,10 +441,10 @@ export const checkIfUserExists = async ({
     };
   }
 
-  // If user doesn't exist, hash the password
   const hashedPassword = await hashPW(password);
   return { error: null, hashedPassword };
 };
+
 export const checkIfClientExists = async ({
   email,
   companyName,
@@ -375,7 +454,6 @@ export const checkIfClientExists = async ({
   companyName: string;
   password: string;
 }) => {
-  // Check if companyName or email already exists
   const existingClient = await prisma.client.findFirst({
     where: {
       OR: [{ companyName }, { email }],
@@ -390,7 +468,6 @@ export const checkIfClientExists = async ({
     throw new EntityAlreadyExistsError(errorMessage);
   }
 
-  // If client doesn't exist, hash the password
   const hashedPassword = await hashPW(password);
   return hashedPassword;
 };

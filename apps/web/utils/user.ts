@@ -12,6 +12,7 @@ export interface UserState {
   email: string;
   avatarUrl: string | null;
   userSkills?: UserSkill[];
+  emailVerified: boolean;
   bio: string | null;
   role: {
     name: Roles | undefined;

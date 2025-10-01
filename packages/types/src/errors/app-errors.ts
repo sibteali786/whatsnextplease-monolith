@@ -61,3 +61,10 @@ export class FileUploadError extends BaseError {
     Object.setPrototypeOf(this, FileUploadError.prototype);
   }
 }
+
+export class TooManyRequestsError extends BaseError {
+  constructor(message = 'Too many requests, please try again later', details?: ErrorDetails) {
+    super(message, 429, ErrorCodes.BAD_REQUEST, details);
+    Object.setPrototypeOf(this, TooManyRequestsError.prototype);
+  }
+}

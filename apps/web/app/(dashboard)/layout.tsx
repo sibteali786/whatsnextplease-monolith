@@ -6,6 +6,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import RouteProgressBar from '@/components/RoutesProgressBar';
 import { ChatProvider } from '../providers/ChatContextProvider';
 import { NotificationPermissionProvider } from '@/components/notifications/notificationPermissionProvider';
+import { EmailVerificationBanner } from '@/components/auth/EmailVerificationBanner';
+import { getCurrentUser } from '@/utils/user';
 
 // Loading fallback component
 const ShellSkeleton = () => (
@@ -22,7 +24,10 @@ const ShellSkeleton = () => (
   </div>
 );
 
-const Dashboard = ({ children }: { children: ReactNode }) => {
+const Dashboard = async ({ children }: { children: ReactNode }) => {
+  // ✅ Fetch user data server-side
+  const user = await getCurrentUser();
+
   return (
     <NotificationLayout>
       <Suspense fallback={<ShellSkeleton />}>
@@ -38,6 +43,12 @@ const Dashboard = ({ children }: { children: ReactNode }) => {
               }}
             >
               <NotificationPermissionProvider>
+                {/* ✅ Show banner at the top of all dashboard content */}
+                {user && !user.emailVerified && (
+                  <div className="mb-4">
+                    <EmailVerificationBanner email={user.email} />
+                  </div>
+                )}
                 <div className="h-full">{children}</div>
               </NotificationPermissionProvider>
             </ChatProvider>
