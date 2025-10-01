@@ -10,6 +10,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as ses from 'aws-cdk-lib/aws-ses'; // ADD THIS IMPORT
 import { Construct } from 'constructs';
 import { Stage } from '../stage';
 
@@ -28,22 +29,24 @@ export class WnpBackendStack extends cdk.Stack {
     super(scope, id, props);
     const isProduction = props.stage === Stage.PRODUCTION;
 
-    // Create S3 bucket (moved from S3Stack)
+    // ========================================
+    // S3 BUCKET SETUP (Keep as is)
+    // ========================================
     this.s3Bucket = new s3.Bucket(this, 'WnpS3Bucket', {
       bucketName: `wnp-media-${props.stage.toLowerCase()}`,
       removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: !isProduction,
-      versioned: isProduction, // Enable versioning in production for better data protection
+      versioned: isProduction,
       cors: [
         {
           allowedMethods: [
             s3.HttpMethods.GET,
             s3.HttpMethods.PUT,
             s3.HttpMethods.HEAD,
-            s3.HttpMethods.POST, // For multipart uploads
-            s3.HttpMethods.DELETE, // If you need client-side deletions
+            s3.HttpMethods.POST,
+            s3.HttpMethods.DELETE,
           ],
-          allowedOrigins: ['*'], // Restrict this in production to your domains
+          allowedOrigins: ['*'],
           allowedHeaders: [
             '*',
             'Range',
@@ -71,7 +74,6 @@ export class WnpBackendStack extends cdk.Stack {
           id: 'DeleteIncompleteMultipartUploads',
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(1),
         },
-        // Add more lifecycle rules as needed
         ...(isProduction
           ? []
           : [
@@ -83,13 +85,14 @@ export class WnpBackendStack extends cdk.Stack {
       ],
     });
 
-    // Create CloudFront Origin Access Control (moved from S3Stack)
+    // ========================================
+    // CLOUDFRONT SETUP (Keep as is)
+    // ========================================
     const oac = new cloudfront.S3OriginAccessControl(this, 'WnpOAC', {
       signing: cloudfront.Signing.SIGV4_ALWAYS,
       originAccessControlName: `WnpS3BucketOAC-${props.stage}`,
     });
 
-    // Create CloudFront distribution (simplified - remove Lambda@Edge for now)
     this.cloudFrontDistribution = new cloudfront.Distribution(this, 'WnpDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(this.s3Bucket, {
@@ -111,11 +114,11 @@ export class WnpBackendStack extends cdk.Stack {
               'Content-MD5',
             ],
             accessControlAllowMethods: ['GET', 'HEAD', 'OPTIONS'],
-            accessControlAllowOrigins: ['*'], // Restrict in production
+            accessControlAllowOrigins: ['*'],
             originOverride: true,
           },
           securityHeadersBehavior: {
-            contentTypeOptions: { override: false }, // AWS manages this
+            contentTypeOptions: { override: false },
             referrerPolicy: {
               referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
               override: false,
@@ -128,11 +131,9 @@ export class WnpBackendStack extends cdk.Stack {
             },
           },
         }),
-        // Note: Removed Lambda@Edge for now - can add back if needed for advanced auth
       },
     });
 
-    // Add S3 bucket policy for CloudFront access
     const bucketPolicyStatement = new iam.PolicyStatement({
       actions: ['s3:GetObject', 's3:GetObjectAttributes'],
       effect: iam.Effect.ALLOW,
@@ -146,10 +147,55 @@ export class WnpBackendStack extends cdk.Stack {
     });
     this.s3Bucket.addToResourcePolicy(bucketPolicyStatement);
 
-    // Create a VPC - COST REDUCTION: Single AZ, no NAT Gateways
+    // ========================================
+    // 🆕 SES SETUP - ADD THIS NEW SECTION HERE
+    // ========================================
+
+    // 1. Create Email Identity for whatnextplease.com
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const emailIdentity = new ses.EmailIdentity(this, 'WnpEmailIdentity', {
+      identity: ses.Identity.domain('whatnextplease.com'),
+      mailFromDomain: 'mail.whatnextplease.com',
+      dkimSigning: true,
+      dkimIdentity: ses.DkimIdentity.easyDkim(ses.EasyDkimSigningKeyLength.RSA_2048_BIT),
+    });
+
+    const configurationSet = new ses.ConfigurationSet(this, 'WnpEmailConfigSet', {
+      configurationSetName: `wnp-email-config-${props.stage}`,
+      reputationMetrics: true,
+      sendingEnabled: true,
+    });
+
+    configurationSet.addEventDestination('WnpEmailEvents', {
+      destination: ses.EventDestination.cloudWatchDimensions([
+        {
+          name: 'email-type',
+          defaultValue: 'transactional',
+          source: ses.CloudWatchDimensionSource.MESSAGE_TAG,
+        },
+        {
+          name: 'environment',
+          defaultValue: props.stage.toLowerCase(),
+          source: ses.CloudWatchDimensionSource.MESSAGE_TAG,
+        },
+      ]),
+      events: [
+        ses.EmailSendingEvent.SEND,
+        ses.EmailSendingEvent.DELIVERY,
+        ses.EmailSendingEvent.BOUNCE,
+        ses.EmailSendingEvent.COMPLAINT,
+        ses.EmailSendingEvent.REJECT,
+        ses.EmailSendingEvent.OPEN, // Track opens
+        ses.EmailSendingEvent.CLICK,
+      ],
+      enabled: true,
+    });
+    // ========================================
+    // VPC AND ECS SETUP (Keep as is)
+    // ========================================
     const vpc = new ec2.Vpc(this, 'WnpBackendVPC', {
-      maxAzs: 1, // COST REDUCTION: Using only one AZ
-      natGateways: 0, // No NAT Gateways
+      maxAzs: 1,
+      natGateways: 0,
       subnetConfiguration: [
         {
           name: 'public',
@@ -159,48 +205,50 @@ export class WnpBackendStack extends cdk.Stack {
       vpcName: `wnp-backend-vpc-${props.stage}`,
     });
 
-    // Create an ECS cluster
     const cluster = new ecs.Cluster(this, 'WnpBackendCluster', {
       vpc,
-      containerInsights: false, // COST REDUCTION: Disable Container Insights
+      containerInsights: false,
       clusterName: `wnp-backend-cluster-${props.stage}`,
     });
 
-    // Create an ECR repository
     this.ecrRepository = new ecr.Repository(this, 'BackendRepo', {
       repositoryName: `wnp-backend-repo-${props.stage}`,
       removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       emptyOnDelete: !isProduction,
       lifecycleRules: [
         {
-          maxImageCount: isProduction ? 6 : 5, // COST REDUCTION: Keep fewer images
+          maxImageCount: isProduction ? 6 : 5,
           description: 'keep only recent images',
         },
       ],
     });
 
-    // Fetch Database URL from Secrets Manager
     const databaseSecret = secretsmanager.Secret.fromSecretNameV2(
       this,
       'DatabaseSecret',
-      `database-url-${props.stage}` // actual secret name
+      `database-url-${props.stage}`
     );
 
     const nextPublicAppUrlSecret = secretsmanager.Secret.fromSecretNameV2(
       this,
       'NextPublicAppUrlSecret',
-      `next-public-app-url-${props.stage}` // actual secret name
+      `next-public-app-url-${props.stage}`
     );
 
-    // Skip Fargate service creation in first deployment as it looks for empty ECR repository
+    // ========================================
+    // FARGATE SERVICE SETUP
+    // ========================================
     if (process.env.SKIP_FARGATE !== 'true') {
-      // Create a task definition
       const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
-        memoryLimitMiB: 512, // Minimum viable memory
-        cpu: 256, // Minimum viable CPU
+        memoryLimitMiB: 512,
+        cpu: 256,
       });
 
-      // Enhanced IAM policies for ECS task to access S3
+      // ========================================
+      // 🆕 IAM POLICIES - UPDATED SECTION
+      // ========================================
+
+      // S3 Access Policy (existing - keep as is)
       const s3FullAccessPolicy = new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
@@ -214,20 +262,59 @@ export class WnpBackendStack extends cdk.Stack {
         resources: [this.s3Bucket.bucketArn, this.s3Bucket.arnForObjects('*')],
       });
 
-      // Add S3 permissions to task role (not just execution role)
-      taskDefinition.taskRole.addToPrincipalPolicy(s3FullAccessPolicy);
+      // 🆕 SES Access Policy - ADD THIS NEW POLICY
+      const sesPolicy = new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'ses:SendEmail', // Send simple email
+          'ses:SendRawEmail', // Send email with attachments
+          'ses:SendTemplatedEmail', // Send using SES templates (optional)
+        ],
+        resources: [
+          // Restrict to your specific domain identity
+          `arn:aws:ses:${this.region}:${this.account}:identity/whatnextplease.com`,
+          // Allow using the configuration set
+          `arn:aws:ses:${this.region}:${this.account}:configuration-set/${configurationSet.configurationSetName}`,
+        ],
+        conditions: {
+          // Additional security: only allow sending from verified addresses
+          StringLike: {
+            'ses:FromAddress': [
+              '*@whatnextplease.com', // Any email from your domain
+            ],
+          },
+        },
+      });
 
-      // Add container to task definition
+      // 🆕 Apply both policies to the task role
+      // WHY TASK ROLE: The task role is used by your application code running in the container
+      // WHY NOT EXECUTION ROLE: Execution role is only for ECS to pull images and write logs
+      taskDefinition.taskRole.addToPrincipalPolicy(s3FullAccessPolicy);
+      taskDefinition.taskRole.addToPrincipalPolicy(sesPolicy);
+
+      // ========================================
+      // 🆕 CONTAINER DEFINITION - UPDATED WITH SES ENV VARS
+      // ========================================
       const container = taskDefinition.addContainer('WnpBackendContainer', {
         image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, 'latest'),
         environment: {
           NODE_ENV: props.stage,
           PORT: '3000',
-          // S3 Configuration (no more Lambda/API Gateway dependencies)
+
+          // S3 Configuration (existing)
           AWS_REGION: 'us-east-1',
           S3_BUCKET_NAME: this.s3Bucket.bucketName,
           CLOUDFRONT_DOMAIN: this.cloudFrontDistribution.distributionDomainName,
-          LOG_LEVEL: isProduction ? 'debug' : 'debug',
+
+          // 🆕 SES Configuration - ADD THESE NEW VARIABLES
+          SES_REGION: 'us-east-1', // SES is regional, ensure it matches your setup
+          SES_FROM_EMAIL: 'noreply@whatnextplease.com', // Default sender email
+          SES_REPLY_TO_EMAIL: 'support@whatnextplease.com', // Optional reply-to
+          SES_CONFIGURATION_SET: configurationSet.configurationSetName,
+          SES_VERIFIED_DOMAIN: 'whatnextplease.com',
+
+          // Logging
+          LOG_LEVEL: isProduction ? 'info' : 'debug',
         },
         secrets: {
           DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
@@ -235,40 +322,38 @@ export class WnpBackendStack extends cdk.Stack {
         },
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'wnp-backend',
-          logRetention: logs.RetentionDays.ONE_WEEK, // Cost optimization
+          logRetention: logs.RetentionDays.ONE_WEEK,
         }),
       });
 
-      // Add port mapping
       container.addPortMappings({
         containerPort: 3000,
         hostPort: 3000,
         protocol: ecs.Protocol.TCP,
       });
 
-      // Create a security group for the Fargate service
+      // ========================================
+      // SECURITY GROUP AND SERVICE (Keep as is)
+      // ========================================
       const serviceSG = new ec2.SecurityGroup(this, 'ServiceSecurityGroup', {
         vpc,
         description: 'Security group for the Fargate service',
         allowAllOutbound: true,
       });
 
-      // Allow inbound traffic on container port
       serviceSG.addIngressRule(
         ec2.Peer.anyIpv4(),
         ec2.Port.tcp(3000),
         'Allow incoming traffic to container port'
       );
 
-      // Create the Fargate service
       this.ecsService = new ecs.FargateService(this, 'WnpBackendService', {
         cluster,
         taskDefinition,
-        assignPublicIp: true, // Required for public subnets without NAT
-        desiredCount: 1, // Single task
+        assignPublicIp: true,
+        desiredCount: 1,
         serviceName: `wnp-backend-service-${props.stage}`,
         securityGroups: [serviceSG],
-        // COST REDUCTION: Using Fargate Spot for ~70% cost savings
         capacityProviderStrategies: [
           {
             capacityProvider: 'FARGATE_SPOT',
@@ -277,22 +362,22 @@ export class WnpBackendStack extends cdk.Stack {
         ],
       });
 
+      // ========================================
+      // LOAD BALANCER SETUP (Keep as is)
+      // ========================================
       const certificate = acm.Certificate.fromCertificateArn(
         this,
         'ApiCertificate',
         'arn:aws:acm:us-east-1:519076116465:certificate/4f07baf8-6438-47e8-bc56-8a74285946d9'
       );
 
-      // Create a Network Load Balancer (cheaper than ALB)
       this.networkLoadBalancer = new elbv2.NetworkLoadBalancer(this, 'WnpBackendNLB', {
         vpc,
         internetFacing: true,
         loadBalancerName: `wnp-backend-nlb-${props.stage}`,
-        // COST REDUCTION: Deploy in same AZ as the service
         vpcSubnets: { subnets: vpc.publicSubnets },
       });
 
-      // Create a target group for the service
       const targetGroup = new elbv2.NetworkTargetGroup(this, 'TargetGroup', {
         vpc,
         port: 3000,
@@ -303,16 +388,14 @@ export class WnpBackendStack extends cdk.Stack {
           port: '3000',
           protocol: elbv2.Protocol.HTTP,
           path: '/health',
-          interval: cdk.Duration.minutes(5), // Reduced frequency
+          interval: cdk.Duration.minutes(5),
           healthyThresholdCount: 2,
           unhealthyThresholdCount: 2,
         },
       });
 
-      // Register targets
       targetGroup.addTarget(this.ecsService);
 
-      // Create a listener
       const httpListener = this.networkLoadBalancer.addListener('Listener', {
         port: 80,
         protocol: elbv2.Protocol.TCP,
@@ -326,14 +409,15 @@ export class WnpBackendStack extends cdk.Stack {
         defaultTargetGroups: [targetGroup],
       });
 
-      // Output the NLB DNS name
+      // ========================================
+      // OUTPUTS - LOAD BALANCER
+      // ========================================
       new cdk.CfnOutput(this, 'LoadBalancerDNS', {
         value: this.networkLoadBalancer.loadBalancerDnsName,
         description: 'Network Load Balancer DNS Name',
         exportName: `LoadBalancerDNS-${props.stage}`,
       });
 
-      // Output both listener ARNs
       new cdk.CfnOutput(this, 'HttpListenerARN', {
         value: httpListener.listenerArn,
         description: 'Network Load Balancer HTTP Listener ARN',
@@ -347,7 +431,9 @@ export class WnpBackendStack extends cdk.Stack {
       });
     }
 
-    // S3 and CloudFront Outputs (moved from S3Stack)
+    // ========================================
+    // OUTPUTS - S3 AND CLOUDFRONT (Keep as is)
+    // ========================================
     new cdk.CfnOutput(this, 'S3BucketName', {
       value: this.s3Bucket.bucketName,
       description: 'S3 Bucket Name for Media Storage',
@@ -366,11 +452,57 @@ export class WnpBackendStack extends cdk.Stack {
       exportName: `CloudFrontDomainName-${props.stage}`,
     });
 
-    // Output the ECR repository URI
     new cdk.CfnOutput(this, 'ECRRepositoryURI', {
       value: this.ecrRepository.repositoryUri,
       description: 'ECR Repository URI',
       exportName: `ECRRepositoryURI-${props.stage}`,
+    });
+
+    // ========================================
+    // 🆕 OUTPUTS - SES - ADD THESE NEW OUTPUTS
+    // ========================================
+    new cdk.CfnOutput(this, 'SESVerifiedDomain', {
+      value: 'whatnextplease.com',
+      description: 'SES Verified Domain',
+      exportName: `SESVerifiedDomain-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'SESConfigurationSet', {
+      value: configurationSet.configurationSetName,
+      description: 'SES Configuration Set Name',
+      exportName: `SESConfigurationSet-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'SESFromEmail', {
+      value: 'noreply@whatnextplease.com',
+      description: 'Default SES From Email Address',
+      exportName: `SESFromEmail-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'SESMailFromDomain', {
+      value: 'mail.whatnextplease.com',
+      description:
+        'MAIL FROM domain - Configure MX record: 10 feedback-smtp.us-east-1.amazonses.com',
+      exportName: `SESMailFromDomain-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'SESMailFromMXRecord', {
+      value: '10 feedback-smtp.us-east-1.amazonses.com',
+      description: 'MX record value for MAIL FROM domain',
+      exportName: `SESMailFromMXRecord-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'SESDKIMRecords', {
+      value: 'Check Route53 or SES Console for CNAME records to add to your DNS',
+      description: 'DKIM CNAME records (3 records) - must be added to DNS for email authentication',
+      exportName: `SESDKIMRecordsInfo-${props.stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'SESSandboxWarning', {
+      value: isProduction
+        ? 'PRODUCTION - Request production access if not already done'
+        : 'DEVELOPMENT - SES in sandbox mode. Only verified emails can receive messages.',
+      description: 'SES Account Status Reminder',
     });
   }
 }

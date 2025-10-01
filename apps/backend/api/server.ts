@@ -14,6 +14,7 @@ import { env } from './config/environment';
 import { taskRoutes } from './routes/task.routes';
 import { commentRoutes } from './routes/comment.routes';
 import { logger } from './utils/logger';
+import { authRoutes } from './routes/auth.routes';
 
 export async function createServer() {
   const app = express();
@@ -63,6 +64,7 @@ export async function createServer() {
   });
   // Routes
   app.use('/notifications', notificationRoutes);
+  app.use('/auth', authRoutes);
   app.use('/user', userRoutes);
   app.use('/client', clientRoutes);
   app.use('/skill', skillRoutes);
