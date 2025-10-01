@@ -73,12 +73,21 @@ jobs:
         run: |
           cd apps/backend
 
-          # Create .env file with all environment-specific variables
-          # This uses the consolidated environment secret from GitHub
-          echo "${{ secrets.ENV_DEVELOPMENT }}" > .env
+          # Create .env file using heredoc (handles quotes and special characters)
+          cat > .env << 'EOF'
+          ${{ secrets.ENV_DEVELOPMENT }}
+          EOF
 
-          # Verify the .env file was created (without showing contents)
-          echo "✅ Environment file created with $(wc -l < .env) lines"
+          # Verify the .env file was created
+          echo "Environment file created with $(wc -l < .env) lines"
+
+          # Verify key variables exist (without showing values)
+          if grep -q "AWS_REGION" .env && grep -q "SES_FROM_EMAIL" .env; then
+            echo "Required environment variables present"
+          else
+            echo "Missing required environment variables"
+            exit 1
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -140,12 +149,12 @@ jobs:
       - name: Notify Success
         if: success()
         run: |
-          echo "✅ Staging deployment completed successfully!"
-          echo "🚀 Image deployed: ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}"
-          echo "📦 Build number: staging-${{ github.run_number }}"
+          echo "Staging deployment completed successfully!"
+          echo "Image deployed: ${{ steps.ecr-repo.outputs.repository }}:${{ github.sha }}"
+          echo "Build number: staging-${{ github.run_number }}"
 
       - name: Notify Failure
         if: failure()
         run: |
-          echo "❌ Staging deployment failed!"
+          echo "Staging deployment failed!"
           echo "Please check the logs and verify your AWS configuration."
