@@ -7,7 +7,7 @@ import prisma from '../config/db';
 import { NotFoundError, UnauthorizedError } from '@wnp/types';
 import { Roles } from '@prisma/client';
 
-const TOKEN_EXPIRY_HOURS = env.PASSWORD_RESET_TOKEN_EXPIRY_HOURS || 1;
+const TOKEN_EXPIRY_HOURS = Number(env.PASSWORD_RESET_TOKEN_EXPIRY_HOURS) || 1;
 
 export class PasswordResetService {
   /**

@@ -30,8 +30,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
   SES_FROM_EMAIL: z.string().email(),
   SES_FROM_NAME: z.string().min(1),
-  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: z.number(),
-  PASSWORD_RESET_TOKEN_EXPIRY_HOURS: z.number(),
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: z.string(),
+  PASSWORD_RESET_TOKEN_EXPIRY_HOURS: z.string(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;

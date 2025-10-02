@@ -348,7 +348,7 @@ If you didn't create an account with us, please ignore this email.
             
             <p style="color: #666; font-size: 14px;">
               Or copy and paste this link into your browser:<br>
-              <a href="${resetUrl}" class="link">${resetUrl}</a>
+              <a href="${resetUrl}" class="link">Click Here</a>
             </p>
             
             <p style="color: #e74c3c; font-size: 14px; margin-top: 30px;">

@@ -18,7 +18,7 @@ interface VerifyEmailParams {
 }
 
 export class EmailVerificationService {
-  private readonly TOKEN_EXPIRY_HOURS = env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS || 24;
+  private readonly TOKEN_EXPIRY_HOURS = Number(env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS) || 24;
   private readonly MAX_RESEND_ATTEMPTS = 3;
   private readonly RESEND_COOLDOWN_MINUTES = 5;
 
