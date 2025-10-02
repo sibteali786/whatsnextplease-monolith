@@ -153,13 +153,22 @@ export class WnpBackendStack extends cdk.Stack {
 
     // 1. Create Email Identity for whatnextplease.com
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const emailIdentity = new ses.EmailIdentity(this, 'WnpEmailIdentity', {
-      identity: ses.Identity.domain('whatnextplease.com'),
-      mailFromDomain: 'mail.whatnextplease.com',
-      dkimSigning: true,
-      dkimIdentity: ses.DkimIdentity.easyDkim(ses.EasyDkimSigningKeyLength.RSA_2048_BIT),
-    });
+    let emailIdentity: ses.IEmailIdentity;
 
+    if (!isProduction) {
+      // Development: Create the email identity
+      new ses.EmailIdentity(this, 'WnpEmailIdentity', {
+        identity: ses.Identity.domain('whatnextplease.com'),
+        mailFromDomain: 'mail.whatnextplease.com',
+        dkimSigning: true,
+        dkimIdentity: ses.DkimIdentity.easyDkim(ses.EasyDkimSigningKeyLength.RSA_2048_BIT),
+      });
+    } else {
+      // Production: Reference the existing identity from development
+      ses.EmailIdentity.fromEmailIdentityName(this, 'WnpEmailIdentity', 'whatnextplease.com');
+    }
+
+    // Configuration Set: Create separately for each environment
     const configurationSet = new ses.ConfigurationSet(this, 'WnpEmailConfigSet', {
       configurationSetName: `wnp-email-config-${props.stage}`,
       reputationMetrics: true,
@@ -185,7 +194,7 @@ export class WnpBackendStack extends cdk.Stack {
         ses.EmailSendingEvent.BOUNCE,
         ses.EmailSendingEvent.COMPLAINT,
         ses.EmailSendingEvent.REJECT,
-        ses.EmailSendingEvent.OPEN, // Track opens
+        ses.EmailSendingEvent.OPEN,
         ses.EmailSendingEvent.CLICK,
       ],
       enabled: true,
@@ -282,6 +291,11 @@ export class WnpBackendStack extends cdk.Stack {
             'ses:FromAddress': [
               '*@whatnextplease.com', // Any email from your domain
             ],
+            ...(isProduction
+              ? {}
+              : {
+                  'ses:Recipients': ['*@hillcountrycoders.com'],
+                }),
           },
         },
       });
@@ -313,6 +327,9 @@ export class WnpBackendStack extends cdk.Stack {
           SES_CONFIGURATION_SET: configurationSet.configurationSetName,
           SES_VERIFIED_DOMAIN: 'whatnextplease.com',
 
+          EMAIL_WHITELIST: isProduction
+            ? ''
+            : '*@hillcountrycoders.com,sbaqar@hillcountrycoders.com',
           // Logging
           LOG_LEVEL: isProduction ? 'info' : 'debug',
         },
