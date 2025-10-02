@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import nodemailer from 'nodemailer';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { env } from '../config/environment';
@@ -276,12 +275,117 @@ If you didn't create an account with us, please ignore this email.
   }
 
   private getPasswordResetEmailTemplate(userName: string, resetUrl: string): string {
-    // TODO: Implement for forgot password feature
-    return `<!-- Password reset template -->`;
+    return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              margin: 0;
+              padding: 0;
+              background-color: #f4f4f4;
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 40px auto; 
+              background: white;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            .header { 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              padding: 40px 20px;
+              text-align: center;
+              color: white;
+            }
+            .content {
+              padding: 40px 30px;
+            }
+            .button { 
+              display: inline-block; 
+              padding: 14px 28px; 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white !important; 
+              text-decoration: none; 
+              border-radius: 6px;
+              font-weight: 600;
+              margin: 20px 0;
+            }
+            .button:hover {
+              opacity: 0.9;
+            }
+            .footer {
+              background: #f8f9fa;
+              padding: 20px 30px;
+              font-size: 12px;
+              color: #666;
+              border-top: 1px solid #e9ecef;
+            }
+            .link {
+              color: #667eea;
+              word-break: break-all;
+            }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="margin: 0; font-size: 28px;">Password Reset Request</h1>
+          </div>
+          
+          <div class="content">
+            <p>Hi ${userName},</p>
+            
+            <p>We received a request to reset your password. Click the button below to choose a new password:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" class="button">Reset Password</a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">
+              Or copy and paste this link into your browser:<br>
+              <a href="${resetUrl}" class="link">${resetUrl}</a>
+            </p>
+            
+            <p style="color: #e74c3c; font-size: 14px; margin-top: 30px;">
+              <strong>⚠️ This link will expire in 1 hour.</strong>
+            </p>
+            
+            <p style="color: #666; font-size: 14px;">
+              If you didn't request a password reset, please ignore this email or contact support if you have concerns.
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p style="margin: 0;">
+              © ${new Date().getFullYear()} ${env.SES_FROM_NAME}. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
   }
 
   private getPasswordResetEmailText(userName: string, resetUrl: string): string {
-    return `Password reset text...`;
+    return `
+Hi ${userName},
+
+We received a request to reset your password.
+
+To reset your password, visit:
+${resetUrl}
+
+⚠️ This link will expire in 1 hour.
+
+If you didn't request a password reset, please ignore this email or contact support if you have concerns.
+
+© ${new Date().getFullYear()} ${env.SES_FROM_NAME}
+  `.trim();
   }
 }
 
