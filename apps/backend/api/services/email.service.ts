@@ -13,12 +13,15 @@ interface EmailOptions {
 
 export class EmailService {
   private transporter: nodemailer.Transporter;
-  private isDevelopment: boolean;
-  private useAwsSes: boolean;
+  private emailWhitelist: string[];
+  private whitelistEnabled: boolean;
+
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV !== 'production';
-    this.useAwsSes = process.env.USE_AWS_SES === 'true';
-    if (this.isDevelopment && !this.useAwsSes) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const useAwsSes = process.env.USE_AWS_SES === 'true' || !isProduction;
+    this.whitelistEnabled = !isProduction;
+    this.emailWhitelist = this.loadEmailWhitelist();
+    if (isProduction && !useAwsSes) {
       // Local development: Use console logging or local SMTP (MailHog)
       this.transporter = nodemailer.createTransport({
         host: 'localhost',
@@ -35,11 +38,73 @@ export class EmailService {
       this.transporter = nodemailer.createTransport({
         SES: { sesClient, SendEmailCommand },
       });
-      logger.info('Email service initialized in PRODUCTION mode (using AWS SES)');
+      logger.info(
+        {
+          mode: isProduction ? 'PRODUCTION' : 'STAGING',
+          whitelistEnabled: this.whitelistEnabled,
+          allowedPatterns: this.whitelistEnabled ? this.emailWhitelist : ['ALL'],
+        },
+        'Email service initialized with AWS SES'
+      );
     }
   }
 
+  private loadEmailWhitelist(): string[] {
+    // Load from environment variable
+    const whitelist = process.env.EMAIL_WHITELIST || '@hillcountrycoders.com';
+    return whitelist.split(',').map(e => e.trim());
+  }
+
+  private isEmailAllowed(email: string): boolean {
+    if (!this.whitelistEnabled) {
+      return true;
+    }
+
+    const allowed = this.emailWhitelist.some(pattern => {
+      if (pattern.startsWith('*@')) {
+        // Wildcard domain: *@hillcountrycoders.com
+        const domain = pattern.substring(1); // Remove '*'
+        return email.toLowerCase().endsWith(domain.toLowerCase());
+      }
+      if (pattern.startsWith('@')) {
+        // Legacy support: @hillcountrycoders.com
+        return email.toLowerCase().endsWith(pattern.toLowerCase());
+      }
+      // Exact email match
+      return email.toLowerCase() === pattern.toLowerCase();
+    });
+
+    if (!allowed) {
+      logger.warn(
+        {
+          email,
+          whitelist: this.emailWhitelist,
+          environment: process.env.NODE_ENV,
+        },
+        'Email blocked by staging whitelist'
+      );
+    }
+
+    return allowed;
+  }
+
   private async sendEmail(options: EmailOptions): Promise<void> {
+    // Staging Protection
+    if (!this.isEmailAllowed(options.to)) {
+      const error = new Error(
+        `Email blocked by staging whitelist, Recipient '${options.to}' not allowed. ` +
+          `Allowed patterns: ${this.emailWhitelist.join(', ')}`
+      );
+      logger.error(
+        {
+          to: options.to,
+          subject: options.subject,
+          whitelist: this.emailWhitelist,
+        },
+        error.message
+      );
+      throw error;
+    }
     try {
       const info = await this.transporter.sendMail({
         from: `"${env.SES_FROM_NAME}" <${env.SES_FROM_EMAIL}>`,
@@ -49,7 +114,15 @@ export class EmailService {
         text: options.text,
       });
 
-      logger.info({ messageId: info.messageId, to: options.to }, 'Email sent successfully');
+      logger.info(
+        {
+          messageId: info.messageId,
+          to: options.to,
+          environment: env.NODE_ENV,
+          whitelistChecked: this.whitelistEnabled,
+        },
+        'Email sent successfully'
+      );
     } catch (error) {
       logger.error({ error, to: options.to }, 'Failed to send email');
       throw error;
