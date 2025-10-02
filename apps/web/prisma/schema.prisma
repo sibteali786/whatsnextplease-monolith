@@ -72,6 +72,7 @@ model User {
     emailVerified        Boolean                  @default(false)
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
+    passwordResetTokens  PasswordResetToken[]
 }
 
 model UserSkill {
@@ -118,6 +119,7 @@ model Client {
     emailVerified        Boolean                  @default(false)
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
+    passwordResetTokens  PasswordResetToken[]
 }
 
 model EmailVerificationToken {
@@ -597,4 +599,17 @@ model PushSubscription {
 
     @@index([userId])
     @@index([clientId])
+}
+
+model PasswordResetToken {
+    id        String   @id @default(uuid())
+    token     String   @unique
+    expiresAt DateTime
+    createdAt DateTime @default(now())
+
+    // Polymorphic relation - can either be client or user
+    userId   String?
+    user     User?   @relation(fields: [userId], references: [id])
+    clientId String?
+    client   Client? @relation(fields: [clientId], references: [id])
 }
