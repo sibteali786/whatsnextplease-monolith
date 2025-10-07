@@ -71,8 +71,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   fetchTasks,
 }) => {
   const [skills, setSkills] = useState<{ id: string; name: string }[]>([]);
+
   const { createdTask } = useCreatedTask();
-  const [, setUser] = useState<UserState>();
+  const [user, setUser] = useState<UserState>();
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserWithTaskCount[]>([]);
@@ -101,7 +102,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     mode: 'onSubmit',
     defaultValues: getDefaultValues(),
   });
-
+  const watchedSkills = form.watch('skills');
   // Reset form logic based on state
   useEffect(() => {
     if (open) {
@@ -262,17 +263,16 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         }
 
         // Only fetch users list if the current role can assign tasks
-        if (roleCanAssignTasks) {
+        /*   if (roleCanAssignTasks) {
           try {
             const response = await usersList(
-              currentLoggedInUser?.role?.name ?? Roles.TASK_SUPERVISOR
+              currentLoggedInUser?.role?.name ?? Roles.TASK_SUPERVISOR,
+              form.getValues('skills')
             );
             if (response.success) {
-              // Fetch task counts for users and update state
               const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
               setUsers(usersWithTaskCounts);
             } else if (response.message !== 'Not authorized') {
-              // Only show error toast if it's not an authorization issue
               toast({
                 variant: 'destructive',
                 title: `Failed to fetch users`,
@@ -281,7 +281,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
               });
             }
           } catch (error) {
-            // Silently handle error for Task Agent role
             if (currentLoggedInUser?.role?.name !== Roles.TASK_AGENT) {
               toast({
                 variant: 'destructive',
@@ -291,7 +290,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
               });
             }
           }
-        }
+        } */
       } catch (error) {
         console.error('Error fetching dependencies:', error);
         toast({
@@ -305,6 +304,49 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
     fetchDependencies();
   }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      // Determine if current role can assign tasks to others
+      const roleCanAssignTasks =
+        user?.role?.name === Roles.SUPER_USER || user?.role?.name === Roles.TASK_SUPERVISOR;
+
+      setCanAssignTasks(roleCanAssignTasks);
+      if (roleCanAssignTasks) {
+        try {
+          const response = await usersList(
+            user?.role?.name ?? Roles.TASK_SUPERVISOR,
+            form.getValues('skills')
+          );
+          if (response.success) {
+            // Fetch task counts for users and update state
+            const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
+            setUsers(usersWithTaskCounts);
+          } else if (response.message !== 'Not authorized') {
+            // Only show error toast if it's not an authorization issue
+            toast({
+              variant: 'destructive',
+              title: `Failed to fetch users`,
+              description: response.message || 'Unknown error occurred',
+              icon: <CircleX size={40} />,
+            });
+          }
+        } catch (error) {
+          // Silently handle error for Task Agent role
+          if (user?.role?.name !== Roles.TASK_AGENT) {
+            toast({
+              variant: 'destructive',
+              title: `Failed to fetch users`,
+              description: error instanceof Error ? error.message : 'Something went wrong!',
+              icon: <CircleX size={40} />,
+            });
+          }
+        }
+      }
+    };
+
+    fetchUsers();
+  }, [watchedSkills]);
 
   const handleModalCloseRequest = () => {
     // Mark as cancelled to preserve form values

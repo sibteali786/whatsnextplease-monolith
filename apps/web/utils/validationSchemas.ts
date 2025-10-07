@@ -677,6 +677,7 @@ export const getAllUsersOutputSchema = errorSchema.merge(
 
 export const getAllUsersInputSchema = z.object({
   role: z.nativeEnum(Roles),
+  skills: z.array(z.string()),
 });
 
 export const TaskByPrioritySchema = z.object({
