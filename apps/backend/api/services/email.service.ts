@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { env } from '../config/environment';
 import { logger } from '../utils/logger';
@@ -10,46 +11,71 @@ interface EmailOptions {
   text: string;
 }
 
+interface EmailResult {
+  success: boolean;
+  provider: 'resend' | 'ses' | 'mailhog';
+  messageId?: string;
+  error?: string;
+}
+
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private resendClient: Resend | null = null;
+  private sesTransporter: nodemailer.Transporter | null = null;
+  private mailhogTransporter: nodemailer.Transporter | null = null;
   private emailWhitelist: string[];
   private whitelistEnabled: boolean;
+  private emailProvider: 'resend' | 'ses' | 'mailhog';
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const useAwsSes = process.env.USE_AWS_SES === 'true' || !isProduction;
+    const emailProvider = process.env.EMAIL_PROVIDER || 'ses'; // 'resend', 'ses', or 'mailhog'
+
+    this.emailProvider = emailProvider as 'resend' | 'ses' | 'mailhog';
     this.whitelistEnabled = !isProduction;
     this.emailWhitelist = this.loadEmailWhitelist();
-    if (isProduction && !useAwsSes) {
-      // Local development: Use console logging or local SMTP (MailHog)
-      this.transporter = nodemailer.createTransport({
-        host: 'localhost',
-        port: 1025,
-        ignoreTLS: true,
-      });
-      logger.info('Email service initialized in DEVELOPMENT mode (using MailHog)');
-    } else {
-      // Production: Use AWS SES
+
+    // Initialize Resend if API key is available
+    if (process.env.RESEND_API_KEY) {
+      this.resendClient = new Resend(process.env.RESEND_API_KEY);
+      logger.info('Resend client initialized');
+    }
+
+    // Initialize AWS SES
+    if (process.env.USE_AWS_SES === 'true' || isProduction) {
       const sesClient = new SESv2Client({
         region: process.env.AWS_REGION || 'us-east-1',
       });
 
-      this.transporter = nodemailer.createTransport({
+      this.sesTransporter = nodemailer.createTransport({
         SES: { sesClient, SendEmailCommand },
       });
-      logger.info(
-        {
-          mode: isProduction ? 'PRODUCTION' : 'STAGING',
-          whitelistEnabled: this.whitelistEnabled,
-          allowedPatterns: this.whitelistEnabled ? this.emailWhitelist : ['ALL'],
-        },
-        'Email service initialized with AWS SES'
-      );
+      logger.info('AWS SES transporter initialized');
     }
+
+    // Initialize MailHog for local development
+    if (!isProduction) {
+      this.mailhogTransporter = nodemailer.createTransport({
+        host: 'localhost',
+        port: 1025,
+        ignoreTLS: true,
+      });
+      logger.info('MailHog transporter initialized');
+    }
+
+    logger.info(
+      {
+        primaryProvider: this.emailProvider,
+        hasResend: !!this.resendClient,
+        hasSES: !!this.sesTransporter,
+        hasMailHog: !!this.mailhogTransporter,
+        whitelistEnabled: this.whitelistEnabled,
+        environment: process.env.NODE_ENV,
+      },
+      'Email service initialized'
+    );
   }
 
   private loadEmailWhitelist(): string[] {
-    // Load from environment variable
     const whitelist = process.env.EMAIL_WHITELIST || '@hillcountrycoders.com';
     return whitelist.split(',').map(e => e.trim());
   }
@@ -61,15 +87,12 @@ export class EmailService {
 
     const allowed = this.emailWhitelist.some(pattern => {
       if (pattern.startsWith('*@')) {
-        // Wildcard domain: *@hillcountrycoders.com
-        const domain = pattern.substring(1); // Remove '*'
+        const domain = pattern.substring(1);
         return email.toLowerCase().endsWith(domain.toLowerCase());
       }
       if (pattern.startsWith('@')) {
-        // Legacy support: @hillcountrycoders.com
         return email.toLowerCase().endsWith(pattern.toLowerCase());
       }
-      // Exact email match
       return email.toLowerCase() === pattern.toLowerCase();
     });
 
@@ -87,11 +110,169 @@ export class EmailService {
     return allowed;
   }
 
-  private async sendEmail(options: EmailOptions): Promise<void> {
-    // Staging Protection
+  /**
+   * Send email via Resend
+   * WHY: Resend provides better deliverability, tracking, and developer experience
+   * ALTERNATIVE: Could use Resend SMTP instead of SDK, but SDK gives us more features
+   */
+  private async sendViaResend(options: EmailOptions): Promise<EmailResult> {
+    if (!this.resendClient) {
+      throw new Error('Resend client not initialized');
+    }
+
+    try {
+      const { data } = await this.resendClient.emails.send({
+        from: `${env.SES_FROM_NAME} <${env.SES_FROM_EMAIL}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+      if (data) {
+        logger.info(
+          {
+            messageId: data?.id,
+            to: options.to,
+            provider: 'resend',
+          },
+          'Email sent successfully via Resend'
+        );
+
+        return {
+          success: true,
+          provider: 'resend',
+          messageId: data?.id,
+        };
+      }
+
+      return {
+        success: false,
+        provider: 'resend',
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error,
+          to: options.to,
+          provider: 'resend',
+        },
+        'Failed to send email via Resend'
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Send email via AWS SES
+   * WHY: SES is reliable and cost-effective at scale
+   * ALTERNATIVE: Could use SES SDK directly instead of Nodemailer wrapper
+   */
+  private async sendViaSES(options: EmailOptions): Promise<EmailResult> {
+    if (!this.sesTransporter) {
+      throw new Error('SES transporter not initialized');
+    }
+
+    try {
+      const info = await this.sesTransporter.sendMail({
+        from: `"${env.SES_FROM_NAME}" <${env.SES_FROM_EMAIL}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+
+      logger.info(
+        {
+          messageId: info.messageId,
+          to: options.to,
+          provider: 'ses',
+        },
+        'Email sent successfully via SES'
+      );
+
+      return {
+        success: true,
+        provider: 'ses',
+        messageId: info.messageId,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error,
+          to: options.to,
+          provider: 'ses',
+        },
+        'Failed to send email via SES'
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Send email via MailHog (local development)
+   * WHY: MailHog captures emails locally for testing without actually sending them
+   */
+  private async sendViaMailHog(options: EmailOptions): Promise<EmailResult> {
+    if (!this.mailhogTransporter) {
+      throw new Error('MailHog transporter not initialized');
+    }
+
+    try {
+      const info = await this.mailhogTransporter.sendMail({
+        from: `"${env.SES_FROM_NAME}" <${env.SES_FROM_EMAIL}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+
+      logger.info(
+        {
+          messageId: info.messageId,
+          to: options.to,
+          provider: 'mailhog',
+        },
+        'Email sent to MailHog'
+      );
+
+      return {
+        success: true,
+        provider: 'mailhog',
+        messageId: info.messageId,
+      };
+    } catch (error) {
+      logger.error(
+        {
+          error,
+          to: options.to,
+          provider: 'mailhog',
+        },
+        'Failed to send email via MailHog'
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Main send email method with automatic fallback
+   * WHY: Automatic fallback ensures high availability without manual intervention
+   *
+   * FLOW:
+   * 1. Check whitelist (staging protection)
+   * 2. Try primary provider (Resend/SES/MailHog based on EMAIL_PROVIDER env)
+   * 3. If primary fails, try SES as fallback (if available and not already primary)
+   * 4. If both fail, throw error
+   *
+   * ALTERNATIVES:
+   * - Could implement circuit breaker pattern to temporarily skip failing providers
+   * - Could implement retry logic with exponential backoff
+   * - Could queue emails for later retry instead of immediate fallback
+   */
+  private async sendEmail(options: EmailOptions): Promise<EmailResult> {
+    // Staging Protection: Check whitelist
     if (!this.isEmailAllowed(options.to)) {
       const error = new Error(
-        `Email blocked by staging whitelist, Recipient '${options.to}' not allowed. ` +
+        `Email blocked by staging whitelist. Recipient '${options.to}' not allowed. ` +
           `Allowed patterns: ${this.emailWhitelist.join(', ')}`
       );
       logger.error(
@@ -104,30 +285,68 @@ export class EmailService {
       );
       throw error;
     }
-    try {
-      const info = await this.transporter.sendMail({
-        from: `"${env.SES_FROM_NAME}" <${env.SES_FROM_EMAIL}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text,
-      });
 
-      logger.info(
+    // Try primary provider
+    try {
+      switch (this.emailProvider) {
+        case 'resend':
+          if (this.resendClient) {
+            return await this.sendViaResend(options);
+          }
+          logger.warn('Resend selected but not initialized, falling back to SES');
+          break;
+
+        case 'mailhog':
+          if (this.mailhogTransporter) {
+            return await this.sendViaMailHog(options);
+          }
+          logger.warn('MailHog selected but not available, falling back to SES');
+          break;
+
+        case 'ses':
+          if (this.sesTransporter) {
+            return await this.sendViaSES(options);
+          }
+          throw new Error('SES selected but not initialized');
+      }
+    } catch (primaryError) {
+      logger.error(
         {
-          messageId: info.messageId,
-          to: options.to,
-          environment: env.NODE_ENV,
-          whitelistChecked: this.whitelistEnabled,
+          error: primaryError,
+          primaryProvider: this.emailProvider,
         },
-        'Email sent successfully'
+        'Primary email provider failed, attempting fallback'
       );
-    } catch (error) {
-      logger.error({ error, to: options.to }, 'Failed to send email');
-      throw error;
+
+      // Fallback to SES if available and not already tried
+      if (this.emailProvider !== 'ses' && this.sesTransporter) {
+        try {
+          logger.info('Attempting SES fallback');
+          return await this.sendViaSES(options);
+        } catch (fallbackError) {
+          logger.error(
+            {
+              primaryError,
+              fallbackError,
+              to: options.to,
+            },
+            'Both primary and fallback email providers failed'
+          );
+          throw new Error('All email providers failed');
+        }
+      }
+
+      // No fallback available
+      throw primaryError;
     }
+
+    throw new Error('No email provider available');
   }
 
+  /**
+   * Send verification email
+   * WHY: Wraps sendEmail with verification-specific template and logging
+   */
   async sendVerificationEmail(email: string, token: string, userName: string): Promise<void> {
     const verificationUrl = `${env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
 
@@ -142,6 +361,10 @@ export class EmailService {
     });
   }
 
+  /**
+   * Send password reset email
+   * WHY: Wraps sendEmail with password reset-specific template and logging
+   */
   async sendPasswordResetEmail(email: string, token: string, userName: string): Promise<void> {
     const resetUrl = `${env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
 
@@ -234,7 +457,7 @@ export class EmailService {
               
               <p style="color: #666; font-size: 14px;">
                 Or copy and paste this link into your browser:<br>
-                <a href="${verificationUrl}" class="link">Verify Email</a>
+                <a href="${verificationUrl}" class="link">Click Here</a>
               </p>
               
               <p style="color: #666; font-size: 14px; margin-top: 30px;">
@@ -279,6 +502,8 @@ If you didn't create an account with us, please ignore this email.
     <!DOCTYPE html>
     <html>
       <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           body { 
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -348,7 +573,7 @@ If you didn't create an account with us, please ignore this email.
             
             <p style="color: #666; font-size: 14px;">
               Or copy and paste this link into your browser:<br>
-              <a href="${resetUrl}" class="link">Click Here</a>
+              <a href="${resetUrl}" class="link">${resetUrl}</a>
             </p>
             
             <p style="color: #e74c3c; font-size: 14px; margin-top: 30px;">
