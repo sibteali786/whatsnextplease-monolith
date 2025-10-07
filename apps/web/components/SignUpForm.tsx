@@ -64,21 +64,33 @@ const SignupForm = () => {
 
       const response = await registerUser(formData);
 
+      // ✅ FIXED: Handle success even if email was blocked
       if (response && response.success) {
         if (response.user) {
           setUser(response.user);
         }
 
-        toast({
-          title: 'Success!',
-          description: 'Account created successfully, redirecting to dashboard...',
-          variant: 'success',
-        });
+        // NEW: Different toast based on whether email was blocked
+        if (response.emailBlocked) {
+          toast({
+            title: 'Account Created! ✓',
+            description:
+              'Welcome! Note: Email verification is disabled in staging mode. Your account is ready to use.',
+            variant: 'default', // NOT destructive - account creation succeeded!
+          });
+        } else {
+          toast({
+            title: 'Success! ✓',
+            description: 'Account created! Please check your email to verify your account.',
+            variant: 'success',
+          });
+        }
 
         // Show navigation overlay and redirect
         setIsNavigating(true);
         setTimeout(() => router.push('/home'), 500);
       } else if (response && response.message && !response.success) {
+        // This is an actual error (email already exists, validation failed, etc.)
         form.setError('root', { message: response.message });
         toast({
           title: 'Registration Failed',
@@ -106,7 +118,6 @@ const SignupForm = () => {
   // Watch the role field for changes
   const role = form.watch('role');
   const pathname = usePathname();
-  // Determine if the current path is /signin or /signup
   const isSignUp = pathname.includes('signup');
 
   return (

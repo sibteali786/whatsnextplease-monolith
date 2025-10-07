@@ -16,6 +16,7 @@ interface EmailResult {
   provider: 'resend' | 'ses' | 'mailhog';
   messageId?: string;
   error?: string;
+  blocked?: boolean;
 }
 
 export class EmailService {
@@ -28,7 +29,7 @@ export class EmailService {
 
   constructor() {
     const isProduction = process.env.NODE_ENV === 'production';
-    const emailProvider = process.env.EMAIL_PROVIDER || 'ses'; // 'resend', 'ses', or 'mailhog'
+    const emailProvider = process.env.EMAIL_PROVIDER || 'ses';
 
     this.emailProvider = emailProvider as 'resend' | 'ses' | 'mailhog';
     this.whitelistEnabled = !isProduction;
@@ -112,8 +113,6 @@ export class EmailService {
 
   /**
    * Send email via Resend
-   * WHY: Resend provides better deliverability, tracking, and developer experience
-   * ALTERNATIVE: Could use Resend SMTP instead of SDK, but SDK gives us more features
    */
   private async sendViaResend(options: EmailOptions): Promise<EmailResult> {
     if (!this.resendClient) {
@@ -128,26 +127,22 @@ export class EmailService {
         html: options.html,
         text: options.text,
       });
-      if (data) {
-        logger.info(
-          {
-            messageId: data?.id,
-            to: options.to,
-            provider: 'resend',
-          },
-          'Email sent successfully via Resend'
-        );
-
-        return {
-          success: true,
-          provider: 'resend',
-          messageId: data?.id,
-        };
+      if (!data) {
+        return { success: false, provider: 'resend' };
       }
+      logger.info(
+        {
+          messageId: data?.id,
+          to: options.to,
+          provider: 'resend',
+        },
+        'Email sent successfully via Resend'
+      );
 
       return {
-        success: false,
+        success: true,
         provider: 'resend',
+        messageId: data?.id,
       };
     } catch (error) {
       logger.error(
@@ -164,8 +159,6 @@ export class EmailService {
 
   /**
    * Send email via AWS SES
-   * WHY: SES is reliable and cost-effective at scale
-   * ALTERNATIVE: Could use SES SDK directly instead of Nodemailer wrapper
    */
   private async sendViaSES(options: EmailOptions): Promise<EmailResult> {
     if (!this.sesTransporter) {
@@ -210,7 +203,6 @@ export class EmailService {
 
   /**
    * Send email via MailHog (local development)
-   * WHY: MailHog captures emails locally for testing without actually sending them
    */
   private async sendViaMailHog(options: EmailOptions): Promise<EmailResult> {
     if (!this.mailhogTransporter) {
@@ -255,35 +247,33 @@ export class EmailService {
 
   /**
    * Main send email method with automatic fallback
-   * WHY: Automatic fallback ensures high availability without manual intervention
    *
-   * FLOW:
-   * 1. Check whitelist (staging protection)
-   * 2. Try primary provider (Resend/SES/MailHog based on EMAIL_PROVIDER env)
-   * 3. If primary fails, try SES as fallback (if available and not already primary)
-   * 4. If both fail, throw error
-   *
-   * ALTERNATIVES:
-   * - Could implement circuit breaker pattern to temporarily skip failing providers
-   * - Could implement retry logic with exponential backoff
-   * - Could queue emails for later retry instead of immediate fallback
+   * IMPORTANT: This method now returns EmailResult with blocked flag
+   * instead of throwing errors for whitelist violations.
+   * This allows the calling code to handle whitelist blocks gracefully.
    */
   private async sendEmail(options: EmailOptions): Promise<EmailResult> {
-    // Staging Protection: Check whitelist
+    // NEW: Check whitelist FIRST and return early if blocked
+    // Don't throw error - return result with blocked flag
     if (!this.isEmailAllowed(options.to)) {
-      const error = new Error(
-        `Email blocked by staging whitelist. Recipient '${options.to}' not allowed. ` +
-          `Allowed patterns: ${this.emailWhitelist.join(', ')}`
-      );
-      logger.error(
+      logger.info(
         {
           to: options.to,
           subject: options.subject,
           whitelist: this.emailWhitelist,
+          environment: process.env.NODE_ENV,
         },
-        error.message
+        'Email blocked by staging whitelist - returning blocked result'
       );
-      throw error;
+
+      // Return a "success" result but with blocked flag
+      // This prevents the signup flow from failing
+      return {
+        success: true, // TRUE so signup doesn't fail
+        blocked: true, // NEW flag to indicate it was blocked
+        provider: this.emailProvider,
+        error: `Email blocked by staging whitelist. Allowed patterns: ${this.emailWhitelist.join(', ')}`,
+      };
     }
 
     // Try primary provider
@@ -336,7 +326,6 @@ export class EmailService {
         }
       }
 
-      // No fallback available
       throw primaryError;
     }
 
@@ -345,15 +334,19 @@ export class EmailService {
 
   /**
    * Send verification email
-   * WHY: Wraps sendEmail with verification-specific template and logging
+   * NOW RETURNS EmailResult so calling code can handle whitelist blocks
    */
-  async sendVerificationEmail(email: string, token: string, userName: string): Promise<void> {
+  async sendVerificationEmail(
+    email: string,
+    token: string,
+    userName: string
+  ): Promise<EmailResult> {
     const verificationUrl = `${env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
 
     const html = this.getVerificationEmailTemplate(userName, verificationUrl);
     const text = this.getVerificationEmailText(userName, verificationUrl);
 
-    await this.sendEmail({
+    return await this.sendEmail({
       to: email,
       subject: 'Verify Your Email Address',
       html,
@@ -363,15 +356,19 @@ export class EmailService {
 
   /**
    * Send password reset email
-   * WHY: Wraps sendEmail with password reset-specific template and logging
+   * NOW RETURNS EmailResult so calling code can handle whitelist blocks
    */
-  async sendPasswordResetEmail(email: string, token: string, userName: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    token: string,
+    userName: string
+  ): Promise<EmailResult> {
     const resetUrl = `${env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
 
     const html = this.getPasswordResetEmailTemplate(userName, resetUrl);
     const text = this.getPasswordResetEmailText(userName, resetUrl);
 
-    await this.sendEmail({
+    return await this.sendEmail({
       to: email,
       subject: 'Reset Your Password',
       html,

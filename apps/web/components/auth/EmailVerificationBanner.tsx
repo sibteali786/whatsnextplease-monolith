@@ -32,8 +32,7 @@ export function EmailVerificationBanner({ email }: EmailVerificationBannerProps)
       });
 
       const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.ok && data.success && !data.blocked) {
         setEmailSent(true);
         toast({
           title: 'Success',
@@ -45,11 +44,11 @@ export function EmailVerificationBanner({ email }: EmailVerificationBannerProps)
         setTimeout(() => {
           setEmailSent(false);
         }, 5000);
-      } else {
+      } else if (data.blocked) {
         toast({
-          title: 'Error',
+          title: 'Success',
           description: data.message || 'Failed to send verification email',
-          variant: 'destructive',
+          variant: 'default',
         });
       }
     } catch (error) {

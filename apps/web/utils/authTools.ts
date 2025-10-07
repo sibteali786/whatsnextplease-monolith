@@ -305,13 +305,23 @@ export const signup = async ({
 
       const token = createTokenForUser(client.id, client.username, Roles.CLIENT);
 
-      // ✅ Send verification email via backend API (non-blocking)
-      await sendVerificationEmail({
+      // ✅ UPDATED: Send verification email and get result
+      const emailResult = await sendVerificationEmail({
         entityId: client.id,
         entityRole: Roles.CLIENT,
         email: client.email,
         name: client.contactName || client.companyName,
       });
+
+      // ✅ UPDATED: Return different message based on whether email was blocked
+      if (emailResult.blocked) {
+        return {
+          client,
+          token,
+          emailBlocked: true,
+          message: 'Client signed up successfully. (Email verification disabled in staging)',
+        };
+      }
 
       return {
         client,
@@ -342,13 +352,23 @@ export const signup = async ({
 
     const token = createTokenForUser(user.id, user.username, role);
 
-    // ✅ Send verification email via backend API (non-blocking)
-    await sendVerificationEmail({
+    // ✅ UPDATED: Send verification email and get result
+    const emailResult = await sendVerificationEmail({
       entityId: user.id,
       entityRole: role,
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
     });
+
+    // ✅ UPDATED: Return different message based on whether email was blocked
+    if (emailResult.blocked) {
+      return {
+        user,
+        token,
+        emailBlocked: true,
+        message: 'User signed up successfully. (Email verification disabled in staging)',
+      };
+    }
 
     return {
       user,
@@ -378,7 +398,7 @@ async function sendVerificationEmail({
   entityRole: Roles;
   email: string;
   name: string;
-}): Promise<void> {
+}): Promise<{ success: boolean; blocked: boolean; message?: string }> {
   try {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -400,7 +420,27 @@ async function sendVerificationEmail({
       throw new Error(error.message || 'Failed to send verification email');
     }
 
+    const result = await response.json();
+
+    // Backend should return: { success: true, blocked: true/false, message: '...' }
+    if (result.blocked) {
+      logger.info(
+        { entityId, entityRole, email },
+        'Verification email blocked by staging whitelist'
+      );
+      return {
+        success: true,
+        blocked: true,
+        message: result.message,
+      };
+    }
+
     logger.info({ entityId, entityRole }, 'Verification email sent successfully');
+    return {
+      success: true,
+      blocked: false,
+      message: result.message,
+    };
   } catch (error) {
     logger.error({ error, entityId, entityRole }, 'Failed to send verification email via API');
     throw error;
