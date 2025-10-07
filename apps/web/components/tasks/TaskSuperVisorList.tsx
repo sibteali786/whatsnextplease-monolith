@@ -296,7 +296,7 @@ export const TaskSuperVisorList = ({
           <TabsTrigger value="assigned" className="text-sm">
             Assigned
           </TabsTrigger>
-          {role === Roles.TASK_AGENT && (
+          {(role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR) && (
             <TabsTrigger value="my-tasks" className="text-sm">
               My Tasks
             </TabsTrigger>
