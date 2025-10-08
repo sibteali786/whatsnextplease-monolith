@@ -32,7 +32,7 @@ export const registerUser = async (formData: FormData) => {
     const validatedData = registerSchema.parse(data);
 
     // Perform the signup operation
-    const { token, error, message, user } = await signup(validatedData);
+    const { token, error, message, user, emailBlocked } = await signup(validatedData);
 
     if (error) {
       console.error(error);
@@ -42,7 +42,7 @@ export const registerUser = async (formData: FormData) => {
     // Set authentication token
     cookies().set(COOKIE_NAME, token);
 
-    return { success: true, message, user };
+    return { success: true, message, user, emailBlocked };
   } catch (e) {
     console.error(e);
     return {

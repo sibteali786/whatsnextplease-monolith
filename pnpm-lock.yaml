@@ -95,6 +95,9 @@ importers:
       pino-pretty:
         specifier: ^13.0.0
         version: 13.1.1
+      resend:
+        specifier: ^6.1.2
+        version: 6.1.2
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
@@ -10249,6 +10252,18 @@ packages:
         integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==,
       }
 
+  resend@6.1.2:
+    resolution:
+      {
+        integrity: sha512-C9Q+YkRe57P8MQlkHG3yatSR/B6sqBGA06Ri2DveJfkz9Vm16182FC/iHB0K6IAfmqZ4yRrFebFw1EPuktLtSg==,
+      }
+    engines: { node: '>=18' }
+    peerDependencies:
+      '@react-email/render': '*'
+    peerDependenciesMeta:
+      '@react-email/render':
+        optional: true
+
   resolve-cwd@3.0.0:
     resolution:
       {
@@ -19473,6 +19488,8 @@ snapshots:
   require-from-string@2.0.2: {}
 
   requires-port@1.0.0: {}
+
+  resend@6.1.2: {}
 
   resolve-cwd@3.0.0:
     dependencies:

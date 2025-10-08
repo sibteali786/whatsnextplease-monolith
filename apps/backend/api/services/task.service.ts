@@ -85,7 +85,7 @@ export class TaskService {
     const queryOptions: TaskQueryOptions = {
       cursor,
       pageSize,
-      orderBy: { id: 'asc' },
+      orderBy: { createdAt: 'desc' },
     };
 
     // Execute queries

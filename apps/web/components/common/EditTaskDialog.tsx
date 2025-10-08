@@ -179,6 +179,8 @@ export default function EditTaskDialog({
     },
     mode: 'onSubmit',
   });
+  const watchedSkills = form.watch('skills');
+
   const selectedAssigneeId = form.watch('assignedToId');
 
   /**
@@ -332,13 +334,12 @@ export default function EditTaskDialog({
       items,
     }));
   };
-
   const fetchUsers = async () => {
     if (!canAssignTasks) {
       return;
     }
     try {
-      const response = await usersList(role ?? Roles.TASK_SUPERVISOR);
+      const response = await usersList(role ?? Roles.TASK_SUPERVISOR, form.getValues('skills'));
       if (response.success) {
         // Fetch task counts for users and update state
         const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
@@ -387,11 +388,14 @@ export default function EditTaskDialog({
       }
     }
     if (open) {
-      fetchUsers();
       fetchSkills();
       fetchTaskMetadata();
     }
   }, [task, open, form]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [watchedSkills]);
 
   const [, startTransition] = useTransition();
 

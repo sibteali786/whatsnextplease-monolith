@@ -17,6 +17,13 @@ interface VerifyEmailParams {
   token: string;
 }
 
+// NEW: Result type to communicate what happened
+interface VerificationEmailResult {
+  success: boolean;
+  blocked?: boolean;
+  message: string;
+}
+
 export class EmailVerificationService {
   private readonly TOKEN_EXPIRY_HOURS = Number(env.EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS) || 24;
   private readonly MAX_RESEND_ATTEMPTS = 3;
@@ -24,8 +31,11 @@ export class EmailVerificationService {
 
   /**
    * Create and send verification token
+   * NOW RETURNS VerificationEmailResult instead of throwing on whitelist blocks
    */
-  async createAndSendVerificationToken(params: CreateVerificationTokenParams): Promise<void> {
+  async createAndSendVerificationToken(
+    params: CreateVerificationTokenParams
+  ): Promise<VerificationEmailResult> {
     const { entityId, entityRole, email, name } = params;
 
     try {
@@ -52,10 +62,37 @@ export class EmailVerificationService {
         },
       });
 
-      // Send email (removed userType parameter)
-      await emailService.sendVerificationEmail(email, rawToken, name);
+      // NEW: Send email and check if it was blocked
+      const emailResult = await emailService.sendVerificationEmail(email, rawToken, name);
+
+      // NEW: Handle blocked email gracefully
+      if (emailResult.blocked) {
+        logger.info(
+          {
+            entityId,
+            entityRole,
+            email,
+            whitelist: process.env.EMAIL_WHITELIST,
+            blocked: emailResult.blocked,
+          },
+          'Verification email blocked by whitelist - account created but email not sent'
+        );
+
+        return {
+          success: true,
+          blocked: true,
+          message:
+            'Account created successfully. Email verification not sent (staging whitelist active).',
+        };
+      }
 
       logger.info({ entityId, entityRole, email }, 'Verification email sent successfully');
+
+      return {
+        success: true,
+        blocked: false,
+        message: 'Verification email sent successfully',
+      };
     } catch (error) {
       logger.error({ error, entityId, entityRole }, 'Failed to create verification token');
       throw error;
@@ -65,7 +102,6 @@ export class EmailVerificationService {
   /**
    * Verify email using token
    */
-
   async verifyEmail(params: VerifyEmailParams): Promise<{ success: boolean; message: string }> {
     const { token } = params;
 
@@ -85,7 +121,6 @@ export class EmailVerificationService {
       }
 
       if (tokenRecord.expiresAt < new Date()) {
-        // ✅ Use deleteMany - won't throw if already deleted
         await prisma.emailVerificationToken.deleteMany({
           where: { id: tokenRecord.id },
         });
@@ -100,7 +135,6 @@ export class EmailVerificationService {
       }
 
       if (entity.emailVerified) {
-        // ✅ Use deleteMany - won't throw if already deleted
         await prisma.emailVerificationToken.deleteMany({
           where: { id: tokenRecord.id },
         });
@@ -129,7 +163,6 @@ export class EmailVerificationService {
         });
       }
 
-      // ✅ Use deleteMany - won't throw if already deleted
       await prisma.emailVerificationToken.deleteMany({
         where: { id: tokenRecord.id },
       });
@@ -150,11 +183,14 @@ export class EmailVerificationService {
   }
 
   /**
-   * ✅ NEW: Resend verification email for authenticated user
+   * Resend verification email for authenticated user
+   * NOW RETURNS VerificationEmailResult
    */
-  async resendVerificationEmailForUser(userId: string, userRole: Roles): Promise<void> {
+  async resendVerificationEmailForUser(
+    userId: string,
+    userRole: Roles
+  ): Promise<VerificationEmailResult> {
     try {
-      // Find user or client by ID
       const user =
         userRole !== Roles.CLIENT ? await prisma.user.findUnique({ where: { id: userId } }) : null;
       const client =
@@ -176,7 +212,7 @@ export class EmailVerificationService {
         ? `${user.firstName} ${user.lastName}`
         : client?.contactName || client?.companyName || 'there';
 
-      await this.createAndSendVerificationToken({
+      return await this.createAndSendVerificationToken({
         entityId: entity.id,
         entityRole: userRole,
         email: entity.email,
@@ -189,12 +225,11 @@ export class EmailVerificationService {
   }
 
   /**
-   * LEGACY: Resend verification email by email address (for backward compatibility)
-   * This is kept for edge cases but not recommended
+   * LEGACY: Resend verification email by email address
+   * NOW RETURNS VerificationEmailResult
    */
-  async resendVerificationEmailByEmail(email: string): Promise<void> {
+  async resendVerificationEmailByEmail(email: string): Promise<VerificationEmailResult> {
     try {
-      // Find user or client by email
       const user = await prisma.user.findUnique({ where: { email } });
       const client = await prisma.client.findUnique({ where: { email } });
 
@@ -213,7 +248,7 @@ export class EmailVerificationService {
         ? `${user.firstName} ${user.lastName}`
         : client?.contactName || client?.companyName || 'there';
 
-      await this.createAndSendVerificationToken({
+      return await this.createAndSendVerificationToken({
         entityId: entity.id,
         entityRole: entityRole as Roles,
         email: entity.email,

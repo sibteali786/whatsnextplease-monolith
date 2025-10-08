@@ -29,16 +29,31 @@ export class AuthController {
         });
       }
 
-      await emailVerificationService.createAndSendVerificationToken({
-        entityId,
-        entityRole,
-        email,
-        name,
-      });
+      const { success, blocked, message } =
+        await emailVerificationService.createAndSendVerificationToken({
+          entityId,
+          entityRole,
+          email,
+          name,
+        });
+      if (success && !blocked) {
+        return res.status(200).json({
+          success: success,
+          blocked,
+          message: 'Verification email sent successfully',
+        });
+      } else if (success && blocked) {
+        return res.status(200).json({
+          success: success,
+          blocked,
+          message,
+        });
+      }
 
-      return res.status(200).json({
-        success: true,
-        message: 'Verification email sent successfully',
+      return res.status(500).json({
+        success: false,
+        blocked,
+        message,
       });
     } catch (error) {
       next(error);
@@ -88,11 +103,27 @@ export class AuthController {
           });
         }
 
-        await emailVerificationService.resendVerificationEmailForUser(userId, userRole);
-
-        return res.status(200).json({
-          success: true,
-          message: 'Verification email sent successfully',
+        const result = await emailVerificationService.resendVerificationEmailForUser(
+          userId,
+          userRole
+        );
+        if (result.success && !result.blocked) {
+          return res.status(200).json({
+            success: true,
+            blocked: result.blocked,
+            message: 'Verification email sent successfully',
+          });
+        } else if (result.success && result.blocked) {
+          return res.status(200).json({
+            success: true,
+            blocked: result.blocked,
+            message: result.message,
+          });
+        }
+        return res.status(500).json({
+          success: false,
+          blocked: result.blocked,
+          message: result.message,
         });
       } catch (error) {
         next(error);
