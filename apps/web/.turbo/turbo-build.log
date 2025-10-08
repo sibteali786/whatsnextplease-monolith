@@ -5,17 +5,12 @@
 Environment variables loaded from .env
 Prisma schema loaded from prisma\schema.prisma
 
-✔ Generated Prisma Client (v6.16.3) to .\..\..\node_modules\.pnpm\@prisma+client@6.16.3_prisma@6.16.3_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 715ms
+✔ Generated Prisma Client (v6.16.3) to .\..\..\node_modules\.pnpm\@prisma+client@6.16.3_prisma@6.16.3_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 1.41s
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
 Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
 
-npm notice
-npm notice New major version of npm available! 10.9.0 -> 11.6.1
-npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.1
-npm notice To update run: npm install -g npm@11.6.1
-npm notice
 
 > web@0.1.0 build:cdk D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web
 > npm --prefix cdk run build
@@ -31,7 +26,13 @@ Datasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:
 37 migrations found in prisma/migrations
 
 
+┌─────────────────────────────────────────────────────────┐
 No pending migrations to apply.
+│  Update available 6.16.3 -> 6.17.0                      │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
   ▲ Next.js 14.2.15
   - Environments: .env.local, .env
 
@@ -128,6 +129,7 @@ Emitted 'error' event on ThreadStream instance at:
     at process.callbackTrampoline (node:internal/async_hooks:130:17)
 
 Node.js v22.11.0
+ ⨯ Static worker exited with code: 1 and signal: null
 node:events:496
       throw er; // Unhandled 'error' event
       ^
@@ -145,6 +147,21 @@ Emitted 'error' event on ThreadStream instance at:
 Node.js v22.11.0
  ⨯ Static worker exited with code: 1 and signal: null
    Generating static pages (8/35) 
+node:events:496
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:491:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.11.0
  ⨯ Static worker exited with code: 1 and signal: null
 node:events:496
       throw er; // Unhandled 'error' event
@@ -161,6 +178,9 @@ Emitted 'error' event on ThreadStream instance at:
     at process.callbackTrampoline (node:internal/async_hooks:130:17)
 
 Node.js v22.11.0
+ ⨯ Static worker exited with code: 1 and signal: null
+   Generating static pages (17/35) 
+   Generating static pages (26/35) 
 Current user API error: n [Error]: Dynamic server usage: Route /api/auth/current-user couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
     at l (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\chunks\2110.js:1:37158)
     at p (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\chunks\601.js:1:33520)
@@ -175,22 +195,6 @@ Current user API error: n [Error]: Dynamic server usage: Route /api/auth/current
   description: "Route /api/auth/current-user couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
   digest: 'DYNAMIC_SERVER_USAGE'
 }
- ⨯ Static worker exited with code: 1 and signal: null
-   Generating static pages (17/35) 
-   Generating static pages (26/35) 
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
-    at process.processTicksAndRejections (node:internal/process/task_queues:85:11)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
-    at process.processImmediate (node:internal/timers:491:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v22.11.0
  ✓ Generating static pages (35/35)
    Finalizing page optimization ...
    Collecting build traces ...
@@ -222,7 +226,7 @@ Route (app)                              Size     First Load JS
 ├ ƒ /settings/permissions                8.27 kB         131 kB
 ├ ƒ /settings/picklists                  24.1 kB         715 kB
 ├ ○ /signin                              9.44 kB         158 kB
-├ ○ /signup                              4.03 kB         174 kB
+├ ○ /signup                              4.11 kB         175 kB
 ├ ƒ /skills                              1.53 kB         209 kB
 ├ ƒ /taskAgents                          11.3 kB         154 kB
 ├ ƒ /taskOfferings                       5.97 kB         768 kB
