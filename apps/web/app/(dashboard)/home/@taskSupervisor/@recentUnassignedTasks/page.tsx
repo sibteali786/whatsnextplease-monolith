@@ -113,11 +113,19 @@ const RecentUnassignedTasksPage = () => {
                 />
               ) : tasks?.length === 0 ? (
                 <CallToAction
-                  title="No unassigned tasks"
+                  title={activeTab === 'unassigned' ? 'No unassigned tasks' : 'No Tasks Found'}
                   link="/taskOfferings"
-                  description="There are currently no unassigned tasks in the system"
+                  description={
+                    activeTab === 'unassigned'
+                      ? 'There are currently no unassigned tasks in the system'
+                      : 'There are no tasks assigned to you at the moment.'
+                  }
                   action="Create New Task"
-                  helperText="You can create a new task or wait for users to submit tasks"
+                  helperText={
+                    activeTab === 'unassigned'
+                      ? 'You can create a new task or wait for users to submit tasks'
+                      : ''
+                  }
                   variant="primary"
                   iconType="plus"
                   className="my-6"
@@ -132,7 +140,6 @@ const RecentUnassignedTasksPage = () => {
                       <TableHead className="text-right font-medium">Due Date</TableHead>
                     </TableRow>
                   </TableHeader>
-                  {}
                   <TableBody>
                     {tasks?.map(task => (
                       <TableRow
