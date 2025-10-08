@@ -54,7 +54,7 @@ export class EmailService {
     }
 
     // Initialize MailHog for local development
-    if (!isProduction) {
+    if (!isProduction && emailProvider === 'mailhog') {
       this.mailhogTransporter = nodemailer.createTransport({
         host: 'localhost',
         port: 1025,
