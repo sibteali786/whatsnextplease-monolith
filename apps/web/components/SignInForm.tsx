@@ -19,7 +19,7 @@ import { signInSchema } from '@/utils/validationSchemas';
 import { signinUser } from '@/actions/auth';
 import { z } from 'zod';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useLoggedInUserState } from '@/store/useUserStore';
 import { useLoggedInClientState } from '@/store/useClientStore';
@@ -38,6 +38,7 @@ const SignInForm = () => {
   const { setClient } = useLoggedInClientState();
   const [showPassword, setShowPassword] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   // Pre-fetch the home page
@@ -54,6 +55,16 @@ const SignInForm = () => {
 
     prefetchDashboard();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('deleted') === 'true') {
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account has been successfully deleted',
+        variant: 'default',
+      });
+    }
+  }, [searchParams, toast]);
 
   const onSubmit = async (data: z.infer<typeof signInSchema>) => {
     try {
