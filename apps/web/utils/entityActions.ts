@@ -3,6 +3,7 @@
 import { COOKIE_NAME } from '@/utils/constant';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 // Define supported entity types
 export type EntityType = 'user' | 'client';
@@ -100,6 +101,30 @@ export const getEntityProfile = async (type: EntityType, id: string) => {
     return await response.json();
   } catch (error) {
     console.error(`Error getting ${type} profile:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Delete current user's own profile
+ * This handles logout and redirects after deletion
+ */
+export const deleteOwnProfile = async (type: EntityType, id: string) => {
+  try {
+    // Delete the profile
+    await deleteEntity(type, id);
+
+    // Clear authentication cookie
+    cookies().delete(COOKIE_NAME);
+
+    // Revalidate home/login pages
+    revalidatePath('/');
+    revalidatePath('/signin');
+
+    // Redirect to login page with message
+    redirect('/signin?deleted=true');
+  } catch (error) {
+    console.error('Error deleting own profile:', error);
     throw error;
   }
 };

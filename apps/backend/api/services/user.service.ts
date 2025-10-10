@@ -637,4 +637,13 @@ export class UserService {
       };
     }
   }
+  async countUsersByRole(roleName: Roles): Promise<number> {
+    return await prisma.user.count({
+      where: {
+        role: {
+          name: roleName,
+        },
+      },
+    });
+  }
 }

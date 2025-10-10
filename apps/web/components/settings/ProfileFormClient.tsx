@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { DeleteProfileSection } from './DeleteProfileSection';
 
 const clientProfileSchema = z.object({
   personalInfo: z.object({
@@ -481,6 +482,11 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
           )}
         </form>
       </Form>
+      <DeleteProfileSection
+        entityType="client"
+        entityId={initialData.id}
+        confirmationText={initialData.companyName}
+      />
     </div>
   );
 }

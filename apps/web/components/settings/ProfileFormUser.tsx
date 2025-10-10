@@ -28,6 +28,7 @@ import { PhoneInput } from '../ui/phone-input';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { UserWithRole } from './types';
+import { DeleteProfileSection } from './DeleteProfileSection';
 
 export const commonProfileSchemaFields = {
   email: z.string().email('Invalid email address'),
@@ -697,6 +698,12 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
           )}
         </form>
       </Form>
+
+      <DeleteProfileSection
+        entityType="user"
+        entityId={initialData.id}
+        confirmationText={`${initialData.firstName} ${initialData.lastName}`}
+      />
     </div>
   );
 }
