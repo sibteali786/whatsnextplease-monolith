@@ -77,6 +77,10 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserWithTaskCount[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState<boolean | undefined>(true);
+  const [loading, setLoading] = useState(false);
+
   const [canAssignTasks, setCanAssignTasks] = useState(false);
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
   const [, setFormWasCancelled] = useState(false);
@@ -102,7 +106,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     mode: 'onSubmit',
     defaultValues: getDefaultValues(),
   });
-  const watchedSkills = form.watch('skills');
   // Reset form logic based on state
   useEffect(() => {
     if (open) {
@@ -191,6 +194,63 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     }
   };
 
+  const fetchUsers = async (pageToFetch?: number) => {
+    // Determine if current role can assign tasks to others
+    const roleCanAssignTasks =
+      user?.role?.name === Roles.SUPER_USER || user?.role?.name === Roles.TASK_SUPERVISOR;
+
+    setCanAssignTasks(roleCanAssignTasks);
+    if (roleCanAssignTasks) {
+      if (!pageToFetch && (loading || !hasMore)) return; // Prevent multiple fetches
+      setLoading(true);
+
+      try {
+        const response = await usersList(
+          user?.role?.name ?? Roles.TASK_SUPERVISOR,
+          form.getValues('skills'),
+          5, //limit
+          pageToFetch ?? page
+        );
+        if (response.success) {
+          // Fetch task counts for users and update state
+          const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
+          /* setUsers(usersWithTaskCounts); */
+          if (pageToFetch) {
+            setUsers([...usersWithTaskCounts]);
+          } else {
+            setUsers(prevUsers => [...prevUsers, ...usersWithTaskCounts]);
+          }
+          setHasMore(response.hasMore); // Update if more users are available
+          // Increment page for next fetch
+          if (pageToFetch) {
+            setPage(2);
+          } else {
+            setPage(prevPage => prevPage + 1);
+          }
+        } else if (response.message !== 'Not authorized') {
+          // Only show error toast if it's not an authorization issue
+          toast({
+            variant: 'destructive',
+            title: `Failed to fetch users`,
+            description: response.message || 'Unknown error occurred',
+            icon: <CircleX size={40} />,
+          });
+        }
+        setLoading(false);
+      } catch (error) {
+        // Silently handle error for Task Agent role
+        if (user?.role?.name !== Roles.TASK_AGENT) {
+          toast({
+            variant: 'destructive',
+            title: `Failed to fetch users`,
+            description: error instanceof Error ? error.message : 'Something went wrong!',
+            icon: <CircleX size={40} />,
+          });
+        }
+        setLoading(false);
+      }
+    }
+  };
   // Fetch skills dynamically
   useEffect(() => {
     const fetchDependencies = async () => {
@@ -304,49 +364,25 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
     fetchDependencies();
   }, []);
-
+  /*   useEffect(() => {
+    console.log('inside usefefect');
+    setPage(1);
+    setUsers([]);
+    setHasMore(true);
+  }, [watchedSkills]); */
   useEffect(() => {
-    const fetchUsers = async () => {
-      // Determine if current role can assign tasks to others
-      const roleCanAssignTasks =
-        user?.role?.name === Roles.SUPER_USER || user?.role?.name === Roles.TASK_SUPERVISOR;
-
-      setCanAssignTasks(roleCanAssignTasks);
-      if (roleCanAssignTasks) {
-        try {
-          const response = await usersList(
-            user?.role?.name ?? Roles.TASK_SUPERVISOR,
-            form.getValues('skills')
-          );
-          if (response.success) {
-            // Fetch task counts for users and update state
-            const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
-            setUsers(usersWithTaskCounts);
-          } else if (response.message !== 'Not authorized') {
-            // Only show error toast if it's not an authorization issue
-            toast({
-              variant: 'destructive',
-              title: `Failed to fetch users`,
-              description: response.message || 'Unknown error occurred',
-              icon: <CircleX size={40} />,
-            });
-          }
-        } catch (error) {
-          // Silently handle error for Task Agent role
-          if (user?.role?.name !== Roles.TASK_AGENT) {
-            toast({
-              variant: 'destructive',
-              title: `Failed to fetch users`,
-              description: error instanceof Error ? error.message : 'Something went wrong!',
-              icon: <CircleX size={40} />,
-            });
-          }
-        }
-      }
-    };
-
     fetchUsers();
-  }, [watchedSkills]);
+  }, [open]);
+  /*   useEffect(() => {
+    if (watchedSkills.length > 0) {
+      setPage(1);
+      setUsers([]);
+      setHasMore(true);
+      fetchUsers(1);
+    } else {
+      fetchUsers();
+    }
+  }, [watchedSkills]); */
 
   const handleModalCloseRequest = () => {
     // Mark as cancelled to preserve form values
@@ -500,6 +536,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           users={users}
           taskCategories={taskCategories}
           canAssignTasks={canAssignTasks}
+          fetchUsers={fetchUsers}
         />
       </ModalWithConfirmation>
     </>

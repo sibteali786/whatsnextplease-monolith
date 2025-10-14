@@ -21,7 +21,7 @@ import {
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
@@ -145,6 +145,13 @@ export default function EditTaskDialog({
   onTaskUpdate,
 }: EditTaskDialogProps) {
   const { toast } = useToast();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState<boolean | undefined>(true);
+  const [page, setPage] = useState(1);
+  const hasFetched = useRef(false);
+  const [firstFetched, setFirstFetched] = useState(false);
+
   const [users, setUsers] = useState<UserWithTaskCount[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
   const [skills, setSkills] = useState<
@@ -179,7 +186,6 @@ export default function EditTaskDialog({
     },
     mode: 'onSubmit',
   });
-  const watchedSkills = form.watch('skills');
 
   const selectedAssigneeId = form.watch('assignedToId');
 
@@ -334,16 +340,53 @@ export default function EditTaskDialog({
       items,
     }));
   };
-  const fetchUsers = async () => {
+  const handleScroll = () => {
+    if (!dropdownRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = dropdownRef.current;
+    const offset = 10; // pixels before reaching the bottom
+
+    if (scrollTop + clientHeight >= scrollHeight - offset) {
+      hasFetched.current = false;
+
+      fetchUsers();
+    }
+  };
+  const fetchUsers = async (pageToFetch?: number) => {
     if (!canAssignTasks) {
       return;
     }
+    if (firstFetched && hasFetched.current) return;
+    if (!firstFetched) {
+      hasFetched.current = true;
+      setFirstFetched(true);
+    }
+
+    if (!pageToFetch && (loading || !hasMore)) return; // Prevent multiple fetches
+    setLoading(true);
     try {
-      const response = await usersList(role ?? Roles.TASK_SUPERVISOR, form.getValues('skills'));
+      const response = await usersList(
+        role ?? Roles.TASK_SUPERVISOR,
+        form.getValues('skills'),
+        5, //limit
+        pageToFetch ?? page
+      );
       if (response.success) {
         // Fetch task counts for users and update state
         const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
-        setUsers(usersWithTaskCounts);
+        if (pageToFetch) {
+          console.log('insdie sinde fetchUsers - pageToFetch is set');
+          setUsers([...usersWithTaskCounts]);
+        } else {
+          setUsers(prevUsers => [...prevUsers, ...usersWithTaskCounts]);
+        }
+        setHasMore(response.hasMore); // Update if more users are available
+        // Increment page for next fetch
+        if (pageToFetch) {
+          setPage(2);
+        } else {
+          setPage(prevPage => prevPage + 1);
+        }
       }
       if (!response.success) {
         toast({
@@ -353,6 +396,7 @@ export default function EditTaskDialog({
           icon: <CircleX size={40} />,
         });
       }
+      setLoading(false);
     } catch (error) {
       if (error instanceof Error) {
         toast({
@@ -362,6 +406,7 @@ export default function EditTaskDialog({
           icon: <CircleX size={40} />,
         });
       }
+      setLoading(false);
     }
   };
 
@@ -392,10 +437,34 @@ export default function EditTaskDialog({
       fetchTaskMetadata();
     }
   }, [task, open, form]);
-
   useEffect(() => {
+    if (open && !hasFetched.current) {
+      // Fetch users only when the modal is open for the first time
+      fetchUsers();
+    }
+    if (!open) {
+      // Reset fetch flag when modal is closed
+      setUsers([]);
+      setPage(1);
+      setHasMore(true);
+      setFirstFetched(false);
+      hasFetched.current = false;
+    }
+  }, [open]);
+  /*   useEffect(() => {
+    if (watchedSkills && watchedSkills.length > 0) {
+    
+      hasFetched.current = false;
+    }
+  }, [watchedSkills]); */
+  /*   useEffect(() => {
+
     fetchUsers();
-  }, [watchedSkills]);
+  }, [open]); */
+
+  /*   useEffect(() => {
+    fetchUsers();
+  }, [watchedSkills]); */
 
   const [, startTransition] = useTransition();
 
@@ -635,7 +704,15 @@ export default function EditTaskDialog({
                   <FormControl>
                     <MultiSelect
                       options={groupSkillsByCategory(skills)}
-                      onValueChange={field.onChange}
+                      onValueChange={value => {
+                        field.onChange(value); // still update the form value
+                        hasFetched.current = false;
+                        fetchUsers(1);
+
+                        /*     setPage(1);
+                    setUsers([]);
+                    setHasMore(true); */
+                      }}
                       defaultValue={field.value || []}
                       placeholder="Select Skills"
                       maxCount={5}
@@ -832,7 +909,7 @@ export default function EditTaskDialog({
                   <FormItem>
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <FormLabel>Assigned Task Agent</FormLabel>
+                        <FormLabel>Assigned User</FormLabel>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Info className="h-3 w-3" />
                           <span>Numbers show current workload</span>
@@ -848,44 +925,50 @@ export default function EditTaskDialog({
                             <SelectValue placeholder="Select Assignee" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">
-                              <div className="flex items-center gap-2">
-                                <UserX className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">No Assignee</span>
-                              </div>
-                            </SelectItem>
-                            {users.map(user => (
-                              <SelectItem key={user.id} value={user.id}>
-                                <div className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6 rounded-lg">
-                                      <AvatarImage
-                                        src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                        alt={user.firstName ?? 'avatar'}
-                                        className="rounded-full"
-                                      />
-                                      <AvatarFallback className="rounded-full text-xs">
-                                        {user.firstName
-                                          ? user.firstName.substring(0, 2).toUpperCase()
-                                          : 'CN'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
-                                  </div>
-                                  {user.currentTasksCount !== undefined && (
-                                    <Badge
-                                      variant={
-                                        user.currentTasksCount > 8 ? 'destructive' : 'secondary'
-                                      }
-                                      className="text-xs ml-2"
-                                      title={`Current workload: ${user.currentTasksCount} tasks`}
-                                    >
-                                      {user.currentTasksCount} total
-                                    </Badge>
-                                  )}
+                            <div
+                              ref={dropdownRef}
+                              onScroll={handleScroll}
+                              style={{ maxHeight: '170px', overflowY: 'auto' }}
+                            >
+                              <SelectItem value="none">
+                                <div className="flex items-center gap-2">
+                                  <UserX className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground">No Assignee</span>
                                 </div>
                               </SelectItem>
-                            ))}
+                              {users.map(user => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  <div className="flex items-center justify-between w-full">
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-6 w-6 rounded-lg">
+                                        <AvatarImage
+                                          src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                          alt={user.firstName ?? 'avatar'}
+                                          className="rounded-full"
+                                        />
+                                        <AvatarFallback className="rounded-full text-xs">
+                                          {user.firstName
+                                            ? user.firstName.substring(0, 2).toUpperCase()
+                                            : 'CN'}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                                    </div>
+                                    {user.currentTasksCount !== undefined && (
+                                      <Badge
+                                        variant={
+                                          user.currentTasksCount > 8 ? 'destructive' : 'secondary'
+                                        }
+                                        className="text-xs ml-2"
+                                        title={`Current workload: ${user.currentTasksCount} tasks`}
+                                      >
+                                        {user.currentTasksCount} total
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </div>
                           </SelectContent>
                         </Select>
                       </FormControl>
@@ -976,7 +1059,7 @@ export default function EditTaskDialog({
               />
             ) : (
               <FormItem>
-                <FormLabel>Assigned Task Agent</FormLabel>
+                <FormLabel>Assigned User</FormLabel>
                 <div className="border rounded-md p-4 w-full bg-muted/30">
                   <div className="flex items-center gap-2">
                     <Info className="h-4 w-4 text-muted-foreground" />
