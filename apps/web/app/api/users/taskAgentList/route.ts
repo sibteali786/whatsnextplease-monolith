@@ -11,47 +11,69 @@ export async function GET(request: Request) {
     const parsedParams = getAllUsersInputSchema.parse({
       role: searchParams.get('role'),
       skills: searchParams.get('skills')?.split(',') ?? [],
+      limit: Number(searchParams.get('limit')) || 0,
+      page: Number(searchParams.get('page')) || 1,
     });
 
-    const { role, skills } = parsedParams;
+    const { role, skills, limit, page } = parsedParams;
     const allowedRoles: Roles[] = [Roles.TASK_SUPERVISOR, Roles.CLIENT, Roles.SUPER_USER];
 
     if (!allowedRoles.includes(role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized Role' }, { status: 403 });
     }
-    const users = await prisma.user.findMany({
-      where: {
-        role: {
-          name: {
-            in: [Roles.TASK_AGENT, Roles.TASK_SUPERVISOR],
-          },
+    const whereClause = {
+      role: {
+        name: {
+          in: [Roles.TASK_AGENT, Roles.TASK_SUPERVISOR],
         },
-        // If no skills are provided, do not filter by userSkills
-        ...(skills.length > 0 && {
-          userSkills: {
-            some: {
-              skill: {
-                name: {
-                  in: skills,
-                },
-              },
+      },
+      ...(skills.length > 0 && {
+        userSkills: {
+          some: {
+            skill: {
+              name: { in: skills },
             },
           },
-        }),
-      },
-
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-      },
-    });
-
-    const response = {
-      success: true,
-      users,
+        },
+      }),
     };
+
+    let users;
+    let hasMore = false;
+
+    if (limit === 0) {
+      //  Return all users (no pagination)
+      users = await prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } else {
+      //  Paginated mode
+      const skip = (page - 1) * limit;
+      const result = await prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+        },
+        skip,
+        take: limit + 1, // fetch one extra record
+        orderBy: { createdAt: 'desc' },
+      });
+
+      hasMore = result.length > limit;
+      users = result.slice(0, limit);
+    }
+
+    const response = { success: true, users, hasMore };
     // Validate response with Zod schema
     const validatedResponse = getAllUsersOutputSchema.parse(response);
 

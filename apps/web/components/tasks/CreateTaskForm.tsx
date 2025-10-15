@@ -30,7 +30,7 @@ import { Calendar } from '@/components/ui/calendar';
 import FileUploadArea from '@/components/common/FileUploadArea';
 import { FileWithMetadataFE } from '@/utils/validationSchemas';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { createTaskSchema, UserWithTaskCount } from './CreateTaskContainer';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -43,6 +43,7 @@ interface CreateTaskFormProps {
   users: UserWithTaskCount[];
   canAssignTasks?: boolean;
   taskCategories: { id: string; categoryName: string }[];
+  fetchUsers: (pageToFetch?: number) => void;
 }
 
 export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
@@ -51,10 +52,11 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   users,
   canAssignTasks = false,
   taskCategories,
+  fetchUsers,
 }) => {
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
   const selectedAssigneeId = form.watch('assignedToId');
-
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const groupSkillsByCategory = (
     skills: { id: string; name: string; skillCategory?: { categoryName: string } }[]
   ) => {
@@ -77,6 +79,16 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
       category,
       items,
     }));
+  };
+  const handleScroll = () => {
+    if (!dropdownRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = dropdownRef.current;
+    const offset = 10; // pixels before reaching the bottom
+
+    if (scrollTop + clientHeight >= scrollHeight - offset) {
+      fetchUsers();
+    }
   };
 
   return (
@@ -120,7 +132,10 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               <FormControl>
                 <MultiSelect
                   options={groupSkillsByCategory(skills)}
-                  onValueChange={field.onChange}
+                  onValueChange={value => {
+                    field.onChange(value); // still update the form value
+                    fetchUsers(1);
+                  }}
                   defaultValue={field.value || []}
                   placeholder="Select Skills"
                   maxCount={5}
@@ -231,7 +246,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               <FormItem>
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <FormLabel>Assigned Task Agent</FormLabel>
+                    <FormLabel>Assigned User</FormLabel>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Info className="h-3 w-3" />
                       <span>Numbers show current workload</span>
@@ -247,42 +262,50 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                         <SelectValue placeholder="Select Assignee" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">
-                          <div className="flex items-center gap-2">
-                            <UserX className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">No Assignee</span>
-                          </div>
-                        </SelectItem>
-                        {users.map(user => (
-                          <SelectItem key={user.id} value={user.id}>
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6 rounded-lg">
-                                  <AvatarImage
-                                    src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                    alt={user.firstName ?? 'avatar'}
-                                    className="rounded-full"
-                                  />
-                                  <AvatarFallback className="rounded-full text-xs">
-                                    {user.firstName
-                                      ? user.firstName.substring(0, 2).toUpperCase()
-                                      : 'CN'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
-                              </div>
-                              {user.currentTasksCount !== undefined && (
-                                <Badge
-                                  variant={user.currentTasksCount > 8 ? 'destructive' : 'secondary'}
-                                  className="text-xs ml-2"
-                                  title={`Current workload: ${user.currentTasksCount} tasks`}
-                                >
-                                  {user.currentTasksCount} total
-                                </Badge>
-                              )}
+                        <div
+                          ref={dropdownRef}
+                          onScroll={handleScroll}
+                          style={{ maxHeight: '170px', overflowY: 'auto' }}
+                        >
+                          <SelectItem value="none">
+                            <div className="flex items-center gap-2">
+                              <UserX className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-muted-foreground">No Assignee</span>
                             </div>
                           </SelectItem>
-                        ))}
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6 rounded-lg">
+                                    <AvatarImage
+                                      src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                      alt={user.firstName ?? 'avatar'}
+                                      className="rounded-full"
+                                    />
+                                    <AvatarFallback className="rounded-full text-xs">
+                                      {user.firstName
+                                        ? user.firstName.substring(0, 2).toUpperCase()
+                                        : 'CN'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                                </div>
+                                {user.currentTasksCount !== undefined && (
+                                  <Badge
+                                    variant={
+                                      user.currentTasksCount > 8 ? 'destructive' : 'secondary'
+                                    }
+                                    className="text-xs ml-2"
+                                    title={`Current workload: ${user.currentTasksCount} tasks`}
+                                  >
+                                    {user.currentTasksCount} total
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </div>
                       </SelectContent>
                     </Select>
                   </FormControl>
