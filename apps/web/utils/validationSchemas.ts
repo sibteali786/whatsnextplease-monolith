@@ -672,12 +672,15 @@ export type UserAssigneeSchema = z.infer<typeof userAssigneeSchema>;
 export const getAllUsersOutputSchema = errorSchema.merge(
   z.object({
     users: z.array(userAssigneeSchema),
+    hasMore: z.boolean().optional(),
   })
 );
 
 export const getAllUsersInputSchema = z.object({
   role: z.nativeEnum(Roles),
   skills: z.array(z.string()),
+  limit: z.number().int().nonnegative().default(0),
+  page: z.number().int().positive().default(1),
 });
 
 export const TaskByPrioritySchema = z.object({

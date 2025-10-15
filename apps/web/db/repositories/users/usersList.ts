@@ -6,11 +6,18 @@ import { z } from 'zod';
 
 type GetUsersSchema = z.infer<typeof getAllUsersOutputSchema>;
 
-export const usersList = async (role: Roles, skills?: string[]): Promise<GetUsersSchema> => {
+export const usersList = async (
+  role: Roles,
+  skills?: string[],
+  limit: number = 0,
+  page: number = 1
+): Promise<GetUsersSchema> => {
   try {
     // Only include skills in the query if it has values
     const query =
-      skills && skills.length > 0 ? `?role=${role}&skills=${skills.join(',')}` : `?role=${role}`;
+      skills && skills.length > 0
+        ? `?role=${role}&limit=${limit}&page=${page}&skills=${skills.join(',')}`
+        : `?role=${role}&limit=${limit}&page=${page}`;
 
     const response = await fetch(`/api/users/taskAgentList${query}`);
 
