@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SearchNFilter } from '../common/SearchNFilter';
 import { DurationEnum, DurationEnumList } from '@/types';
-import { CreatorType, Roles } from '@prisma/client';
+import { CreatorType, Roles, TaskStatusEnum } from '@prisma/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { UserTasksTable } from '../users/UserTaskTable';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
@@ -20,6 +20,7 @@ import { CallToAction } from '../CallToAction';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useSearchParams } from 'next/navigation';
 
 export const TaskSuperVisorList = ({
   userId,
@@ -30,6 +31,7 @@ export const TaskSuperVisorList = ({
   listOfFilter?: DurationEnumList;
   role: Roles;
 }) => {
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [open, setOpen] = useState(false);
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
@@ -49,7 +51,7 @@ export const TaskSuperVisorList = ({
   const [hasSkills, setHasSkills] = useState(false);
   const [hasTaskCategories, setHasTaskCategories] = useState(false);
   const [checkingPrerequisites, setCheckingPrerequisites] = useState(true);
-
+  const statusFilter = searchParams.get('status');
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term);
     setDuration(duration);
@@ -109,6 +111,14 @@ export const TaskSuperVisorList = ({
     setLoading(true);
     setError(null);
     try {
+      const statusArray = statusFilter?.split(',') || []; // Split the comma-separated status values
+
+      // If there are status values, map them to TaskStatusEnum
+      const normalizedStatus = statusArray
+        ? statusArray
+            .map((status: string) => TaskStatusEnum[status as keyof typeof TaskStatusEnum] || null)
+            .filter(status => status !== null)
+        : [];
       const response = await tasksByType(
         activeTab,
         role,
@@ -116,7 +126,8 @@ export const TaskSuperVisorList = ({
         pageSize,
         searchTerm,
         duration,
-        userId
+        userId,
+        normalizedStatus
       );
       const responseIds = await taskIdsByType(activeTab, role, searchTerm, duration);
 
@@ -140,7 +151,7 @@ export const TaskSuperVisorList = ({
       }
     }
     setLoading(false);
-  }, [activeTab, searchTerm, duration, pageSize, cursor, role, toast]);
+  }, [activeTab, searchTerm, duration, pageSize, cursor, role, toast, statusFilter]);
 
   useEffect(() => {
     fetchTasks();

@@ -5,11 +5,11 @@
 Environment variables loaded from .env
 Prisma schema loaded from prisma\schema.prisma
 
-✔ Generated Prisma Client (v6.16.3) to .\..\..\node_modules\.pnpm\@prisma+client@6.16.3_prisma@6.16.3_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 1.41s
+✔ Generated Prisma Client (v6.16.3) to .\..\..\node_modules\.pnpm\@prisma+client@6.16.3_prisma@6.16.3_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 547ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
 
 
 > web@0.1.0 build:cdk D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web
@@ -26,13 +26,7 @@ Datasource "db": PostgreSQL database "wnpdb_dev", schema "public" at "localhost:
 37 migrations found in prisma/migrations
 
 
-┌─────────────────────────────────────────────────────────┐
 No pending migrations to apply.
-│  Update available 6.16.3 -> 6.17.0                      │
-│  Run the following to update                            │
-│    npm i --save-dev prisma@latest                       │
-│    npm i @prisma/client@latest                          │
-└─────────────────────────────────────────────────────────┘
   ▲ Next.js 14.2.15
   - Environments: .env.local, .env
 
@@ -82,28 +76,28 @@ No pending migrations to apply.
 68:9  Warning: The 'toggleLink' function makes the dependencies of useEffect Hook (at line 119) change on every render. To fix this, wrap the definition of 'toggleLink' in its own useCallback() Hook.  react-hooks/exhaustive-deps
 
 ./components/common/EditTaskDialog.tsx
-394:6  Warning: React Hook useEffect has missing dependencies: 'fetchSkills' and 'fetchTaskMetadata'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
-398:6  Warning: React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+439:6  Warning: React Hook useEffect has missing dependencies: 'fetchSkills' and 'fetchTaskMetadata'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+453:6  Warning: React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/files/FilePreviewModal.tsx
 292:6  Warning: React Hook useEffect has a missing dependency: 'currentFile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/settings/ProfileFormClient.tsx
-140:6  Warning: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+141:6  Warning: React Hook useEffect has a missing dependency: 'toast'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/settings/ProfileFormUser.tsx
-217:6  Warning: React Hook useEffect has missing dependencies: 'toast' and 'token'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+218:6  Warning: React Hook useEffect has missing dependencies: 'toast' and 'token'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/tasks/CreateTaskContainer.tsx
-121:6  Warning: React Hook useEffect has a missing dependency: 'getDefaultValues'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
-306:6  Warning: React Hook useEffect has missing dependencies: 'form', 'router', and 'toast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
-349:6  Warning: React Hook useEffect has missing dependencies: 'form', 'toast', and 'user?.role?.name'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+124:6  Warning: React Hook useEffect has a missing dependency: 'getDefaultValues'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+366:6  Warning: React Hook useEffect has missing dependencies: 'form', 'router', and 'toast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+375:6  Warning: React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/tasks/TasksListModal.tsx
 67:6  Warning: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/tasks/TaskSuperVisorList.tsx
-143:6  Warning: React Hook useCallback has a missing dependency: 'userId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+154:6  Warning: React Hook useCallback has a missing dependency: 'userId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/TopBar.tsx
 194:6  Warning: React Hook useEffect has a missing dependency: 'createMessageHandler'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
@@ -129,7 +123,6 @@ Emitted 'error' event on ThreadStream instance at:
     at process.callbackTrampoline (node:internal/async_hooks:130:17)
 
 Node.js v22.11.0
- ⨯ Static worker exited with code: 1 and signal: null
 node:events:496
       throw er; // Unhandled 'error' event
       ^
@@ -147,6 +140,7 @@ Emitted 'error' event on ThreadStream instance at:
 Node.js v22.11.0
  ⨯ Static worker exited with code: 1 and signal: null
    Generating static pages (8/35) 
+ ⨯ Static worker exited with code: 1 and signal: null
 node:events:496
       throw er; // Unhandled 'error' event
       ^
@@ -212,7 +206,7 @@ Route (app)                              Size     First Load JS
 ├ ƒ /api/user/doesUserExists             0 B                0 B
 ├ ƒ /api/users/taskAgentList             0 B                0 B
 ├ ƒ /clients                             7.93 kB         172 kB
-├ ƒ /clients/[clientId]                  6.01 kB         754 kB
+├ ƒ /clients/[clientId]                  6.01 kB         755 kB
 ├ ƒ /clients/addclient                   2.01 kB         277 kB
 ├ ○ /forgot-password                     4.49 kB         106 kB
 ├ ƒ /home                                3.68 kB         247 kB
@@ -221,19 +215,19 @@ Route (app)                              Size     First Load JS
 ├ ○ /resend-verification                 4.38 kB        98.6 kB
 ├ ○ /reset-password                      5.85 kB         107 kB
 ├ ƒ /settings/billing                    193 B          87.6 kB
-├ ƒ /settings/myprofile                  12.2 kB         285 kB
+├ ƒ /settings/myprofile                  15.1 kB         288 kB
 ├ ƒ /settings/notifications              8.46 kB         127 kB
 ├ ƒ /settings/permissions                8.27 kB         131 kB
 ├ ƒ /settings/picklists                  24.1 kB         715 kB
-├ ○ /signin                              9.44 kB         158 kB
+├ ○ /signin                              9.52 kB         159 kB
 ├ ○ /signup                              4.11 kB         175 kB
 ├ ƒ /skills                              1.53 kB         209 kB
 ├ ƒ /taskAgents                          11.3 kB         154 kB
-├ ƒ /taskOfferings                       5.97 kB         768 kB
+├ ƒ /taskOfferings                       6.12 kB         769 kB
 ├ ƒ /taskOfferings/(.)taskId             943 B           668 kB
 ├ ƒ /taskOfferings/[taskId]              638 B           668 kB
 ├ ƒ /users                               14 kB           305 kB
-├ ƒ /users/[userId]                      5.06 kB         884 kB
+├ ƒ /users/[userId]                      5.06 kB         885 kB
 ├ ƒ /users/adduser                       2.69 kB         285 kB
 └ ○ /verify-email                        3.72 kB        97.9 kB
 + First Load JS shared by all            87.4 kB

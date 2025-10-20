@@ -1,7 +1,7 @@
-"use client";
-import { useEffect, useState } from "react";
-import { Input } from "../ui/input";
-import { Search } from "lucide-react";
+'use client';
+import { useEffect, useState } from 'react';
+import { Input } from '../ui/input';
+import { Search } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -10,8 +10,9 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { DurationEnum, DurationEnumList } from "@/types";
+} from '../ui/select';
+import { DurationEnum, DurationEnumList } from '@/types';
+import TableFilter from '../tasks/TableFilter';
 
 export const SearchNFilter = ({
   filterList,
@@ -20,7 +21,7 @@ export const SearchNFilter = ({
   filterList?: DurationEnumList;
   onSearch: (term: string, duration: DurationEnum) => void; // Updated to include duration
 }) => {
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL); // New state for duration
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(term);
 
@@ -41,12 +42,12 @@ export const SearchNFilter = ({
   }, [debouncedSearchTerm, duration, onSearch]);
 
   return (
-    <div className="flex items-center gap-8 justify-start flex-1">
-      <div className="relative w-[40%]">
+    <div className="flex items-center gap-4 justify-start flex-1">
+      <div className="relative w-[35%]">
         <Input
           placeholder="Search tasks"
           className="pl-10 rounded-full"
-          onChange={(e) => setTerm(e.target.value)}
+          onChange={e => setTerm(e.target.value)}
         />
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
       </div>
@@ -54,14 +55,14 @@ export const SearchNFilter = ({
         <Select
           onValueChange={(value: DurationEnum) => setDuration(value)} // Handle duration change
         >
-          <SelectTrigger className="w-[180px] rounded-full px-4">
+          <SelectTrigger className="w-[180px] h-[40px] px-4">
             <SelectValue placeholder="Select a duration" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Durations</SelectLabel>
               {filterList &&
-                filterList.map((duration) => (
+                filterList.map(duration => (
                   <SelectItem key={duration.value} value={duration.label}>
                     {duration.value}
                   </SelectItem>
@@ -70,6 +71,7 @@ export const SearchNFilter = ({
           </SelectContent>
         </Select>
       )}
+      <TableFilter />
     </div>
   );
 };

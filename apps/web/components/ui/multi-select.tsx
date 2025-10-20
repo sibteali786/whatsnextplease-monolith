@@ -80,6 +80,7 @@ interface MultiSelectProps
 
   /** The default selected values when the component mounts. */
   defaultValue?: string[];
+  value?: string[];
 
   /**
    * Placeholder text to be displayed when no values are selected.
@@ -125,6 +126,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
       options,
       onValueChange,
       variant,
+      value,
       defaultValue = [],
       placeholder = 'Select options',
       animation = 0,
@@ -140,6 +142,12 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
     const [isAnimating, setIsAnimating] = React.useState(false);
 
+    // Update selected values when value prop changes
+    React.useEffect(() => {
+      if (value && value.length > 0) {
+        setSelectedValues(value);
+      }
+    }, [value]);
     // Helper function to determine if options are grouped
     const isGroupedOptions = (opts: any[]): opts is { category: string; items: any[] }[] => {
       return opts.length > 0 && 'category' in opts[0];
