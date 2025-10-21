@@ -70,13 +70,24 @@ export class TaskService {
     if (!canViewTasks(role)) {
       throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
     }
+    const normalizedStatus: TaskStatusEnum[] = (() => {
+      if (status) {
+        // Decode URL-encoded string and split by comma if there are multiple statuses
+        const statusArray = decodeURIComponent(status).split(',');
 
+        // Map the status values to the TaskStatusEnum values
+        return statusArray
+          .map(s => TaskStatusEnum[s as keyof typeof TaskStatusEnum])
+          .filter(Boolean); // Filter out invalid values
+      }
+      return []; // Return empty array if no status is provided
+    })();
     // Build filters
     const filters: TaskFilters = {
       whereCondition: userId ? getTaskFilterCondition(userId, role) : {},
       dateFilter: getDateFilter(duration),
       searchTerm,
-      status,
+      status: normalizedStatus.length ? normalizedStatus : undefined,
       priority,
       assignedToId,
       categoryId,

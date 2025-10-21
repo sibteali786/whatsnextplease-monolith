@@ -2,7 +2,7 @@
 import { DurationEnum } from '@/types';
 import { handleError } from '@/utils/errorHandler';
 import { getTasksOutputSchema } from '@/utils/validationSchemas';
-import { Roles } from '@prisma/client';
+import { Roles, TaskStatusEnum } from '@prisma/client';
 import { z } from 'zod';
 import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 
@@ -15,10 +15,11 @@ export const tasksByType = async (
   pageSize: number,
   searchTerm: string,
   duration: DurationEnum,
-  userId?: string
+  userId?: string,
+  status?: TaskStatusEnum | TaskStatusEnum[]
 ): Promise<GetTaskSchema> => {
   try {
-    const response = await taskApiClient.getTasks({
+    const queryParams: any = {
       cursor: cursor || undefined,
       pageSize,
       search: searchTerm,
@@ -27,7 +28,16 @@ export const tasksByType = async (
       ...(type === 'assigned' && { assignedToId: 'not-null' }),
       ...(type === 'unassigned' && { assignedToId: null }),
       ...(type === 'my-tasks' && { assignedToId: userId }),
-    });
+    };
+
+    // Only add 'status' if it is provided
+    if (status && Array.isArray(status)) {
+      queryParams.status = status.join(',');
+    } else if (status && !Array.isArray(status)) {
+      queryParams.status = status;
+    }
+
+    const response = await taskApiClient.getTasks(queryParams);
 
     if (response.success) {
       return {
