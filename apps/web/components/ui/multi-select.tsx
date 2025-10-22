@@ -144,7 +144,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
 
     // Update selected values when value prop changes
     React.useEffect(() => {
-      if (value && value.length > 0) {
+      if (value !== undefined) {
         setSelectedValues(value);
       }
     }, [value]);
