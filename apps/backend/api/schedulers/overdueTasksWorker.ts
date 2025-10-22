@@ -3,11 +3,12 @@ import { parentPort, workerData } from 'worker_threads';
 import { PrismaClient, NotificationType, Roles, TaskStatusEnum } from '@prisma/client';
 import { NotificationService } from '../services/notification.service.js';
 import { NotificationPayload } from '../services/notificationDelivery.service.js';
+import { TASK_CONFIG } from '../config/taskConfig.js';
 
 async function main() {
   const prisma = new PrismaClient();
   const notificationService = new NotificationService();
-  const { batchSize = 50 } = workerData || {};
+  const { batchSize = TASK_CONFIG.OVERDUE_CHECK_BATCH_SIZE } = workerData || {};
 
   try {
     // First, find the OVERDUE status ID (Do this first to validate setup)
@@ -19,7 +20,6 @@ async function main() {
       console.error('OVERDUE task status not found in the database');
       throw new Error('OVERDUE task status not found in the database');
     }
-
     console.log('Found OVERDUE status:', overdueStatus);
 
     // Find tasks that are overdue but not marked as OVERDUE status
@@ -28,7 +28,7 @@ async function main() {
         dueDate: { lt: new Date() },
         status: {
           statusName: {
-            notIn: [TaskStatusEnum.COMPLETED, TaskStatusEnum.OVERDUE],
+            notIn: TASK_CONFIG.OVERDUE_EXCLUDED_STATUSES,
           },
         },
       },
