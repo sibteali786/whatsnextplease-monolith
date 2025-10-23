@@ -1,18 +1,18 @@
 
-> web@0.1.0 build D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web
+> web@0.1.0 build D:\Study Related\HCC\whatsnextplease-monolith\apps\web
 > npx prisma generate && pnpm run build:cdk && npx prisma migrate deploy && next build
 
 Environment variables loaded from .env
 Prisma schema loaded from prisma\schema.prisma
 
-✔ Generated Prisma Client (v6.16.3) to .\..\..\node_modules\.pnpm\@prisma+client@6.16.3_prisma@6.16.3_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 547ms
+✔ Generated Prisma Client (v6.16.3) to .\..\..\node_modules\.pnpm\@prisma+client@6.16.3_prisma@6.16.3_magicast@0.3.5_typescript@5.6.3__typescript@5.6.3\node_modules\@prisma\client in 216ms
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
 Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
 
 
-> web@0.1.0 build:cdk D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web
+> web@0.1.0 build:cdk D:\Study Related\HCC\whatsnextplease-monolith\apps\web
 > npm --prefix cdk run build
 
 
@@ -97,7 +97,7 @@ No pending migrations to apply.
 67:6  Warning: React Hook useEffect has a missing dependency: 'fetchTasks'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/tasks/TaskSuperVisorList.tsx
-154:6  Warning: React Hook useCallback has a missing dependency: 'userId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+166:6  Warning: React Hook useCallback has a missing dependency: 'userId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./components/TopBar.tsx
 194:6  Warning: React Hook useEffect has a missing dependency: 'createMessageHandler'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
@@ -108,87 +108,87 @@ No pending migrations to apply.
 info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
    Collecting page data ...
    Generating static pages (0/35) ...
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
-    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
-    at listOnTimeout (node:internal/timers:594:17)
-    at process.processTimers (node:internal/timers:529:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
-    at process.processImmediate (node:internal/timers:491:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v22.11.0
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
-    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
-    at listOnTimeout (node:internal/timers:594:17)
-    at process.processTimers (node:internal/timers:529:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
-    at process.processImmediate (node:internal/timers:491:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v22.11.0
- ⨯ Static worker exited with code: 1 and signal: null
-   Generating static pages (8/35) 
- ⨯ Static worker exited with code: 1 and signal: null
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
-    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
-    at listOnTimeout (node:internal/timers:594:17)
-    at process.processTimers (node:internal/timers:529:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
-    at process.processImmediate (node:internal/timers:491:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v22.11.0
- ⨯ Static worker exited with code: 1 and signal: null
-node:events:496
-      throw er; // Unhandled 'error' event
-      ^
-
-TypeError: destination.write is not a function
-    at run (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
-    at Timeout._onTimeout (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
-    at listOnTimeout (node:internal/timers:594:17)
-    at process.processTimers (node:internal/timers:529:7)
-Emitted 'error' event on ThreadStream instance at:
-    at Immediate.<anonymous> (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
-    at process.processImmediate (node:internal/timers:491:21)
-    at process.callbackTrampoline (node:internal/async_hooks:130:17)
-
-Node.js v22.11.0
- ⨯ Static worker exited with code: 1 and signal: null
-   Generating static pages (17/35) 
-   Generating static pages (26/35) 
 Current user API error: n [Error]: Dynamic server usage: Route /api/auth/current-user couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at l (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\chunks\2110.js:1:37158)
-    at p (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\chunks\601.js:1:33520)
-    at c (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\apps\web\.next\server\app\api\auth\current-user\route.js:1:1240)
-    at D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36963
-    at D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
-    at D:\STUDY RELATED\HillCountryCoders\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
+    at l (D:\Study Related\HCC\whatsnextplease-monolith\apps\web\.next\server\chunks\2110.js:1:37158)
+    at p (D:\Study Related\HCC\whatsnextplease-monolith\apps\web\.next\server\chunks\601.js:1:33520)
+    at c (D:\Study Related\HCC\whatsnextplease-monolith\apps\web\.next\server\app\api\auth\current-user\route.js:1:1240)
+    at D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36963
+    at D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\server\lib\trace\tracer.js:140:36
+    at NoopContextManager.with (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
+    at ContextAPI.with (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
+    at NoopTracer.startActiveSpan (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
+    at ProxyTracer.startActiveSpan (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
+    at D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\next@14.2.15_@babel+core@7.28.4_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
+   Generating static pages (8/35) 
   description: "Route /api/auth/current-user couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
   digest: 'DYNAMIC_SERVER_USAGE'
 }
+   Generating static pages (17/35) 
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:485:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.20.0
+ ⨯ Static worker exited with code: 1 and signal: null
+   Generating static pages (26/35) 
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:485:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.20.0
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:485:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.20.0
+ ⨯ Static worker exited with code: 1 and signal: null
+ ⨯ Static worker exited with code: 1 and signal: null
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+TypeError: destination.write is not a function
+    at run (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\worker.js:130:27)
+    at Timeout._onTimeout (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\lib\wait.js:51:11)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
+Emitted 'error' event on ThreadStream instance at:
+    at Immediate.<anonymous> (D:\Study Related\HCC\whatsnextplease-monolith\node_modules\.pnpm\thread-stream@3.1.0\node_modules\thread-stream\index.js:369:12)
+    at process.processImmediate (node:internal/timers:485:21)
+    at process.callbackTrampoline (node:internal/async_hooks:130:17)
+
+Node.js v22.20.0
+ ⨯ Static worker exited with code: 1 and signal: null
  ✓ Generating static pages (35/35)
    Finalizing page optimization ...
    Collecting build traces ...
@@ -223,8 +223,8 @@ Route (app)                              Size     First Load JS
 ├ ○ /signup                              4.11 kB         175 kB
 ├ ƒ /skills                              1.53 kB         209 kB
 ├ ƒ /taskAgents                          11.3 kB         154 kB
-├ ƒ /taskOfferings                       6.12 kB         769 kB
-├ ƒ /taskOfferings/(.)taskId             943 B           668 kB
+├ ƒ /taskOfferings                       6.17 kB         769 kB
+├ ƒ /taskOfferings/(.)taskId             944 B           668 kB
 ├ ƒ /taskOfferings/[taskId]              638 B           668 kB
 ├ ƒ /users                               14 kB           305 kB
 ├ ƒ /users/[userId]                      5.06 kB         885 kB
@@ -236,7 +236,7 @@ Route (app)                              Size     First Load JS
   └ other shared chunks (total)          2.03 kB
 
 
-ƒ Middleware                             80 kB
+ƒ Middleware                             79.9 kB
 
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand

@@ -82,13 +82,25 @@ export class TaskService {
       }
       return []; // Return empty array if no status is provided
     })();
+    const normalizedPriority: TaskPriorityEnum[] = (() => {
+      if (priority) {
+        // Decode URL-encoded string and split by comma if there are multiple priority
+        const priorityArray = decodeURIComponent(priority).split(',');
+
+        // Map the priority values to the TaskPriorityEnum values
+        return priorityArray
+          .map(s => TaskPriorityEnum[s as keyof typeof TaskPriorityEnum])
+          .filter(Boolean); // Filter out invalid values
+      }
+      return []; // Return empty array if no priority is provided
+    })();
     // Build filters
     const filters: TaskFilters = {
       whereCondition: userId ? getTaskFilterCondition(userId, role) : {},
       dateFilter: getDateFilter(duration),
       searchTerm,
       status: normalizedStatus.length ? normalizedStatus : undefined,
-      priority,
+      priority: normalizedPriority.length ? normalizedPriority : undefined,
       assignedToId,
       categoryId,
     };
