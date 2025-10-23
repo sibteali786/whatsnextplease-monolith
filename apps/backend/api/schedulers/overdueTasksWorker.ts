@@ -48,7 +48,7 @@ async function main() {
           dueDate: { lt: new Date() },
           status: {
             statusName: {
-              notIn: [TaskStatusEnum.COMPLETED, TaskStatusEnum.OVERDUE],
+              notIn: TASK_CONFIG.OVERDUE_EXCLUDED_STATUSES,
             },
           },
         },

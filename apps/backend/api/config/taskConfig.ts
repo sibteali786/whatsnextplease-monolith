@@ -12,5 +12,5 @@ export const TASK_CONFIG = {
     TaskStatusEnum.ON_HOLD,
   ],
   OVERDUE_CHECK_BATCH_SIZE: 50,
-  OVERDUE_CHECK_SCHEDULE: '0 9,* * *', // Daily at 9 am
+  OVERDUE_CHECK_SCHEDULE: '0 9 * * *', // Daily at 9 am
 };
