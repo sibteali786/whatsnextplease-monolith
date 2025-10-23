@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SearchNFilter } from '../common/SearchNFilter';
 import { DurationEnum, DurationEnumList } from '@/types';
-import { CreatorType, Roles, TaskStatusEnum } from '@prisma/client';
+import { CreatorType, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { UserTasksTable } from '../users/UserTaskTable';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
@@ -52,6 +52,7 @@ export const TaskSuperVisorList = ({
   const [hasTaskCategories, setHasTaskCategories] = useState(false);
   const [checkingPrerequisites, setCheckingPrerequisites] = useState(true);
   const statusFilter = searchParams.get('status');
+  const priorityFilter = searchParams.get('priority');
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term);
     setDuration(duration);
@@ -111,13 +112,23 @@ export const TaskSuperVisorList = ({
     setLoading(true);
     setError(null);
     try {
-      const statusArray = statusFilter?.split(',') || []; // Split the comma-separated status values
+      // Split the comma-separated status values
+      const statusArray = statusFilter?.split(',') || [];
+      const priorityArray = priorityFilter?.split(',') || [];
 
       // If there are status values, map them to TaskStatusEnum
       const normalizedStatus = statusArray
         ? statusArray
             .map((status: string) => TaskStatusEnum[status as keyof typeof TaskStatusEnum] || null)
             .filter(status => status !== null)
+        : [];
+      const normalizedPriority = priorityArray
+        ? priorityArray
+            .map(
+              (priority: string) =>
+                TaskPriorityEnum[priority as keyof typeof TaskPriorityEnum] || null
+            )
+            .filter(priority => priority !== null)
         : [];
       const response = await tasksByType(
         activeTab,
@@ -127,7 +138,8 @@ export const TaskSuperVisorList = ({
         searchTerm,
         duration,
         userId,
-        normalizedStatus
+        normalizedStatus,
+        normalizedPriority
       );
       const responseIds = await taskIdsByType(activeTab, role, searchTerm, duration);
 
@@ -151,7 +163,17 @@ export const TaskSuperVisorList = ({
       }
     }
     setLoading(false);
-  }, [activeTab, searchTerm, duration, pageSize, cursor, role, toast, statusFilter]);
+  }, [
+    activeTab,
+    searchTerm,
+    duration,
+    pageSize,
+    cursor,
+    role,
+    toast,
+    statusFilter,
+    priorityFilter,
+  ]);
 
   useEffect(() => {
     fetchTasks();

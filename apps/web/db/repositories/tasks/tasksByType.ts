@@ -2,7 +2,7 @@
 import { DurationEnum } from '@/types';
 import { handleError } from '@/utils/errorHandler';
 import { getTasksOutputSchema } from '@/utils/validationSchemas';
-import { Roles, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { z } from 'zod';
 import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 
@@ -16,7 +16,8 @@ export const tasksByType = async (
   searchTerm: string,
   duration: DurationEnum,
   userId?: string,
-  status?: TaskStatusEnum | TaskStatusEnum[]
+  status?: TaskStatusEnum | TaskStatusEnum[],
+  priority?: TaskPriorityEnum | TaskPriorityEnum[]
 ): Promise<GetTaskSchema> => {
   try {
     const queryParams: any = {
@@ -36,7 +37,12 @@ export const tasksByType = async (
     } else if (status && !Array.isArray(status)) {
       queryParams.status = status;
     }
-
+    // Only add 'priority' if it is provided
+    if (priority && Array.isArray(priority)) {
+      queryParams.priority = priority.join(',');
+    } else if (priority && !Array.isArray(priority)) {
+      queryParams.priority = priority;
+    }
     const response = await taskApiClient.getTasks(queryParams);
 
     if (response.success) {

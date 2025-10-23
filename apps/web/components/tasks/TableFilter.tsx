@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MultiSelect } from '../ui/multi-select';
-import { TaskStatusEnum } from '@prisma/client';
+import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -11,32 +11,48 @@ export default function TableFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [selectedStatus, setSelectedStatus] = useState<string[]>([]); // F
-  const handleStatusChange = (value: string[]) => {
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
+  const updateParams = (key: string, values: string[]) => {
     const currentParams = new URLSearchParams(searchParams.toString());
 
-    if (value.length > 0) {
-      // Join the selected status values into a comma-separated string and set it in the URL
-      currentParams.set('status', value.join(','));
+    if (values.length > 0) {
+      currentParams.set(key, values.join(','));
     } else {
-      currentParams.delete('status'); // Remove the status if no values are selected
+      currentParams.delete(key);
     }
 
-    // Update the URL query parameters
     router.push(`${pathname}?${currentParams.toString()}`);
+  };
+  // handle Status change
+  const handleStatusChange = (value: string[]) => {
     setSelectedStatus(value);
+    updateParams('status', value);
+  };
+
+  // handle Priority change
+  const handlePriorityChange = (value: string[]) => {
+    setSelectedPriority(value);
+    updateParams('priority', value);
   };
   useEffect(() => {
     const statusParam = searchParams.get('status');
+    const priorityParam = searchParams.get('priority');
+
     if (statusParam) {
-      // Split the status query parameter (comma-separated) and set it in the state as string[]
-      const statusArray = decodeURIComponent(statusParam).split(',');
-      setSelectedStatus(statusArray); // Store as string[] to match MultiSelect
+      setSelectedStatus(decodeURIComponent(statusParam).split(','));
+    } else {
+      setSelectedStatus([]);
+    }
+
+    if (priorityParam) {
+      setSelectedPriority(decodeURIComponent(priorityParam).split(','));
+    } else {
+      setSelectedPriority([]);
     }
   }, [searchParams]);
-
   return (
-    <div>
+    <div className="flex gap-4">
       {/* Status Filter */}
       <MultiSelect
         options={Object.entries(TaskStatusEnum).map(([, value]) => ({
@@ -46,6 +62,17 @@ export default function TableFilter() {
         onValueChange={handleStatusChange}
         value={selectedStatus}
         placeholder="Select Status"
+        maxCount={2}
+      />
+      {/*  Priority Filter */}
+      <MultiSelect
+        options={Object.entries(TaskPriorityEnum).map(([, value]) => ({
+          label: transformEnumValue(value),
+          value: value,
+        }))}
+        onValueChange={handlePriorityChange}
+        value={selectedPriority}
+        placeholder="Select Priority"
         maxCount={2}
       />
     </div>
