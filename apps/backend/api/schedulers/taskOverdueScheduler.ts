@@ -3,6 +3,7 @@ import { Worker } from 'worker_threads';
 import cron from 'node-cron';
 import path from 'path';
 import { logger } from '../utils/logger';
+import { TASK_CONFIG } from '../config/taskConfig';
 
 export class TaskOverdueScheduler {
   private scheduledJob: cron.ScheduledTask;
@@ -10,7 +11,7 @@ export class TaskOverdueScheduler {
 
   constructor() {
     // For testing: run every minute
-    this.scheduledJob = cron.schedule('0 0 * * *', async () => {
+    this.scheduledJob = cron.schedule(TASK_CONFIG.OVERDUE_CHECK_SCHEDULE, async () => {
       if (this.isProcessing) {
         logger.warn('Overdue task check already in progress, skipping');
         return;

@@ -6,7 +6,7 @@ export interface TaskFilters {
   whereCondition?: Prisma.TaskWhereInput;
   dateFilter?: Prisma.TaskWhereInput;
   searchTerm?: string;
-  status?: TaskStatusEnum;
+  status?: TaskStatusEnum | TaskStatusEnum[];
   priority?: TaskPriorityEnum;
   assignedToId?: string | null | { not: null };
   categoryId?: string;
@@ -48,7 +48,7 @@ export class TaskRepository {
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
       ...dateFilter,
-      ...(status && { status: { statusName: status } }),
+      ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
       ...(priority && { priority: { priorityName: priority } }),
       ...(assignedToId !== undefined && { assignedToId: assignedToId }),
       ...(categoryId && { categoryId }),
@@ -129,7 +129,7 @@ export class TaskRepository {
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
       ...dateFilter,
-      ...(status && { status: { statusName: status } }),
+      ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
       ...(priority && { priority: { priorityName: priority } }),
       ...(assignedToId !== undefined && { assignedToId }),
       ...(categoryId && { categoryId }),
@@ -447,7 +447,7 @@ export class TaskRepository {
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
       ...dateFilter,
-      ...(status && { status: { statusName: status } }),
+      ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
       ...(priority && { priority: { priorityName: priority } }),
       ...(assignedToId !== undefined && { assignedToId }),
       ...(categoryId && { categoryId }),
@@ -584,7 +584,15 @@ export class TaskRepository {
       ...updatedFilters.whereCondition,
       ...updatedFilters.dateFilter,
       priority: { priorityName: { in: priorities } }, // Use multiple priorities
-      ...(updatedFilters.status && { status: { statusName: updatedFilters.status } }),
+      ...(updatedFilters.status && {
+        status: {
+          statusName: {
+            in: Array.isArray(updatedFilters.status)
+              ? updatedFilters.status
+              : [updatedFilters.status],
+          },
+        },
+      }), // Handle single or array status
       ...(updatedFilters.assignedToId !== undefined && {
         assignedToId: updatedFilters.assignedToId,
       }),

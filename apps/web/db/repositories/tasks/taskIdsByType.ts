@@ -9,7 +9,7 @@ import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 type GetTaskIdsSchema = z.infer<typeof getTaskIdsByTypeOutput>;
 
 export const taskIdsByType = async (
-  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
+  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks' | 'task-history',
   role: Roles,
   searchTerm: string,
   duration: DurationEnum
