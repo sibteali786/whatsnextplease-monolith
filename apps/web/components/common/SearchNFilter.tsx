@@ -13,13 +13,16 @@ import {
 } from '../ui/select';
 import { DurationEnum, DurationEnumList } from '@/types';
 import TableFilter from '../tasks/TableFilter';
+import { Roles } from '@prisma/client';
 
 export const SearchNFilter = ({
   filterList,
   onSearch,
+  role,
 }: {
   filterList?: DurationEnumList;
   onSearch: (term: string, duration: DurationEnum) => void; // Updated to include duration
+  role?: Roles;
 }) => {
   const [term, setTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL); // New state for duration
@@ -43,7 +46,7 @@ export const SearchNFilter = ({
 
   return (
     <div className="flex items-center gap-4 justify-start flex-1">
-      <div className="relative w-[35%]">
+      <div className="relative w-[250px] max-w-[350px]">
         <Input
           placeholder="Search tasks"
           className="pl-10 rounded-full"
@@ -55,8 +58,8 @@ export const SearchNFilter = ({
         <Select
           onValueChange={(value: DurationEnum) => setDuration(value)} // Handle duration change
         >
-          <SelectTrigger className="w-[180px] h-[40px] px-4">
-            <SelectValue placeholder="Select a duration" />
+          <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit text-[#9ca3af]">
+            <SelectValue placeholder="Duration" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -71,7 +74,7 @@ export const SearchNFilter = ({
           </SelectContent>
         </Select>
       )}
-      <TableFilter />
+      <TableFilter role={role} />
     </div>
   );
 };

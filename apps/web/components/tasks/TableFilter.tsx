@@ -2,27 +2,41 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MultiSelect } from '../ui/multi-select';
-import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
+import { TaskStatusEnum, TaskPriorityEnum, Roles } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-
-export default function TableFilter() {
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+export default function TableFilter({ role }: { role?: Roles }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const [selectedType, setSelectedType] = useState<string>('Unassigned');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
-  const updateParams = (key: string, values: string[]) => {
+  const updateParams = (key: string, values: string[] | string) => {
     const currentParams = new URLSearchParams(searchParams.toString());
-
-    if (values.length > 0) {
-      currentParams.set(key, values.join(','));
+    if (Array.isArray(values)) {
+      if (values.length > 0) currentParams.set(key, values.join(','));
+      else currentParams.delete(key);
     } else {
-      currentParams.delete(key);
+      if (values && values !== 'All') currentParams.set(key, values);
+      else currentParams.delete(key);
     }
 
     router.push(`${pathname}?${currentParams.toString()}`);
+  };
+
+  // Handle type change
+  const handleTypeChange = (value: string) => {
+    setSelectedType(value);
+    updateParams('type', value);
   };
   // handle Status change
   const handleStatusChange = (value: string[]) => {
@@ -36,23 +50,37 @@ export default function TableFilter() {
     updateParams('priority', value);
   };
   useEffect(() => {
+    const typeParam = searchParams.get('type');
     const statusParam = searchParams.get('status');
     const priorityParam = searchParams.get('priority');
 
-    if (statusParam) {
-      setSelectedStatus(decodeURIComponent(statusParam).split(','));
-    } else {
-      setSelectedStatus([]);
-    }
-
-    if (priorityParam) {
-      setSelectedPriority(decodeURIComponent(priorityParam).split(','));
-    } else {
-      setSelectedPriority([]);
-    }
+    setSelectedType(typeParam || 'unassigned');
+    setSelectedStatus(statusParam ? decodeURIComponent(statusParam).split(',') : []);
+    setSelectedPriority(priorityParam ? decodeURIComponent(priorityParam).split(',') : []);
   }, [searchParams]);
   return (
     <div className="flex gap-4">
+      {/* Type Filter (assigned, unassigned etc.) */}
+      {role !== Roles.CLIENT && (
+        <Select onValueChange={handleTypeChange} value={selectedType}>
+          <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            {['all', 'assigned', 'unassigned', 'my-tasks'].map(value => (
+              <SelectItem key={value} value={value} className="pr-10">
+                {
+                  value
+                    .split('-') // ["my", "tasks"]
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // ["My", "Tasks"]
+                    .join(' ') // "My Tasks"
+                }
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
       {/* Status Filter */}
       <MultiSelect
         options={Object.entries(TaskStatusEnum).map(([, value]) => ({
@@ -61,8 +89,8 @@ export default function TableFilter() {
         }))}
         onValueChange={handleStatusChange}
         value={selectedStatus}
-        placeholder="Select Status"
-        maxCount={2}
+        placeholder="Status"
+        maxCount={1}
       />
       {/*  Priority Filter */}
       <MultiSelect
@@ -72,8 +100,8 @@ export default function TableFilter() {
         }))}
         onValueChange={handlePriorityChange}
         value={selectedPriority}
-        placeholder="Select Priority"
-        maxCount={2}
+        placeholder="Priority"
+        maxCount={1}
       />
     </div>
   );

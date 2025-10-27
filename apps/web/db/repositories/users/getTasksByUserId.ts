@@ -1,7 +1,7 @@
 'use server';
 import prisma from '@/db/db';
 import logger from '@/utils/logger';
-import { Roles } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { getDateFilter } from '@/utils/dateFilter';
 import { DurationEnum } from '@/types';
 import { TaskByUserIdResponse, TaskByUserIdSchema } from '@/utils/validationSchemas';
@@ -19,7 +19,10 @@ export const getTasksByUserId = async (
   pageSize = 10,
   searchTerm = '',
   duration: DurationEnum = DurationEnum.ALL,
-  context: USER_CREATED_TASKS_CONTEXT = USER_CREATED_TASKS_CONTEXT.GENERAL
+  context: USER_CREATED_TASKS_CONTEXT = USER_CREATED_TASKS_CONTEXT.GENERAL,
+
+  status?: TaskStatusEnum | TaskStatusEnum[],
+  priority?: TaskPriorityEnum | TaskPriorityEnum[]
 ): Promise<TaskByUserIdResponse> => {
   try {
     // Check if the role has permission to view tasks
@@ -40,11 +43,38 @@ export const getTasksByUserId = async (
         ? getUserProfileTaskFilter(userId)
         : getGeneralTaskFilter(userId, role);
     const dateFilter = getDateFilter(duration);
+    // Optional filters for status & priority
+    const statusFilter =
+      status && Array.isArray(status) && status.length > 0
+        ? {
+            status: {
+              is: {
+                statusName: {
+                  in: status,
+                },
+              },
+            },
+          }
+        : {};
 
+    const priorityFilter =
+      priority && Array.isArray(priority) && priority.length > 0
+        ? {
+            priority: {
+              is: {
+                priorityName: {
+                  in: priority,
+                },
+              },
+            },
+          }
+        : {};
     const tasks = await prisma.task.findMany({
       where: {
         ...whereCondition,
         ...dateFilter,
+        ...statusFilter,
+        ...priorityFilter,
         OR: searchTerm
           ? [
               { title: { contains: searchTerm, mode: 'insensitive' } },
@@ -112,6 +142,8 @@ export const getTasksByUserId = async (
       where: {
         ...whereCondition,
         ...dateFilter,
+        ...statusFilter,
+        ...priorityFilter,
         OR: searchTerm
           ? [
               { title: { contains: searchTerm, mode: 'insensitive' } },
