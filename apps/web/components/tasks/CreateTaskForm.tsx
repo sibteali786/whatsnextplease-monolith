@@ -137,6 +137,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                     fetchUsers(1);
                   }}
                   defaultValue={field.value || []}
+                  value={field.value}
                   placeholder="Select Skills"
                   maxCount={5}
                 />
@@ -205,6 +206,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               <Select
                 onValueChange={field.onChange}
                 defaultValue={field.value}
+                value={field.value}
                 disabled={taskCategories.length === 0}
               >
                 <FormControl>
