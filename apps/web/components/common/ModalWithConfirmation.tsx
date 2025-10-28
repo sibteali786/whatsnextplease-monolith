@@ -99,7 +99,8 @@ const ModalWithConfirmation: React.FC<ModalWithConfirmationProps> = ({
       {/* Close confirmation alert */}
       <Alert
         title="Are you sure you want to close?"
-        description="Your changes will be saved as a draft and you can continue later."
+        /*     description="Your changes will be saved as a draft and you can continue later." */
+        description="Your changes will be lost."
         confirmAction={confirmClose}
         isOpen={alertOpen}
         onClose={() => setAlertOpen(false)}

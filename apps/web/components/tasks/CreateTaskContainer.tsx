@@ -364,25 +364,10 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
     fetchDependencies();
   }, []);
-  /*   useEffect(() => {
-    console.log('inside usefefect');
-    setPage(1);
-    setUsers([]);
-    setHasMore(true);
-  }, [watchedSkills]); */
+
   useEffect(() => {
     fetchUsers();
   }, [open]);
-  /*   useEffect(() => {
-    if (watchedSkills.length > 0) {
-      setPage(1);
-      setUsers([]);
-      setHasMore(true);
-      fetchUsers(1);
-    } else {
-      fetchUsers();
-    }
-  }, [watchedSkills]); */
 
   const handleModalCloseRequest = () => {
     // Mark as cancelled to preserve form values
@@ -394,12 +379,15 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     const response = await deleteTaskById(taskId);
     if (response.success) {
       toast({
-        title: 'Task deleted Successfully',
-        description: 'Draft task was discarded successfully',
+        title: 'Task deleted',
+        /*  description: 'Draft task was discarded successfully', */
+        description: 'Task was discarded successfully',
         variant: 'success',
         icon: <CheckCircle size={40} />,
       });
       setOpen(false);
+      form.reset(getDefaultValues());
+
       // Keep form values for next time (don't reset formWasCancelled)
     } else {
       toast({
@@ -413,6 +401,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
   const handleResetForm = () => {
     form.reset(getDefaultValues());
+
     setFormWasCancelled(false); // Clear cancel state
     setLastSubmissionWasSuccessful(false); // Clear success state
     setIsFirstOpen(true); // Reset to first open state
