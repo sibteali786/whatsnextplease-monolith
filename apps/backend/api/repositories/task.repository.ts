@@ -43,7 +43,7 @@ export class TaskRepository {
       categoryId,
     } = filters;
 
-    const { cursor, pageSize, orderBy = { id: 'asc' } } = options;
+    const { cursor, pageSize, orderBy = { createdAt: 'asc' } } = options;
     // Build comprehensive where clause
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
@@ -437,7 +437,7 @@ export class TaskRepository {
    */
   async findTaskIds(
     filters: TaskFilters,
-    orderBy: Prisma.TaskOrderByWithRelationInput = { id: 'asc' }
+    orderBy: Prisma.TaskOrderByWithRelationInput = { createdAt: 'asc' }
   ) {
     const {
       whereCondition = {},
