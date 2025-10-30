@@ -2,8 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SearchNFilter } from '../common/SearchNFilter';
 import { DurationEnum, DurationEnumList } from '@/types';
-import { CreatorType, Roles, TaskStatusEnum } from '@prisma/client';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { CreatorType, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { UserTasksTable } from '../users/UserTaskTable';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +20,7 @@ import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSearchParams } from 'next/navigation';
+import { DynamicBreadcrumb } from '../skills/DynamicBreadcrumb';
 
 export const TaskSuperVisorList = ({
   userId,
@@ -42,9 +42,7 @@ export const TaskSuperVisorList = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [totalCount, setTotalCount] = useState<number | undefined>(0);
   const [pageIndex, setPageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'assigned' | 'unassigned' | 'my-tasks'>(
-    'unassigned'
-  );
+
   const [error, setError] = useState<string | null>(null);
   const { toast, dismiss } = useToast();
   const { setCreatedTask } = useCreatedTask();
@@ -52,6 +50,12 @@ export const TaskSuperVisorList = ({
   const [hasTaskCategories, setHasTaskCategories] = useState(false);
   const [checkingPrerequisites, setCheckingPrerequisites] = useState(true);
   const statusFilter = searchParams.get('status');
+  const priorityFilter = searchParams.get('priority');
+  const typeFilter: 'all' | 'assigned' | 'unassigned' | 'my-tasks' = searchParams.get('type') as
+    | 'all'
+    | 'assigned'
+    | 'unassigned'
+    | 'my-tasks';
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term);
     setDuration(duration);
@@ -111,7 +115,9 @@ export const TaskSuperVisorList = ({
     setLoading(true);
     setError(null);
     try {
-      const statusArray = statusFilter?.split(',') || []; // Split the comma-separated status values
+      // Split the comma-separated status values
+      const statusArray = statusFilter?.split(',') || [];
+      const priorityArray = priorityFilter?.split(',') || [];
 
       // If there are status values, map them to TaskStatusEnum
       const normalizedStatus = statusArray
@@ -119,17 +125,33 @@ export const TaskSuperVisorList = ({
             .map((status: string) => TaskStatusEnum[status as keyof typeof TaskStatusEnum] || null)
             .filter(status => status !== null)
         : [];
+      const normalizedPriority = priorityArray
+        ? priorityArray
+            .map(
+              (priority: string) =>
+                TaskPriorityEnum[priority as keyof typeof TaskPriorityEnum] || null
+            )
+            .filter(priority => priority !== null)
+        : [];
       const response = await tasksByType(
-        activeTab,
-        role,
+        typeFilter ?? 'unassigned',
+
         cursor,
         pageSize,
         searchTerm,
         duration,
         userId,
-        normalizedStatus
+        normalizedStatus,
+        normalizedPriority
       );
-      const responseIds = await taskIdsByType(activeTab, role, searchTerm, duration);
+      const responseIds = await taskIdsByType(
+        typeFilter ?? 'unassigned',
+        searchTerm,
+        duration,
+        userId,
+        normalizedStatus,
+        normalizedPriority
+      );
 
       if (response && responseIds && response.success && responseIds.success) {
         setData(response.tasks);
@@ -144,18 +166,28 @@ export const TaskSuperVisorList = ({
       if (error instanceof Error) {
         toast({
           variant: 'destructive',
-          title: `Failed to fetch ${activeTab} tasks`,
+          title: `Failed to fetch ${typeFilter ?? 'unassigned'} tasks`,
           description: error.message || 'Something went wrong!',
           icon: <CircleX size={40} />,
         });
       }
     }
     setLoading(false);
-  }, [activeTab, searchTerm, duration, pageSize, cursor, role, toast, statusFilter]);
+  }, [
+    searchTerm,
+    duration,
+    pageSize,
+    cursor,
+    role,
+    toast,
+    statusFilter,
+    priorityFilter,
+    typeFilter,
+  ]);
 
   useEffect(() => {
     fetchTasks();
-  }, [activeTab, searchTerm, duration, pageSize, cursor, fetchTasks]);
+  }, [searchTerm, duration, pageSize, cursor, fetchTasks]);
   useEffect(() => {
     const checkPrerequisites = async () => {
       setCheckingPrerequisites(true);
@@ -278,7 +310,13 @@ export const TaskSuperVisorList = ({
         </Alert>
       )}
       <div className="flex justify-between">
-        <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} />
+        <DynamicBreadcrumb
+          links={[
+            { label: 'Task Offerings' },
+            // ...(selectedCategory ? [{ label: selectedCategory.categoryName }] : []),
+          ]}
+        />
+
         <Button
           className="flex gap-2 font-bold text-base"
           onClick={() => createTaskHandler()}
@@ -288,39 +326,8 @@ export const TaskSuperVisorList = ({
         </Button>
         <CreateTaskContainer open={open} setOpen={setOpen} fetchTasks={fetchTasks} />
       </div>
-
-      <Tabs
-        defaultValue={'unassigned'}
-        className="w-full"
-        onValueChange={value => {
-          setActiveTab(value as 'all' | 'assigned' | 'unassigned' | 'my-tasks');
-          setCursor(null);
-        }}
-      >
-        <TabsList className="flex gap-4 bg-transparent items-start justify-start">
-          <TabsTrigger value="all" className="text-sm">
-            All
-          </TabsTrigger>
-          <TabsTrigger value="unassigned" className="text-sm">
-            Unassigned
-          </TabsTrigger>
-          <TabsTrigger value="assigned" className="text-sm">
-            Assigned
-          </TabsTrigger>
-          {(role === Roles.TASK_AGENT || role === Roles.TASK_SUPERVISOR) && (
-            <TabsTrigger value="my-tasks" className="text-sm">
-              My Tasks
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        <TabsContent value="all">{renderContent()}</TabsContent>
-
-        <TabsContent value="unassigned">{renderContent()}</TabsContent>
-
-        <TabsContent value="assigned">{renderContent()}</TabsContent>
-        <TabsContent value="my-tasks">{renderContent()}</TabsContent>
-      </Tabs>
+      <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} role={role} />
+      {renderContent()}
     </div>
   );
 };

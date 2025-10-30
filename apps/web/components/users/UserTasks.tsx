@@ -5,7 +5,7 @@ import { UserTasksTable } from './UserTaskTable';
 import { getTasksByUserId } from '@/db/repositories/users/getTasksByUserId';
 import { getTaskIdsByUserId } from '@/utils/userTools';
 import { DurationEnum, DurationEnumList } from '@/types';
-import { CreatorType, Roles } from '@prisma/client';
+import { CreatorType, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { Button } from '../ui/button';
 import { CircleX, Loader2, Plus } from 'lucide-react';
 import { createDraftTask } from '@/db/repositories/tasks/createDraftTask';
@@ -17,6 +17,8 @@ import { TaskTable } from '@/utils/validationSchemas';
 import { State } from '../DataState';
 import { CallToAction } from '../CallToAction';
 import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
+import { useSearchParams } from 'next/navigation';
+import { DynamicBreadcrumb } from '../skills/DynamicBreadcrumb';
 
 export const UserTasks = ({
   userId,
@@ -31,6 +33,8 @@ export const UserTasks = ({
   onTaskUpdate?: () => Promise<void>;
   context: USER_CREATED_TASKS_CONTEXT;
 }) => {
+  const searchParams = useSearchParams();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
   const handleSearch = (term: string, duration: DurationEnum) => {
@@ -80,10 +84,30 @@ export const UserTasks = ({
   const [pageIndex, setPageIndex] = useState(0);
   const [taskIDs, setTaskIDs] = useState<string[] | null>([]);
   const [error, setError] = useState<string | null>(null);
+  const statusFilter = searchParams.get('status');
+  const priorityFilter = searchParams.get('priority');
 
   const fetchTasks = async () => {
     setLoading(true);
     try {
+      // Split the comma-separated status values
+      const statusArray = statusFilter?.split(',') || [];
+      const priorityArray = priorityFilter?.split(',') || [];
+
+      // If there are status values, map them to TaskStatusEnum
+      const normalizedStatus = statusArray
+        ? statusArray
+            .map((status: string) => TaskStatusEnum[status as keyof typeof TaskStatusEnum] || null)
+            .filter(status => status !== null)
+        : [];
+      const normalizedPriority = priorityArray
+        ? priorityArray
+            .map(
+              (priority: string) =>
+                TaskPriorityEnum[priority as keyof typeof TaskPriorityEnum] || null
+            )
+            .filter(priority => priority !== null)
+        : [];
       const response = await getTasksByUserId(
         userId,
         role,
@@ -91,7 +115,9 @@ export const UserTasks = ({
         pageSize,
         searchTerm,
         duration,
-        context
+        context,
+        normalizedStatus,
+        normalizedPriority
       );
       const { taskIds, success } = await getTaskIdsByUserId(userId, searchTerm, duration, role);
 
@@ -112,17 +138,23 @@ export const UserTasks = ({
 
   useEffect(() => {
     fetchTasks();
-  }, [cursor, pageSize, searchTerm, duration]);
+  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter]);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between">
-        <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} />
+        <DynamicBreadcrumb
+          links={[
+            { label: 'Task Offerings' },
+            // ...(selectedCategory ? [{ label: selectedCategory.categoryName }] : []),
+          ]}
+        />
         <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
           <Plus className="h-5 w-5" /> Create New Task
         </Button>
         <CreateTaskContainer open={open} setOpen={setOpen} />
       </div>
+      <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} role={role} />
 
       {loading ? (
         <div className="flex justify-center items-center min-h-[300px]">

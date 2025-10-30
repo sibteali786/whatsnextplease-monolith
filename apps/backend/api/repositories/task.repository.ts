@@ -7,7 +7,7 @@ export interface TaskFilters {
   dateFilter?: Prisma.TaskWhereInput;
   searchTerm?: string;
   status?: TaskStatusEnum | TaskStatusEnum[];
-  priority?: TaskPriorityEnum;
+  priority?: TaskPriorityEnum | TaskPriorityEnum[];
   assignedToId?: string | null | { not: null };
   categoryId?: string;
 }
@@ -43,13 +43,16 @@ export class TaskRepository {
       categoryId,
     } = filters;
 
-    const { cursor, pageSize, orderBy = { id: 'asc' } } = options;
+    const { cursor, pageSize, orderBy = { createdAt: 'asc' } } = options;
     // Build comprehensive where clause
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
       ...dateFilter,
       ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
-      ...(priority && { priority: { priorityName: priority } }),
+
+      ...(priority && {
+        priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
+      }),
       ...(assignedToId !== undefined && { assignedToId: assignedToId }),
       ...(categoryId && { categoryId }),
       ...(searchTerm && {
@@ -130,7 +133,9 @@ export class TaskRepository {
       ...whereCondition,
       ...dateFilter,
       ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
-      ...(priority && { priority: { priorityName: priority } }),
+      ...(priority && {
+        priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
+      }),
       ...(assignedToId !== undefined && { assignedToId }),
       ...(categoryId && { categoryId }),
       ...(searchTerm && {
@@ -432,7 +437,7 @@ export class TaskRepository {
    */
   async findTaskIds(
     filters: TaskFilters,
-    orderBy: Prisma.TaskOrderByWithRelationInput = { id: 'asc' }
+    orderBy: Prisma.TaskOrderByWithRelationInput = { createdAt: 'asc' }
   ) {
     const {
       whereCondition = {},
@@ -448,7 +453,9 @@ export class TaskRepository {
       ...whereCondition,
       ...dateFilter,
       ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
-      ...(priority && { priority: { priorityName: priority } }),
+      ...(priority && {
+        priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
+      }), // Handle both single and array status
       ...(assignedToId !== undefined && { assignedToId }),
       ...(categoryId && { categoryId }),
       ...(searchTerm && {
