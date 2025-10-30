@@ -135,7 +135,17 @@ export class TaskController {
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
-
+      // FIXED: Handle assignedToId properly
+      let processedAssignedToId;
+      if (assignedToId === 'null') {
+        processedAssignedToId = null; // Unassigned tasks
+      } else if (assignedToId === 'not-null') {
+        processedAssignedToId = { not: null }; // Assigned tasks
+      } else if (assignedToId && assignedToId !== 'undefined') {
+        processedAssignedToId = assignedToId; // Specific user ID
+      } else {
+        processedAssignedToId = undefined; // All tasks (no filter)
+      }
       const result = await this.taskService.getTaskIds({
         userId,
         role: req.user.role,
@@ -143,7 +153,7 @@ export class TaskController {
         duration,
         status,
         priority,
-        assignedToId: assignedToId === 'null' ? null : assignedToId,
+        assignedToId: processedAssignedToId,
         categoryId,
       });
 

@@ -42,15 +42,7 @@ const RecentUnassignedTasksPage = () => {
         const user = await getCurrentUser();
         if (user?.role?.name === Roles.TASK_SUPERVISOR) {
           // UPDATED: Use backend API instead of Next.js API route
-          const response = await tasksByType(
-            activeTab,
-            user?.role?.name,
-            null,
-            5,
-            '',
-            DurationEnum.ALL,
-            user?.id
-          );
+          const response = await tasksByType(activeTab, null, 5, '', DurationEnum.ALL, user?.id);
 
           if (response && response.success) {
             setTasks(response.tasks);

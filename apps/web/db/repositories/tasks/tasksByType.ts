@@ -2,7 +2,7 @@
 import { DurationEnum } from '@/types';
 import { handleError } from '@/utils/errorHandler';
 import { getTasksOutputSchema } from '@/utils/validationSchemas';
-import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { z } from 'zod';
 import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 
@@ -10,7 +10,6 @@ type GetTaskSchema = z.infer<typeof getTasksOutputSchema>;
 
 export const tasksByType = async (
   type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
-  role: Roles,
   cursor: string | null,
   pageSize: number,
   searchTerm: string,
