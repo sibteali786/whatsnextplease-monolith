@@ -65,7 +65,7 @@ const editTaskSchema = z.object({
   statusName: z.nativeEnum(TaskStatusEnum),
   taskCategoryName: z.string().min(1, 'Task Category is required'),
   assignedToId: z.string().optional(),
-  skills: z.array(z.string()).nonempty('Please select at least one skill'),
+  skills: z.array(z.string()).optional(),
   timeForTask: z
     .string()
     .min(1, 'Time for Task is required')
@@ -188,7 +188,6 @@ export default function EditTaskDialog({
   });
 
   const selectedAssigneeId = form.watch('assignedToId');
-
   /**
    * Function to fetch current task counts for users
    */
@@ -375,7 +374,6 @@ export default function EditTaskDialog({
         // Fetch task counts for users and update state
         const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
         if (pageToFetch) {
-          console.log('insdie sinde fetchUsers - pageToFetch is set');
           setUsers([...usersWithTaskCounts]);
         } else {
           setUsers(prevUsers => [...prevUsers, ...usersWithTaskCounts]);
@@ -581,6 +579,7 @@ export default function EditTaskDialog({
       };
 
       const response = await updateTaskById(formattedData);
+
       if (response.success) {
         toast({
           title: 'Task Updated Successfully',

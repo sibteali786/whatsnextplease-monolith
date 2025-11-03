@@ -26,7 +26,7 @@ export const createTaskSchema = z.object({
     .min(1, 'Task Name is required')
     .max(100, 'Task Name must not exceed 100 characters'),
   description: z.string().min(1, 'Description is required'),
-  skills: z.array(z.string()).nonempty('Please select at least one skill'),
+  skills: z.array(z.string()).optional(),
   statusName: z.nativeEnum(TaskStatusEnum).default(TaskStatusEnum.NEW),
   priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.NORMAL),
   taskCategoryName: z.string().default('General Tasks'),
@@ -498,7 +498,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     return (
       values.title.trim() !== '' ||
       values.description.trim() !== '' ||
-      values.skills.length > 0 ||
+      (values.skills && values.skills.length > 0) ||
       values.assignedToId !== '' ||
       values.timeForTask !== '1d' ||
       values.dueDate !== undefined
