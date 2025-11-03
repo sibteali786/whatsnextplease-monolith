@@ -334,6 +334,11 @@ export const generateUserTaskColumns = (
         const skillsSchema = z.array(z.string());
         type Skills = z.infer<typeof skillsSchema>;
         const skills: Skills = row.getValue('taskSkills');
+
+        if (!skills || skills.length === 0) {
+          return <span className="text-muted-foreground italic">No skills</span>;
+        }
+
         return (
           <div className={`flex ${skills.length > 2 ? 'flex-wrap' : ''} gap-2 items-center`}>
             {skills.map((skill, index) => (
