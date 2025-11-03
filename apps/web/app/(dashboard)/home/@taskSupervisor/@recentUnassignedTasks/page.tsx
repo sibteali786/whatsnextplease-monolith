@@ -139,9 +139,7 @@ const RecentUnassignedTasksPage = () => {
                         className="hover:bg-muted/30 cursor-pointer transition-colors"
                         onClick={() => handleRowClick(task.id)}
                       >
-                        <TableCell className="font-medium">
-                          {task.taskCategory?.categoryName || 'No Category'}
-                        </TableCell>
+                        <TableCell className="font-medium">{task.description}</TableCell>
                         <TableCell>
                           <Badge
                             className={`${taskPriorityColors[task.priority.priorityName]} py-1.5 px-2.5 text-xs font-medium`}

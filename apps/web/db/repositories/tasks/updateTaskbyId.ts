@@ -433,12 +433,11 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       },
     });
 
-    // Update task skills if provided
-    if (skills && skills.length > 0) {
-      // Remove existing taskSkill entries
-      await prisma.taskSkill.deleteMany({ where: { taskId: id } });
+    // Always remove existing taskSkill entries first
+    await prisma.taskSkill.deleteMany({ where: { taskId: id } });
 
-      // Insert new taskSkill entries
+    // Only re-add if there are new skills
+    if (skills && skills.length > 0) {
       const taskSkillData = skillIds.map(skillId => ({
         taskId: id,
         skillId: skillId,
