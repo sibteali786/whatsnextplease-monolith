@@ -51,10 +51,11 @@ export function TaskAgentTable({ fetchData, agentIds, status, searchTerm }: Task
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      const response = await fetchData(cursor, pageSize);
+      const cursorToUse = pageIndex > 0 ? cursor : null;
+      const response = await fetchData(cursorToUse, pageSize);
       setData(response.taskAgents);
       setTotalCount(response.totalCount);
-      setCursor(response.nextCursor ?? null);
+      if (response.nextCursor) setCursor(response.nextCursor);
     } catch (error) {
       console.error('Failed to fetch task agents:', error);
     }
@@ -68,7 +69,7 @@ export function TaskAgentTable({ fetchData, agentIds, status, searchTerm }: Task
   const taskAgentColumns = createTaskAgentColumns(handleUserClick);
   useEffect(() => {
     fetchAgents();
-  }, [cursor, pageSize, status, searchTerm]);
+  }, [pageIndex, pageSize, status, searchTerm]);
 
   // Calculate total number of pages
   const totalPages = Math.ceil(totalCount / pageSize);

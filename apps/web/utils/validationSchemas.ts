@@ -279,6 +279,14 @@ export const TaskSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   createdByUserId: z.string().nullable().optional(),
+  createdByClient: z
+    .object({
+      id: z.string(),
+      companyName: z.string().nullable().optional(),
+      contactName: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   createdByClientId: z.string().nullable().optional(),
   assignedToId: z.string().nullable().optional(),
   taskFiles: z.array(TaskFileSchema).optional().nullable(),
