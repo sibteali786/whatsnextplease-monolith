@@ -98,6 +98,10 @@ export class TaskRepository {
             },
           },
         },
+        createdByClient: {
+          select: { id: true, companyName: true, contactName: true },
+        },
+        createdByClientId: true,
         createdAt: true,
         updatedAt: true,
       },

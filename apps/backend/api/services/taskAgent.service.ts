@@ -80,9 +80,7 @@ export class TaskAgentService {
             name: Roles.TASK_AGENT,
           },
         },
-        orderBy: {
-          id: 'asc',
-        },
+        orderBy: [{ firstName: 'asc' }, { id: 'asc' }],
         select: {
           id: true,
         },
@@ -153,7 +151,7 @@ export class TaskAgentService {
       const paginationOptions: Prisma.UserFindManyArgs = {
         where: baseWhereCondition,
         select: { id: true },
-        orderBy: { firstName: 'asc' },
+        orderBy: [{ firstName: 'asc' }, { id: 'asc' }],
         take: pageSize + 1, // Take one extra to determine if there are more pages
       };
 
@@ -167,7 +165,7 @@ export class TaskAgentService {
       // Determine if there are more pages
       const hasMore = paginatedUsers.length > pageSize;
       const userIds = paginatedUsers.slice(0, pageSize).map(user => user.id);
-      const nextCursor = hasMore ? paginatedUsers[pageSize - 1]?.id || null : null;
+      const nextCursor = hasMore ? paginatedUsers[pageSize]?.id || null : null;
 
       if (userIds.length === 0) {
         return {
@@ -189,7 +187,7 @@ export class TaskAgentService {
           lastName: true,
           designation: true,
         },
-        orderBy: { firstName: 'asc' },
+        orderBy: [{ firstName: 'asc' }, { id: 'asc' }],
       });
 
       // Get task counts for each user individually - this avoids the ambiguous column issue
