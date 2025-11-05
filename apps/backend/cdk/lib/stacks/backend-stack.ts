@@ -243,6 +243,16 @@ export class WnpBackendStack extends cdk.Stack {
       'NextPublicAppUrlSecret',
       `next-public-app-url-${props.stage}`
     );
+    const chatAppApiUrlSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'ChatAppApiUrlSecret',
+      `chat-app-api-url`
+    );
+    const allowedOriginsChatSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'AllowedOriginsChatSecret',
+      `allowed-origins-chat`
+    );
 
     // ========================================
     // FARGATE SERVICE SETUP
@@ -336,6 +346,8 @@ export class WnpBackendStack extends cdk.Stack {
         secrets: {
           DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
           NEXT_PUBLIC_APP_URL: ecs.Secret.fromSecretsManager(nextPublicAppUrlSecret),
+          ALLOWED_ORIGIS: ecs.Secret.fromSecretsManager(allowedOriginsChatSecret),
+          CHAT_APP_API_URL: ecs.Secret.fromSecretsManager(chatAppApiUrlSecret),
         },
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'wnp-backend',

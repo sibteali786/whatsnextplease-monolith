@@ -28,7 +28,12 @@ export const getCurrentUser = cache(async () => {
   return user;
 });
 
-export const signout = () => {
-  cookies().delete(COOKIE_NAME);
+export const signout = async () => {
+  const cookieStore = cookies();
+
+  [COOKIE_NAME, 'refreshToken', 'token', 'pardy-token'].forEach(name => {
+    cookieStore.delete({ name });
+  });
+
   redirect('/signin');
 };

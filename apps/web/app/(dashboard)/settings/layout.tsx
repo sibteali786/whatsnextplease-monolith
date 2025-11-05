@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { User2, Bell, CreditCard, List, Shield } from 'lucide-react';
+import { User2, Bell, CreditCard, List, Shield, Workflow } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { LinkButton } from '@/components/ui/LinkButton';
 
@@ -22,7 +22,8 @@ const menuItems = [
   { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
   { icon: CreditCard, label: 'Billing', href: '/settings/billing' },
   { icon: List, label: 'Picklist', href: '/settings/picklists' },
-  { icon: Shield, label: 'Permissions', href: '/settings/permissions' }, // New permissions menu item
+  { icon: Shield, label: 'Permissions', href: '/settings/permissions' },
+  { icon: Workflow, label: 'Integrations', href: '/settings/integrations' },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
