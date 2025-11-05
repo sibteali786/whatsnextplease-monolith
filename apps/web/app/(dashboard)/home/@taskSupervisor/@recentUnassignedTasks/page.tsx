@@ -129,6 +129,7 @@ const RecentUnassignedTasksPage = () => {
                       <TableHead className="font-medium">Task Details</TableHead>
                       <TableHead className="font-medium">Priority</TableHead>
                       <TableHead className="font-medium">Status</TableHead>
+                      <TableHead className="font-medium">Customer</TableHead>
                       <TableHead className="text-right font-medium">Due Date</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -153,6 +154,11 @@ const RecentUnassignedTasksPage = () => {
                           >
                             {transformEnumValue(task.status.statusName)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {task.createdByClient?.companyName ||
+                            task.createdByClient?.contactName ||
+                            'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
                           {task.dueDate

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const whereClause = {
       role: {
         name: {
-          in: [Roles.TASK_AGENT, Roles.TASK_SUPERVISOR],
+          in: [Roles.TASK_AGENT, Roles.TASK_SUPERVISOR, Roles.SUPER_USER],
         },
       },
       ...(skills.length > 0 && {

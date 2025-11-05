@@ -351,6 +351,28 @@ export const generateUserTaskColumns = (
       },
     },
     {
+      id: 'customer',
+      header: ({ column }: { column: Column<TaskTable, unknown> }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Customer
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const client = row.original.createdByClient;
+        const companyName = client?.companyName?.trim();
+        const contactName = client?.contactName?.trim();
+
+        const displayName = companyName || contactName || 'N/A'; // 👈 recommended fallback
+
+        return <span>{displayName}</span>;
+      },
+    },
+
+    {
       accessorKey: 'assignedTo',
       header: 'Assignee',
       cell: ({ row }) => {
