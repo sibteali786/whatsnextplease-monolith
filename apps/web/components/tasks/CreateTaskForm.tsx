@@ -2,8 +2,8 @@
 
 import { UseFormReturn } from 'react-hook-form';
 import { format } from 'date-fns';
-import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
-import { transformEnumValue } from '@/utils/utils';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { getCookie, transformEnumValue } from '@/utils/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,11 +30,13 @@ import { Calendar } from '@/components/ui/calendar';
 import FileUploadArea from '@/components/common/FileUploadArea';
 import { FileWithMetadataFE } from '@/utils/validationSchemas';
 import { z } from 'zod';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createTaskSchema, UserWithTaskCount } from './CreateTaskContainer';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
+import { AddSkillDialog } from '../skills/AddSkillDialog';
+import { COOKIE_NAME } from '@/utils/constant';
 
 interface CreateTaskFormProps {
   form: UseFormReturn<z.infer<typeof createTaskSchema>>;
@@ -44,8 +46,15 @@ interface CreateTaskFormProps {
   canAssignTasks?: boolean;
   taskCategories: { id: string; categoryName: string }[];
   fetchUsers: (pageToFetch?: number) => void;
+  reload?: boolean;
+  setReload?: React.Dispatch<React.SetStateAction<boolean>>;
+  role?: Roles;
 }
-
+interface SkillCategory {
+  id: string;
+  categoryName: string;
+  skillsDescription: string;
+}
 export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   form,
   skills,
@@ -53,8 +62,16 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   canAssignTasks = false,
   taskCategories,
   fetchUsers,
+  reload,
+  setReload,
+  role,
 }) => {
+  /*   const user = await getCurrentUser(); */
+
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
+  const [skillsCategory, setSkillsCategory] = useState<SkillCategory[]>([]);
+  const [open, setOpen] = useState(false);
+
   const selectedAssigneeId = form.watch('assignedToId');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const groupSkillsByCategory = (
@@ -91,6 +108,31 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
     }
   };
 
+  const fetchSkills = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/search`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const skillsData = await response.json();
+        setSkillsCategory(skillsData);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
+  };
+
+  const onAddSkill = () => {
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    fetchSkills();
+  }, [reload]);
   return (
     <Form {...form}>
       <div className="space-y-6 flex-1 overflow-y-auto px-6 py-6">
@@ -140,11 +182,21 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   value={field.value}
                   placeholder="Select Skills"
                   maxCount={5}
+                  onAddSkill={onAddSkill}
+                  taskOffering={true}
+                  role={role}
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
+        />
+        <AddSkillDialog
+          skills={skillsCategory}
+          open={open}
+          setOpen={setOpen}
+          taskOffering={true}
+          setReload={setReload}
         />
         {/* Status */}
         <FormField

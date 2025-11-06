@@ -56,6 +56,7 @@ import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClass
 import CommentSection from '../comments/CommentSection';
 import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 import { taskApiClient } from '@/utils/taskApi';
+import { AddSkillDialog } from '../skills/AddSkillDialog';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -102,7 +103,11 @@ const editTaskSchema = z.object({
     ),
   dueDate: z.date().nullable(),
 });
-
+interface SkillCategory {
+  id: string;
+  categoryName: string;
+  skillsDescription: string;
+}
 interface TaskMetadata {
   priorities: Array<{
     id: string;
@@ -151,6 +156,8 @@ export default function EditTaskDialog({
   const [page, setPage] = useState(1);
   const hasFetched = useRef(false);
   const [firstFetched, setFirstFetched] = useState(false);
+  const [openSkillDialog, setOpenSkillDialog] = useState(false);
+  const [skillsCategory, setSkillsCategory] = useState<SkillCategory[]>([]);
 
   const [users, setUsers] = useState<UserWithTaskCount[]>([]);
   const [files, setFiles] = useState<TaskFile[]>([]);
@@ -162,7 +169,7 @@ export default function EditTaskDialog({
   const [metadata, setMetadata] = useState<TaskMetadata | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [metadataError, setMetadataError] = useState<string | null>(null);
-
+  const [reload, setReload] = useState(false);
   // Permission checks based on role
   const canAssignTasks = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
   const canEditStatus = role !== Roles.CLIENT;
@@ -449,20 +456,6 @@ export default function EditTaskDialog({
       hasFetched.current = false;
     }
   }, [open]);
-  /*   useEffect(() => {
-    if (watchedSkills && watchedSkills.length > 0) {
-    
-      hasFetched.current = false;
-    }
-  }, [watchedSkills]); */
-  /*   useEffect(() => {
-
-    fetchUsers();
-  }, [open]); */
-
-  /*   useEffect(() => {
-    fetchUsers();
-  }, [watchedSkills]); */
 
   const [, startTransition] = useTransition();
 
@@ -651,568 +644,604 @@ export default function EditTaskDialog({
       console.error('Failed to refresh task data:', error);
     }
   };
+  const fetchSkillsCategory = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/search`, {
+        headers: {
+          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const skillsData = await response.json();
+        setSkillsCategory(skillsData);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
+  };
+  const onAddSkill = () => {
+    setOpenSkillDialog(true);
+  };
+  useEffect(() => {
+    fetchSkillsCategory();
+    fetchSkills();
+  }, [reload]);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[700px] max-h-[98%] overflow-hidden px-0">
-        <DialogHeader className="px-6 flex flex-row gap-2 items-center">
-          <DialogTitle>Edit Task</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[700px] max-h-[98%] overflow-hidden px-0">
+          <DialogHeader className="px-6 flex flex-row gap-2 items-center">
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 max-h-[70vh] overflow-auto px-6"
-          >
-            {/* Title - Always editable */}
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Task Title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4 max-h-[70vh] overflow-auto px-6"
+            >
+              {/* Title - Always editable */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Task Title" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Description - Always editable */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Task Description" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {/* Description - Always editable */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Task Description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Skills - Always editable (with warning for clients) */}
-            <FormField
-              control={form.control}
-              name="skills"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Skills</FormLabel>
-                  <FormControl>
-                    <MultiSelect
-                      options={groupSkillsByCategory(skills)}
-                      onValueChange={value => {
-                        field.onChange(value); // still update the form value
-                        hasFetched.current = false;
-                        fetchUsers(1);
+              {/* Skills - Always editable (with warning for clients) */}
+              <FormField
+                control={form.control}
+                name="skills"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Skills</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={groupSkillsByCategory(skills)}
+                        onValueChange={value => {
+                          field.onChange(value); // still update the form value
+                          hasFetched.current = false;
+                          fetchUsers(1);
 
-                        /*     setPage(1);
+                          /*     setPage(1);
                     setUsers([]);
                     setHasMore(true); */
-                      }}
-                      defaultValue={field.value || []}
-                      placeholder="Select Skills"
-                      maxCount={5}
-                    />
-                  </FormControl>
-                  {role === Roles.CLIENT && (
-                    <div className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-2">
-                      <Info className="h-3 w-3 inline mr-1" />
-                      Please ensure you select the correct skills. Task Supervisors may adjust if
-                      needed.
-                    </div>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Task Category - Conditional editing */}
-            {canEditCategory ? (
-              <FormField
-                control={form.control}
-                name="taskCategoryName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Task Category</FormLabel>
-                    <FormControl>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={taskCategories.length === 0}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {taskCategories.length > 0 ? (
-                            taskCategories.map(category => (
-                              <SelectItem key={category.id} value={category.categoryName}>
-                                {category.categoryName}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-categories" disabled>
-                              No categories available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
+                        }}
+                        defaultValue={field.value || []}
+                        placeholder="Select Skills"
+                        maxCount={5}
+                        onAddSkill={onAddSkill}
+                        taskOffering={true}
+                        role={role}
+                      />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormItem>
-                <FormLabel>Task Category</FormLabel>
-                <div className="border rounded-md p-3 bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      Category: <strong>{task.taskCategory.categoryName}</strong>
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Task category cannot be changed after creation.
-                  </p>
-                </div>
-              </FormItem>
-            )}
-
-            {/* Priority - Conditional editing */}
-            {canEditPriority ? (
-              <FormField
-                control={form.control}
-                name="priorityName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {metadataLoading ? (
-                            <SelectItem value="loading" disabled>
-                              Loading...
-                            </SelectItem>
-                          ) : metadataError ? (
-                            <SelectItem value="error" disabled>
-                              Error loading priorities
-                            </SelectItem>
-                          ) : (
-                            metadata?.priorities.map(priority => (
-                              <SelectItem key={priority.id} value={priority.name}>
-                                <div className="flex items-center gap-2">
-                                  <Badge className={taskPriorityColors[priority.name]}>
-                                    {priority.displayName}
-                                  </Badge>
-                                  {priority.isLegacy && (
-                                    <Badge variant="outline" className="text-xs">
-                                      Legacy
-                                    </Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormItem>
-                <FormLabel>Priority</FormLabel>
-                <div className="border rounded-md p-3 bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <Badge className={taskPriorityColors[task.priority.priorityName]}>
-                      {transformEnumValue(task.priority.priorityName)}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Task priority is managed by Task Supervisors.
-                  </p>
-                </div>
-              </FormItem>
-            )}
-
-            {/* Status - Conditional editing */}
-            {canEditStatus ? (
-              <FormField
-                control={form.control}
-                name="statusName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {metadataLoading ? (
-                            <SelectItem value="loading" disabled>
-                              Loading...
-                            </SelectItem>
-                          ) : metadataError ? (
-                            <SelectItem value="error" disabled>
-                              Error loading statuses
-                            </SelectItem>
-                          ) : (
-                            metadata?.statuses.map(status => (
-                              <SelectItem key={status.id} value={status.name}>
-                                <Badge className={taskStatusColors[status.name]}>
-                                  {status.displayName}
-                                </Badge>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <div className="border rounded-md p-3 bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <Badge className={taskStatusColors[task.status.statusName]}>
-                      {transformEnumValue(task.status.statusName)}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Task status is updated by the assigned Task Agent.
-                  </p>
-                </div>
-              </FormItem>
-            )}
-
-            {/* Assignment - Conditional editing with workload display */}
-            {canAssignTasks ? (
-              <FormField
-                control={form.control}
-                name="assignedToId"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <FormLabel>Assigned User</FormLabel>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Info className="h-3 w-3" />
-                          <span>Numbers show current workload</span>
-                        </div>
+                    {role === Roles.CLIENT && (
+                      <div className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-2">
+                        <Info className="h-3 w-3 inline mr-1" />
+                        Please ensure you select the correct skills. Task Supervisors may adjust if
+                        needed.
                       </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
+              {/* Task Category - Conditional editing */}
+              {canEditCategory ? (
+                <FormField
+                  control={form.control}
+                  name="taskCategoryName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Task Category</FormLabel>
                       <FormControl>
                         <Select
-                          onValueChange={value => field.onChange(value === 'none' ? '' : value)}
-                          value={field.value || 'none'}
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={taskCategories.length === 0}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select Assignee" />
+                            <SelectValue placeholder="Select a category" />
                           </SelectTrigger>
                           <SelectContent>
-                            <div
-                              ref={dropdownRef}
-                              onScroll={handleScroll}
-                              style={{ maxHeight: '170px', overflowY: 'auto' }}
-                            >
-                              <SelectItem value="none">
-                                <div className="flex items-center gap-2">
-                                  <UserX className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-muted-foreground">No Assignee</span>
-                                </div>
+                            {taskCategories.length > 0 ? (
+                              taskCategories.map(category => (
+                                <SelectItem key={category.id} value={category.categoryName}>
+                                  {category.categoryName}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-categories" disabled>
+                                No categories available
                               </SelectItem>
-                              {users.map(user => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  <div className="flex items-center justify-between w-full">
-                                    <div className="flex items-center gap-2">
-                                      <Avatar className="h-6 w-6 rounded-lg">
-                                        <AvatarImage
-                                          src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                          alt={user.firstName ?? 'avatar'}
-                                          className="rounded-full"
-                                        />
-                                        <AvatarFallback className="rounded-full text-xs">
-                                          {user.firstName
-                                            ? user.firstName.substring(0, 2).toUpperCase()
-                                            : 'CN'}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
-                                    </div>
-                                    {user.currentTasksCount !== undefined && (
-                                      <Badge
-                                        variant={
-                                          user.currentTasksCount > 8 ? 'destructive' : 'secondary'
-                                        }
-                                        className="text-xs ml-2"
-                                        title={`Current workload: ${user.currentTasksCount} tasks`}
-                                      >
-                                        {user.currentTasksCount} total
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormItem>
+                  <FormLabel>Task Category</FormLabel>
+                  <div className="border rounded-md p-3 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        Category: <strong>{task.taskCategory.categoryName}</strong>
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Task category cannot be changed after creation.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+
+              {/* Priority - Conditional editing */}
+              {canEditPriority ? (
+                <FormField
+                  control={form.control}
+                  name="priorityName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {metadataLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Loading...
+                              </SelectItem>
+                            ) : metadataError ? (
+                              <SelectItem value="error" disabled>
+                                Error loading priorities
+                              </SelectItem>
+                            ) : (
+                              metadata?.priorities.map(priority => (
+                                <SelectItem key={priority.id} value={priority.name}>
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={taskPriorityColors[priority.name]}>
+                                      {priority.displayName}
+                                    </Badge>
+                                    {priority.isLegacy && (
+                                      <Badge variant="outline" className="text-xs">
+                                        Legacy
                                       </Badge>
                                     )}
                                   </div>
                                 </SelectItem>
-                              ))}
-                            </div>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <div className="border rounded-md p-3 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <Badge className={taskPriorityColors[task.priority.priorityName]}>
+                        {transformEnumValue(task.priority.priorityName)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Task priority is managed by Task Supervisors.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
 
-                      {/* Workload Warning */}
-                      {selectedAssigneeId &&
-                        selectedAssigneeId !== '' &&
-                        (() => {
-                          const selectedUser = users.find(u => u.id === selectedAssigneeId);
-                          const currentAssignee = task.assignedTo;
-                          const isReassignment =
-                            currentAssignee && currentAssignee.id !== selectedAssigneeId;
-                          const taskCountAdjustment = isReassignment ? 0 : 1; // If reassigning, no net increase
+              {/* Status - Conditional editing */}
+              {canEditStatus ? (
+                <FormField
+                  control={form.control}
+                  name="statusName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {metadataLoading ? (
+                              <SelectItem value="loading" disabled>
+                                Loading...
+                              </SelectItem>
+                            ) : metadataError ? (
+                              <SelectItem value="error" disabled>
+                                Error loading statuses
+                              </SelectItem>
+                            ) : (
+                              metadata?.statuses.map(status => (
+                                <SelectItem key={status.id} value={status.name}>
+                                  <Badge className={taskStatusColors[status.name]}>
+                                    {status.displayName}
+                                  </Badge>
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <div className="border rounded-md p-3 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <Badge className={taskStatusColors[task.status.statusName]}>
+                        {transformEnumValue(task.status.statusName)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Task status is updated by the assigned Task Agent.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
 
-                          if (
-                            selectedUser?.currentTasksCount &&
-                            selectedUser.currentTasksCount > 8
-                          ) {
-                            const newTotal = selectedUser.currentTasksCount + taskCountAdjustment;
-                            return (
-                              <div className="bg-orange-50 border border-orange-200 p-3 rounded-md text-sm">
-                                <div className="flex items-center gap-2 text-orange-800">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <div>
-                                    <div className="font-medium">High workload warning</div>
-                                    <div className="text-xs mt-1">
-                                      {selectedUser.firstName} {selectedUser.lastName} currently has{' '}
-                                      {selectedUser.currentTasksCount} tasks.
-                                      {isReassignment
-                                        ? ` Reassigning this task will maintain their current workload.`
-                                        : ` Assigning this task will bring their total to ${newTotal} tasks.`}
+              {/* Assignment - Conditional editing with workload display */}
+              {canAssignTasks ? (
+                <FormField
+                  control={form.control}
+                  name="assignedToId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <FormLabel>Assigned User</FormLabel>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Info className="h-3 w-3" />
+                            <span>Numbers show current workload</span>
+                          </div>
+                        </div>
+
+                        <FormControl>
+                          <Select
+                            onValueChange={value => field.onChange(value === 'none' ? '' : value)}
+                            value={field.value || 'none'}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Assignee" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <div
+                                ref={dropdownRef}
+                                onScroll={handleScroll}
+                                style={{ maxHeight: '170px', overflowY: 'auto' }}
+                              >
+                                <SelectItem value="none">
+                                  <div className="flex items-center gap-2">
+                                    <UserX className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">No Assignee</span>
+                                  </div>
+                                </SelectItem>
+                                {users.map(user => (
+                                  <SelectItem key={user.id} value={user.id}>
+                                    <div className="flex items-center justify-between w-full">
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="h-6 w-6 rounded-lg">
+                                          <AvatarImage
+                                            src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                            alt={user.firstName ?? 'avatar'}
+                                            className="rounded-full"
+                                          />
+                                          <AvatarFallback className="rounded-full text-xs">
+                                            {user.firstName
+                                              ? user.firstName.substring(0, 2).toUpperCase()
+                                              : 'CN'}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                                      </div>
+                                      {user.currentTasksCount !== undefined && (
+                                        <Badge
+                                          variant={
+                                            user.currentTasksCount > 8 ? 'destructive' : 'secondary'
+                                          }
+                                          className="text-xs ml-2"
+                                          title={`Current workload: ${user.currentTasksCount} tasks`}
+                                        >
+                                          {user.currentTasksCount} total
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </div>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+
+                        {/* Workload Warning */}
+                        {selectedAssigneeId &&
+                          selectedAssigneeId !== '' &&
+                          (() => {
+                            const selectedUser = users.find(u => u.id === selectedAssigneeId);
+                            const currentAssignee = task.assignedTo;
+                            const isReassignment =
+                              currentAssignee && currentAssignee.id !== selectedAssigneeId;
+                            const taskCountAdjustment = isReassignment ? 0 : 1; // If reassigning, no net increase
+
+                            if (
+                              selectedUser?.currentTasksCount &&
+                              selectedUser.currentTasksCount > 8
+                            ) {
+                              const newTotal = selectedUser.currentTasksCount + taskCountAdjustment;
+                              return (
+                                <div className="bg-orange-50 border border-orange-200 p-3 rounded-md text-sm">
+                                  <div className="flex items-center gap-2 text-orange-800">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <div>
+                                      <div className="font-medium">High workload warning</div>
+                                      <div className="text-xs mt-1">
+                                        {selectedUser.firstName} {selectedUser.lastName} currently
+                                        has {selectedUser.currentTasksCount} tasks.
+                                        {isReassignment
+                                          ? ` Reassigning this task will maintain their current workload.`
+                                          : ` Assigning this task will bring their total to ${newTotal} tasks.`}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
-
-                      {/* Assignment Preview */}
-                      {selectedAssigneeId &&
-                        selectedAssigneeId !== '' &&
-                        (() => {
-                          const selectedUser = users.find(u => u.id === selectedAssigneeId);
-                          const currentAssignee = task.assignedTo;
-
-                          if (selectedUser) {
-                            if (currentAssignee && currentAssignee.id === selectedAssigneeId) {
-                              return (
-                                <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
-                                  <strong>Current Assignment:</strong> This task is already assigned
-                                  to {selectedUser.firstName} {selectedUser.lastName}
-                                </div>
-                              );
-                            } else if (currentAssignee) {
-                              return (
-                                <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 p-3 rounded-md">
-                                  <strong>Reassignment:</strong> Will reassign from{' '}
-                                  {currentAssignee.firstName} {currentAssignee.lastName} to{' '}
-                                  {selectedUser.firstName} {selectedUser.lastName}
-                                </div>
-                              );
-                            } else {
-                              return (
-                                <div className="text-sm text-muted-foreground bg-green-50 border border-green-200 p-3 rounded-md">
-                                  <strong>New Assignment:</strong> This task will be assigned to{' '}
-                                  {selectedUser.firstName} {selectedUser.lastName}
-                                </div>
                               );
                             }
-                          }
-                          return null;
-                        })()}
+                            return null;
+                          })()}
 
-                      {/* Unassignment Preview */}
-                      {(selectedAssigneeId === '' || selectedAssigneeId === 'none') &&
-                        task.assignedTo && (
-                          <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
-                            <strong>Unassignment:</strong> Will remove assignment from{' '}
-                            {task.assignedTo.firstName} {task.assignedTo.lastName}
-                          </div>
-                        )}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormItem>
-                <FormLabel>Assigned User</FormLabel>
-                <div className="border rounded-md p-4 w-full bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    {task.assignedTo ? (
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8 rounded-lg">
-                          <AvatarImage
-                            src={task.assignedTo.avatarUrl || 'https://github.com/shadcn.png'}
-                            alt={task.assignedTo.firstName ?? 'avatar'}
-                            className="rounded-full"
-                          />
-                          <AvatarFallback className="rounded-full">
-                            {task.assignedTo.firstName
-                              ? task.assignedTo.firstName.substring(0, 2).toUpperCase()
-                              : 'CN'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">
-                          Assigned to:{' '}
-                          <strong>{`${task.assignedTo.firstName} ${task.assignedTo.lastName}`}</strong>
-                        </span>
+                        {/* Assignment Preview */}
+                        {selectedAssigneeId &&
+                          selectedAssigneeId !== '' &&
+                          (() => {
+                            const selectedUser = users.find(u => u.id === selectedAssigneeId);
+                            const currentAssignee = task.assignedTo;
+
+                            if (selectedUser) {
+                              if (currentAssignee && currentAssignee.id === selectedAssigneeId) {
+                                return (
+                                  <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
+                                    <strong>Current Assignment:</strong> This task is already
+                                    assigned to {selectedUser.firstName} {selectedUser.lastName}
+                                  </div>
+                                );
+                              } else if (currentAssignee) {
+                                return (
+                                  <div className="text-sm text-muted-foreground bg-yellow-50 border border-yellow-200 p-3 rounded-md">
+                                    <strong>Reassignment:</strong> Will reassign from{' '}
+                                    {currentAssignee.firstName} {currentAssignee.lastName} to{' '}
+                                    {selectedUser.firstName} {selectedUser.lastName}
+                                  </div>
+                                );
+                              } else {
+                                return (
+                                  <div className="text-sm text-muted-foreground bg-green-50 border border-green-200 p-3 rounded-md">
+                                    <strong>New Assignment:</strong> This task will be assigned to{' '}
+                                    {selectedUser.firstName} {selectedUser.lastName}
+                                  </div>
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
+
+                        {/* Unassignment Preview */}
+                        {(selectedAssigneeId === '' || selectedAssigneeId === 'none') &&
+                          task.assignedTo && (
+                            <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded-md">
+                              <strong>Unassignment:</strong> Will remove assignment from{' '}
+                              {task.assignedTo.firstName} {task.assignedTo.lastName}
+                            </div>
+                          )}
                       </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        Not yet assigned. Task Supervisors will assign this task.
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </FormItem>
-            )}
-
-            {/* Original Estimate - Always editable */}
-            <FormField
-              control={form.control}
-              name="timeForTask"
-              render={({ field }) => (
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
                 <FormItem>
-                  <FormLabel>Original Estimate</FormLabel>
-                  <FormControl>
-                    <Input type="text" placeholder="e.g. 2w 1d 5h 4m" {...field} />
-                  </FormControl>
-                  <FormMessage />
+                  <FormLabel>Assigned User</FormLabel>
+                  <div className="border rounded-md p-4 w-full bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      {task.assignedTo ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8 rounded-lg">
+                            <AvatarImage
+                              src={task.assignedTo.avatarUrl || 'https://github.com/shadcn.png'}
+                              alt={task.assignedTo.firstName ?? 'avatar'}
+                              className="rounded-full"
+                            />
+                            <AvatarFallback className="rounded-full">
+                              {task.assignedTo.firstName
+                                ? task.assignedTo.firstName.substring(0, 2).toUpperCase()
+                                : 'CN'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            Assigned to:{' '}
+                            <strong>{`${task.assignedTo.firstName} ${task.assignedTo.lastName}`}</strong>
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          Not yet assigned. Task Supervisors will assign this task.
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </FormItem>
               )}
-            />
 
-            {/* OverTime - Conditional editing */}
-            {canEditOverTime ? (
+              {/* Original Estimate - Always editable */}
               <FormField
                 control={form.control}
-                name="overTime"
+                name="timeForTask"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>OverTime (optional)</FormLabel>
+                    <FormLabel>Original Estimate</FormLabel>
                     <FormControl>
-                      <Input
-                        type="text"
-                        placeholder="e.g. 1h 30m or leave empty if none"
-                        {...field}
-                      />
+                      <Input type="text" placeholder="e.g. 2w 1d 5h 4m" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            ) : (
-              <FormItem>
-                <FormLabel>OverTime</FormLabel>
-                <div className="border rounded-md p-3 bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {task.overTime && Number(task.overTime) > 0
-                        ? `${formatOriginalEstimate(Number(task.overTime))} of overtime logged`
-                        : 'No overtime logged'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Overtime is tracked by the Task Agent during work.
-                  </p>
-                </div>
-              </FormItem>
-            )}
 
-            {/* Due Date - Always editable */}
-            <FormField
-              control={form.control}
-              name="dueDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Due Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
+              {/* OverTime - Conditional editing */}
+              {canEditOverTime ? (
+                <FormField
+                  control={form.control}
+                  name="overTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>OverTime (optional)</FormLabel>
                       <FormControl>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'w-[240px] pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {field.value ? (
-                            new Date(field.value).toLocaleDateString()
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
+                        <Input
+                          type="text"
+                          placeholder="e.g. 1h 30m or leave empty if none"
+                          {...field}
+                        />
                       </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value ?? undefined}
-                        onSelect={field.onChange}
-                        disabled={date => date < new Date('1900-01-01')}
-                        autoFocus={true}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormItem>
+                  <FormLabel>OverTime</FormLabel>
+                  <div className="border rounded-md p-3 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {task.overTime && Number(task.overTime) > 0
+                          ? `${formatOriginalEstimate(Number(task.overTime))} of overtime logged`
+                          : 'No overtime logged'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Overtime is tracked by the Task Agent during work.
+                    </p>
+                  </div>
                 </FormItem>
               )}
-            />
 
-            {/* Show Task Attachments if any */}
-            {files && files.length > 0 && (
-              <FileAttachmentsList
-                files={files}
-                onDownload={file => handleDownload(file)}
-                onDelete={fileId => deleteFileHandler(fileId)}
-                loadingFileIds={loadingFileIds}
+              {/* Due Date - Always editable */}
+              <FormField
+                control={form.control}
+                name="dueDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Due Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={'outline'}
+                            className={cn(
+                              'w-[240px] pl-3 text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? (
+                              new Date(field.value).toLocaleDateString()
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ?? undefined}
+                          onSelect={field.onChange}
+                          disabled={date => date < new Date('1900-01-01')}
+                          autoFocus={true}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            )}
 
-            {/* Add Comments Section */}
-            <div className="border-t pt-6 mt-6">
-              <CommentSection
-                taskId={task.id}
-                onDataChange={handleCommentDataChange}
-                key={refreshKey}
-              />
-            </div>
+              {/* Show Task Attachments if any */}
+              {files && files.length > 0 && (
+                <FileAttachmentsList
+                  files={files}
+                  onDownload={file => handleDownload(file)}
+                  onDelete={fileId => deleteFileHandler(fileId)}
+                  loadingFileIds={loadingFileIds}
+                />
+              )}
 
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              {/* Add Comments Section */}
+              <div className="border-t pt-6 mt-6">
+                <CommentSection
+                  taskId={task.id}
+                  onDataChange={handleCommentDataChange}
+                  key={refreshKey}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      <AddSkillDialog
+        skills={skillsCategory}
+        open={openSkillDialog}
+        setOpen={setOpenSkillDialog}
+        taskOffering={true}
+        setReload={setReload}
+      />
+    </>
   );
 }
