@@ -253,6 +253,22 @@ export class WnpBackendStack extends cdk.Stack {
       'AllowedOriginsChatSecret',
       `allowed-origins-chat`
     );
+    const chatSharedSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'ChatSharedSecret',
+      `chat-shared-secret-${props.stage}`
+    );
+    const chatAppRegistrationToken = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'ChatAppRegistrationToken',
+      `chat-app-registration-token-${props.stage}`
+    );
+
+    const tenantId = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'TenantId',
+      `tenant-id-${props.stage}`
+    );
 
     // ========================================
     // FARGATE SERVICE SETUP
@@ -346,8 +362,11 @@ export class WnpBackendStack extends cdk.Stack {
         secrets: {
           DATABASE_URL: ecs.Secret.fromSecretsManager(databaseSecret),
           NEXT_PUBLIC_APP_URL: ecs.Secret.fromSecretsManager(nextPublicAppUrlSecret),
-          ALLOWED_ORIGIS: ecs.Secret.fromSecretsManager(allowedOriginsChatSecret),
+          ALLOWED_ORIGINS: ecs.Secret.fromSecretsManager(allowedOriginsChatSecret),
           CHAT_APP_API_URL: ecs.Secret.fromSecretsManager(chatAppApiUrlSecret),
+          CHAT_SHARED_SECRET: ecs.Secret.fromSecretsManager(chatSharedSecret),
+          CHAT_APP_REGISTRATION_TOKEN: ecs.Secret.fromSecretsManager(chatAppRegistrationToken),
+          TENANT_ID: ecs.Secret.fromSecretsManager(tenantId),
         },
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'wnp-backend',

@@ -76,7 +76,7 @@ export default function IntegrationsPage() {
           onChange={e =>
             setRegistrationData(prev => ({
               ...prev,
-              tenantName: e.target.value,
+              name: e.target.value,
             }))
           }
           placeholder="ABC Company"
