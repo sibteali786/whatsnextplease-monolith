@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import prisma from '../config/db';
 import { env } from '../config/environment';
+import { logger } from '../utils/logger';
 
 const CHAT_APP_URL = env.CHAT_APP_API_URL || 'http://localhost:5002';
 const CHAT_SHARED_SECRET = env.CHAT_SHARED_SECRET!;
@@ -39,6 +40,12 @@ export class ChatController {
         return res.status(500).json({
           error: 'Missing chat credentials. Contact Chat App admin for setup.',
         });
+      }
+
+      if (env.NODE_ENV === 'development') {
+        logger.debug(
+          `values for shared secret: ${sharedSecret}, registration token: ${registrationToken}`
+        );
       }
 
       // Domain for this environment
