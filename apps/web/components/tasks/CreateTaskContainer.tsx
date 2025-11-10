@@ -74,12 +74,15 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
   const { createdTask } = useCreatedTask();
   const [user, setUser] = useState<UserState>();
+
   const { toast } = useToast();
   const taskId = createdTask?.id ?? '';
   const [users, setUsers] = useState<UserWithTaskCount[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState<boolean | undefined>(true);
   const [loading, setLoading] = useState(false);
+  /* To refetch skills when new skill or skill category is added from task offering page */
+  const [reload, setReload] = useState(false);
 
   const [canAssignTasks, setCanAssignTasks] = useState(false);
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
@@ -363,7 +366,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     };
 
     fetchDependencies();
-  }, []);
+  }, [reload]);
 
   useEffect(() => {
     fetchUsers();
@@ -526,6 +529,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           taskCategories={taskCategories}
           canAssignTasks={canAssignTasks}
           fetchUsers={fetchUsers}
+          reload={reload}
+          setReload={setReload}
+          role={user?.role?.name}
         />
       </ModalWithConfirmation>
     </>
