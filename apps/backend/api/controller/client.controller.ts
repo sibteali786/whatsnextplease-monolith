@@ -185,8 +185,60 @@ export class ClientController {
       next(error);
     }
   };
+
+  private handleUpdateClientById = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+      const updatingUserId = req.user?.id;
+
+      if (!updatingUserId) {
+        throw new BadRequestError('User not authenticated');
+      }
+
+      if (!id) {
+        throw new BadRequestError('Client ID is required');
+      }
+
+      await checkIfClientExists(id);
+
+      const parsedClient =
+        Object.keys(req.body).length > 0
+          ? UpdateClientProfileSchema.partial().parse({ id, ...req.body })
+          : null;
+
+      let updateData = parsedClient;
+
+      // Hash password if provided
+      if (parsedClient && parsedClient.passwordHash) {
+        const hashedPassword = await hashPW(parsedClient.passwordHash);
+        updateData = {
+          ...parsedClient,
+          passwordHash: hashedPassword,
+        };
+      }
+
+      const updatedClient = await this.clientService.updateProfile({
+        ...updateData,
+        id,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: `Client ${id} updated successfully`,
+        client: updatedClient,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getClientProfile = asyncHandler(this.handleGetClientProfile);
   updateProfile = asyncHandler(this.handleUpdateProfile);
   deleteClient = asyncHandler(this.handleDeleteClient);
+  updateClientById = asyncHandler(this.handleUpdateClientById);
 }
