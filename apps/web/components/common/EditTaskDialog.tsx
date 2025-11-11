@@ -57,6 +57,7 @@ import CommentSection from '../comments/CommentSection';
 import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 import { taskApiClient } from '@/utils/taskApi';
 import { AddSkillDialog } from '../skills/AddSkillDialog';
+import { SearchableDropdown } from '../ui/searchable-dropdown';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -150,12 +151,12 @@ export default function EditTaskDialog({
   onTaskUpdate,
 }: EditTaskDialogProps) {
   const { toast } = useToast();
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState<boolean | undefined>(true);
   const [page, setPage] = useState(1);
-  const hasFetched = useRef(false);
-  const [firstFetched, setFirstFetched] = useState(false);
+  const hasFetchedInitial = useRef(false);
   const [openSkillDialog, setOpenSkillDialog] = useState(false);
   const [skillsCategory, setSkillsCategory] = useState<SkillCategory[]>([]);
 
@@ -346,52 +347,41 @@ export default function EditTaskDialog({
       items,
     }));
   };
-  const handleScroll = () => {
-    if (!dropdownRef.current) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = dropdownRef.current;
-    const offset = 10; // pixels before reaching the bottom
-
-    if (scrollTop + clientHeight >= scrollHeight - offset) {
-      hasFetched.current = false;
-
-      fetchUsers();
-    }
-  };
-  const fetchUsers = async (pageToFetch?: number) => {
-    if (!canAssignTasks) {
-      return;
-    }
-    if (firstFetched && hasFetched.current) return;
-    if (!firstFetched) {
-      hasFetched.current = true;
-      setFirstFetched(true);
-    }
-
-    if (!pageToFetch && (loading || !hasMore)) return; // Prevent multiple fetches
+  const fetchUsers = async (
+    pageToFetch?: number,
+    searchQuery?: string,
+    opts?: { isInitial?: boolean }
+  ) => {
+    if (!canAssignTasks) return;
+    if (loading) return; // prevent concurrent calls
+    if (!hasMore && pageToFetch && pageToFetch > 1) return; // no more pages
+    // Only block duplicate initial modal load
+    if (opts?.isInitial && hasFetchedInitial.current) return;
+    if (opts?.isInitial) hasFetchedInitial.current = true;
     setLoading(true);
     try {
       const response = await usersList(
         role ?? Roles.TASK_SUPERVISOR,
         form.getValues('skills'),
         5, //limit
-        pageToFetch ?? page
+        pageToFetch ?? page,
+        searchQuery
       );
       if (response.success) {
         // Fetch task counts for users and update state
         const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
-        if (pageToFetch) {
-          setUsers([...usersWithTaskCounts]);
-        } else {
-          setUsers(prevUsers => [...prevUsers, ...usersWithTaskCounts]);
-        }
-        setHasMore(response.hasMore); // Update if more users are available
-        // Increment page for next fetch
-        if (pageToFetch) {
+        if (pageToFetch === 1) {
+          // Fresh search or first page → replace
+          setUsers(usersWithTaskCounts);
           setPage(2);
         } else {
-          setPage(prevPage => prevPage + 1);
+          // Subsequent pages → append
+          setUsers(prev => [...prev, ...usersWithTaskCounts]);
+          setPage(prev => prev + 1);
         }
+
+        setHasMore(response.hasMore);
       }
       if (!response.success) {
         toast({
@@ -443,17 +433,13 @@ export default function EditTaskDialog({
     }
   }, [task, open, form]);
   useEffect(() => {
-    if (open && !hasFetched.current) {
-      // Fetch users only when the modal is open for the first time
-      fetchUsers();
-    }
-    if (!open) {
-      // Reset fetch flag when modal is closed
+    if (open) {
+      fetchUsers(1, '', { isInitial: true });
+    } else {
       setUsers([]);
       setPage(1);
       setHasMore(true);
-      setFirstFetched(false);
-      hasFetched.current = false;
+      hasFetchedInitial.current = false;
     }
   }, [open]);
 
@@ -723,9 +709,11 @@ export default function EditTaskDialog({
                         options={groupSkillsByCategory(skills)}
                         onValueChange={value => {
                           field.onChange(value); // still update the form value
-                          hasFetched.current = false;
-                          fetchUsers(1);
+                          setPage(1);
+                          setUsers([]);
+                          setHasMore(true);
 
+                          fetchUsers(1, searchQuery);
                           /*     setPage(1);
                     setUsers([]);
                     setHasMore(true); */
@@ -937,60 +925,89 @@ export default function EditTaskDialog({
                         </div>
 
                         <FormControl>
-                          <Select
-                            onValueChange={value => field.onChange(value === 'none' ? '' : value)}
-                            value={field.value || 'none'}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Assignee" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <div
-                                ref={dropdownRef}
-                                onScroll={handleScroll}
-                                style={{ maxHeight: '170px', overflowY: 'auto' }}
-                              >
-                                <SelectItem value="none">
-                                  <div className="flex items-center gap-2">
-                                    <UserX className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">No Assignee</span>
-                                  </div>
-                                </SelectItem>
-                                {users.map(user => (
-                                  <SelectItem key={user.id} value={user.id}>
-                                    <div className="flex items-center justify-between w-full">
-                                      <div className="flex items-center gap-2">
-                                        <Avatar className="h-6 w-6 rounded-lg">
-                                          <AvatarImage
-                                            src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                                            alt={user.firstName ?? 'avatar'}
-                                            className="rounded-full"
-                                          />
-                                          <AvatarFallback className="rounded-full text-xs">
-                                            {user.firstName
-                                              ? user.firstName.substring(0, 2).toUpperCase()
-                                              : 'CN'}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
-                                      </div>
-                                      {user.currentTasksCount !== undefined && (
-                                        <Badge
-                                          variant={
-                                            user.currentTasksCount > 8 ? 'destructive' : 'secondary'
-                                          }
-                                          className="text-xs ml-2"
-                                          title={`Current workload: ${user.currentTasksCount} tasks`}
-                                        >
-                                          {user.currentTasksCount} total
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
+                          <SearchableDropdown<{
+                            value: string;
+                            label: string;
+                            avatarUrl: string | null;
+                            firstName: string;
+                            lastName: string;
+                            currentTasksCount?: number;
+                          }>
+                            items={[
+                              {
+                                value: 'none',
+                                label: 'No Assignee',
+                                avatarUrl: null,
+                                firstName: '',
+                                lastName: '',
+                                currentTasksCount: undefined,
+                              },
+                              ...users.map(user => ({
+                                value: user.id,
+                                label: `${user.firstName} ${user.lastName}`,
+                                avatarUrl: user.avatarUrl,
+                                firstName: user.firstName,
+                                lastName: user.lastName,
+                                currentTasksCount: user.currentTasksCount,
+                              })),
+                            ]}
+                            noSelectionValue="none"
+                            noSelectionContent={
+                              <div className="flex items-center gap-2">
+                                <UserX className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">No Assignee</span>
                               </div>
-                            </SelectContent>
-                          </Select>
+                            }
+                            value={field.value || 'none'}
+                            onChange={value => field.onChange(value === 'none' ? '' : value)}
+                            placeholder="Select Assignee"
+                            onScrollEnd={() => {
+                              if (hasMore && !loading) {
+                                fetchUsers(page, searchQuery); // append next page of current query
+                              }
+                            }}
+                            onSearch={q => {
+                              setSearchQuery(q);
+                              fetchUsers(1, q); // new search → replace user list
+                            }}
+                            renderOption={user =>
+                              user.value === 'none' ? (
+                                <div className="flex items-center gap-2">
+                                  <UserX className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground">No Assignee</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6 rounded-lg">
+                                      <AvatarImage
+                                        src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                                        alt={user.firstName ?? 'avatar'}
+                                        className="rounded-full"
+                                      />
+                                      <AvatarFallback className="rounded-full text-xs">
+                                        {user.firstName
+                                          ? user.firstName.substring(0, 2).toUpperCase()
+                                          : 'CN'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm">{`${user.firstName} ${user.lastName}`}</span>
+                                  </div>
+
+                                  {user.currentTasksCount !== undefined && (
+                                    <Badge
+                                      variant={
+                                        user.currentTasksCount > 8 ? 'destructive' : 'secondary'
+                                      }
+                                      className="text-xs ml-2"
+                                    >
+                                      {user.currentTasksCount} total
+                                    </Badge>
+                                  )}
+                                </div>
+                              )
+                            }
+                          />
                         </FormControl>
 
                         {/* Workload Warning */}

@@ -10,14 +10,15 @@ export const usersList = async (
   role: Roles,
   skills?: string[],
   limit: number = 0,
-  page: number = 1
+  page: number = 1,
+  searchQuery: string = ''
 ): Promise<GetUsersSchema> => {
   try {
     // Only include skills in the query if it has values
     const query =
       skills && skills.length > 0
-        ? `?role=${role}&limit=${limit}&page=${page}&skills=${skills.join(',')}`
-        : `?role=${role}&limit=${limit}&page=${page}`;
+        ? `?role=${role}&limit=${limit}&page=${page}&search=${searchQuery}&skills=${skills.join(',')}`
+        : `?role=${role}&limit=${limit}&page=${page}&search=${searchQuery}`;
 
     const response = await fetch(`/api/users/taskAgentList${query}`);
 

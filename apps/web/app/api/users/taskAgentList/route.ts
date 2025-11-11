@@ -14,14 +14,15 @@ export async function GET(request: Request) {
       limit: Number(searchParams.get('limit')) || 0,
       page: Number(searchParams.get('page')) || 1,
     });
-
+    const search = searchParams.get('search')?.toLowerCase() || '';
     const { role, skills, limit, page } = parsedParams;
     const allowedRoles: Roles[] = [Roles.TASK_SUPERVISOR, Roles.CLIENT, Roles.SUPER_USER];
 
     if (!allowedRoles.includes(role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized Role' }, { status: 403 });
     }
-    const whereClause = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = {
       role: {
         name: {
           in: [Roles.TASK_AGENT, Roles.TASK_SUPERVISOR, Roles.SUPER_USER],
@@ -36,8 +37,13 @@ export async function GET(request: Request) {
           },
         },
       }),
+      ...(search && {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
     };
-
     let users;
     let hasMore = false;
 
