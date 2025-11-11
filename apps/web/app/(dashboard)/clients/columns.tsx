@@ -256,7 +256,6 @@ export const createColumns = (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Company Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -269,7 +268,6 @@ export const createColumns = (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Contact Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -281,7 +279,6 @@ export const createColumns = (
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Email
@@ -304,7 +301,6 @@ export const createColumns = (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Phone
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -316,7 +312,6 @@ export const createColumns = (
       header: ({ column }) => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Website
