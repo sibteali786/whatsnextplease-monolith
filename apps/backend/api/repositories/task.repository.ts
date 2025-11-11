@@ -102,6 +102,7 @@ export class TaskRepository {
           select: { id: true, companyName: true, contactName: true },
         },
         createdByClientId: true,
+        createdByUser: { select: { id: true, firstName: true, lastName: true } },
         createdAt: true,
         updatedAt: true,
       },

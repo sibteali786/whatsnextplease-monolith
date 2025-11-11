@@ -197,7 +197,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     }
   };
 
-  const fetchUsers = async (pageToFetch?: number) => {
+  const fetchUsers = async (pageToFetch?: number, searchQuery?: string) => {
     // Determine if current role can assign tasks to others
     const roleCanAssignTasks =
       user?.role?.name === Roles.SUPER_USER || user?.role?.name === Roles.TASK_SUPERVISOR;
@@ -212,24 +212,23 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           user?.role?.name ?? Roles.TASK_SUPERVISOR,
           form.getValues('skills'),
           5, //limit
-          pageToFetch ?? page
+          pageToFetch ?? page,
+          searchQuery
         );
         if (response.success) {
           // Fetch task counts for users and update state
           const usersWithTaskCounts = await fetchUserTaskCounts(response.users);
-          /* setUsers(usersWithTaskCounts); */
-          if (pageToFetch) {
-            setUsers([...usersWithTaskCounts]);
-          } else {
-            setUsers(prevUsers => [...prevUsers, ...usersWithTaskCounts]);
-          }
-          setHasMore(response.hasMore); // Update if more users are available
-          // Increment page for next fetch
-          if (pageToFetch) {
+          if (pageToFetch === 1) {
+            // Fresh search or first page → replace
+            setUsers(usersWithTaskCounts);
             setPage(2);
           } else {
-            setPage(prevPage => prevPage + 1);
+            // Subsequent pages → append
+            setUsers(prev => [...prev, ...usersWithTaskCounts]);
+            setPage(prev => prev + 1);
           }
+
+          setHasMore(response.hasMore);
         } else if (response.message !== 'Not authorized') {
           // Only show error toast if it's not an authorization issue
           toast({
@@ -532,6 +531,9 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           reload={reload}
           setReload={setReload}
           role={user?.role?.name}
+          page={page}
+          hasMore={hasMore}
+          loading={loading}
         />
       </ModalWithConfirmation>
     </>
