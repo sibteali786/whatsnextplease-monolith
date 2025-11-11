@@ -1,9 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { MessageSquare, ExternalLink } from 'lucide-react';
+import { MessageSquare, ExternalLink, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import FullPageChat from '@/components/chat/FullPageChat'; // Import the existing FullPageChat component
+import FullPageChat from '@/components/chat/FullPageChat';
 import ChatModal from '@/components/chat/ChatModal'; // Import ChatModal for the modal option
 
 interface MessagesPageProps {
@@ -11,14 +12,16 @@ interface MessagesPageProps {
 }
 
 export default function MessagesPage({ className = '' }: MessagesPageProps) {
-  const handleChatOpen = () => {
-    console.log('Chat modal opened');
-    // Add any analytics or tracking here
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleModalOpen = () => {
+    console.log('Modal modal opened');
+    setIsModalOpen(true);
   };
 
-  const handleChatClose = () => {
-    console.log('Chat modal closed');
-    // Add any cleanup or analytics here
+  const handleModalClose = () => {
+    console.log('Modal modal closed');
+    setIsModalOpen(false);
   };
 
   return (
@@ -38,26 +41,45 @@ export default function MessagesPage({ className = '' }: MessagesPageProps) {
 
           <div className="flex items-center gap-2">
             {/* Modal Option Button */}
-            <ChatModal
-              trigger={
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Open in Modal
-                </Button>
-              }
-              title="Client Messages Chat"
-              onModalOpen={handleChatOpen}
-              onModalClose={handleChatClose}
-              defaultFullscreen={false}
-            />
+            {!isModalOpen ? (
+              <ChatModal
+                trigger={
+                  <Button variant="outline" size="sm">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open in Modal
+                  </Button>
+                }
+                title="Client Messages Chat"
+                onModalOpen={handleModalOpen}
+                onModalClose={handleModalClose}
+                defaultFullscreen={false}
+              />
+            ) : (
+              <Button variant="outline" size="sm" onClick={handleModalClose} disabled>
+                <Minimize2 className="w-4 h-4 mr-2" />
+                Modal Active
+              </Button>
+            )}
           </div>
         </div>
       </Card>
 
       {/* Full Page Chat Component */}
-      <Card className="flex-1 p-0 overflow-hidden">
-        <FullPageChat className="h-full" />
-      </Card>
+      {!isModalOpen && (
+        <Card className="flex-1 p-0 overflow-hidden">
+          <FullPageChat className="h-full" />
+        </Card>
+      )}
+
+      {/* Show placeholder when modal is open */}
+      {isModalOpen && (
+        <Card className="flex-1 p-0 overflow-hidden flex items-center justify-center bg-muted/20">
+          <div className="text-center text-muted-foreground">
+            <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="text-sm">Chat is open in modal view</p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
