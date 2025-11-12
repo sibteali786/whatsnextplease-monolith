@@ -1,6 +1,6 @@
-"use client";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+'use client';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -9,18 +9,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PhoneInput } from "../ui/phone-input";
-import { AddClientInput, addClientSchema } from "@/utils/validationSchemas";
-import { CircleCheckBig, CircleX, Loader2 } from "lucide-react"; // Importing the loader icon
-import { useState } from "react";
-import addClient from "@/db/repositories/clients/addClient";
-import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
-import PasswordStrengthMeter from "../PasswordStrengthMeter";
-import { getPasswordStrength } from "@/utils/utils";
+} from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { PhoneInput } from '../ui/phone-input';
+import { AddClientInput, addClientSchema } from '@/utils/validationSchemas';
+import { CircleCheckBig, CircleX, Loader2 } from 'lucide-react'; // Importing the loader icon
+import { useState } from 'react';
+import addClient from '@/db/repositories/clients/addClient';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import PasswordStrengthMeter from '../PasswordStrengthMeter';
+import { getPasswordStrength } from '@/utils/utils';
 
 const AddClientForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false); // State to handle form submission
@@ -28,7 +28,7 @@ const AddClientForm = () => {
   const router = useRouter();
   const form = useForm<AddClientInput>({
     resolver: zodResolver(addClientSchema),
-    mode: "onSubmit",
+    mode: 'onSubmit',
   });
   const handlePasswordChange = (value: string) => {
     setPasswordStrength(getPasswordStrength(value));
@@ -38,40 +38,41 @@ const AddClientForm = () => {
     setIsSubmitting(true); // Start the loader
     try {
       const formData = new FormData();
-      formData.append("username", data.username);
-      formData.append("companyName", data.companyName);
-      formData.append("contactName", data.contactName || "");
-      formData.append("email", data.email || "");
-      formData.append("passwordHash", data.password || "");
-      formData.append("phone", data.phone || "");
-      formData.append("address1", data.address1 || "");
-      formData.append("address2", data.address2 || "");
-      formData.append("city", data.city || "");
-      formData.append("state", data.state || "");
-      formData.append("zipCode", data.zipCode || "");
+      formData.append('username', data.username);
+      formData.append('companyName', data.companyName);
+      formData.append('contactName', data.contactName || '');
+      formData.append('email', data.email || '');
+      formData.append('website', data.website || '');
+      formData.append('passwordHash', data.password || '');
+      formData.append('phone', data.phone || '');
+      formData.append('address1', data.address1 || '');
+      formData.append('address2', data.address2 || '');
+      formData.append('city', data.city || '');
+      formData.append('state', data.state || '');
+      formData.append('zipCode', data.zipCode || '');
 
       const response = await addClient(formData);
       if (response.success) {
-        console.log("Client data submitted:", response);
+        console.log('Client data submitted:', response);
         toast({
-          title: "Client Created",
+          title: 'Client Created',
           description: `The client ${data.contactName} was created`,
-          variant: "success",
+          variant: 'success',
           icon: <CircleCheckBig size={40} />,
         });
         form.reset();
-        router.push("/clients");
+        router.push('/clients');
       } else {
         toast({
-          title: "Client Creation Failed",
+          title: 'Client Creation Failed',
           description: `The client ${data.contactName} was not created! Please try again`,
-          variant: "destructive",
+          variant: 'destructive',
           icon: <CircleX size={40} />,
         });
       }
     } catch (e) {
-      console.error("Failed to create a client", e);
-      form.setError("root", { message: "Failed to create a new client" });
+      console.error('Failed to create a client', e);
+      form.setError('root', { message: 'Failed to create a new client' });
     } finally {
       setIsSubmitting(false); // Stop the loader
     }
@@ -79,10 +80,7 @@ const AddClientForm = () => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="bg-content1 flex flex-col gap-4 pb-6"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="bg-content1 flex flex-col gap-4 pb-6">
         <FormField
           control={form.control}
           name="username"
@@ -108,7 +106,7 @@ const AddClientForm = () => {
                   type="password"
                   placeholder="Password"
                   {...field}
-                  onChange={(e) => {
+                  onChange={e => {
                     field.onChange(e);
                     handlePasswordChange(e.target.value);
                   }}
@@ -130,9 +128,7 @@ const AddClientForm = () => {
               <FormControl>
                 <Input placeholder="Company Name" {...field} />
               </FormControl>
-              <FormDescription className="text-left">
-                Enter Company Name
-              </FormDescription>
+              <FormDescription className="text-left">Enter Company Name</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -147,9 +143,7 @@ const AddClientForm = () => {
               <FormControl>
                 <Input placeholder="Contact Name" {...field} />
               </FormControl>
-              <FormDescription className="text-left">
-                Enter Contact Name
-              </FormDescription>
+              <FormDescription className="text-left">Enter Contact Name</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -164,14 +158,25 @@ const AddClientForm = () => {
               <FormControl>
                 <Input placeholder="Email Address" {...field} />
               </FormControl>
-              <FormDescription className="text-left">
-                Enter an email address
-              </FormDescription>
+              <FormDescription className="text-left">Enter an email address</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-
+        <FormField
+          control={form.control}
+          name="website"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Website</FormLabel>
+              <FormControl>
+                <Input placeholder="Website" {...field} />
+              </FormControl>
+              <FormDescription className="text-left">Enter a website</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         {/* TODO: The phone number is not selected when clicked once*/}
         <FormField
           control={form.control}
@@ -182,9 +187,7 @@ const AddClientForm = () => {
               <FormControl className="w-full">
                 <PhoneInput placeholder="Enter a phone number" {...field} />
               </FormControl>
-              <FormDescription className="text-left">
-                Enter a phone number
-              </FormDescription>
+              <FormDescription className="text-left">Enter a phone number</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -265,17 +268,11 @@ const AddClientForm = () => {
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <Loader2 className="animate-spin h-4 w-4 mr-2" />
-            ) : (
-              "Save"
-            )}
+            {isSubmitting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : 'Save'}
           </Button>
         </div>
         {form.formState.errors.root && (
-          <p className="text-red-500 text-center">
-            {form.formState.errors.root.message}
-          </p>
+          <p className="text-red-500 text-center">{form.formState.errors.root.message}</p>
         )}
       </form>
     </Form>

@@ -47,6 +47,7 @@ const ROLE_PERMISSIONS: Record<
   TASK_SUPERVISOR: [
     { path: '/home', label: 'Home', Icon: Home },
     { path: '/taskAgents', label: 'Task Agents', Icon: UserCheck }, // Added Task Agents
+    { path: '/clients', label: 'Clients', Icon: LayoutDashboard },
     { path: '/settings', label: 'Settings', Icon: Settings },
   ],
   // Add other roles as needed

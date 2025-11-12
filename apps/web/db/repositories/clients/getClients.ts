@@ -1,12 +1,12 @@
-import prisma from "@/db/db";
-import { handleError } from "@/utils/errorHandler";
-import logger from "@/utils/logger";
+import prisma from '@/db/db';
+import { handleError } from '@/utils/errorHandler';
+import logger from '@/utils/logger';
 import {
   ClientsListResponse,
   ClientsListResponseSchema,
   GetClientsListParamsSchema,
-} from "@/utils/validationSchemas";
-import "server-only";
+} from '@/utils/validationSchemas';
+import 'server-only';
 
 interface GetClientsListParams {
   cursor: string | null; // Cursor to start fetching the next set of records
@@ -35,14 +35,20 @@ const getClientsList = async ({
       ...(cursor && { cursor: { id: cursor }, skip: 1 }), // Skip cursor if provided
       select: {
         id: true,
+        username: true,
         companyName: true,
         contactName: true,
         email: true,
         phone: true,
         website: true,
+        address1: true,
+        address2: true,
+        city: true,
+        state: true,
+        zipCode: true,
       },
       orderBy: {
-        id: "asc",
+        id: 'asc',
       },
     });
 
@@ -69,8 +75,8 @@ const getClientsList = async ({
     // Validate the response data against the schema
     return ClientsListResponseSchema.parse(responseData);
   } catch (error) {
-    logger.error({ error }, "Error in getClientsList");
-    return handleError(error, "getClientsList") as ClientsListResponse;
+    logger.error({ error }, 'Error in getClientsList');
+    return handleError(error, 'getClientsList') as ClientsListResponse;
   }
 };
 

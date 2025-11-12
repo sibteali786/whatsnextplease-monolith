@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   flexRender,
@@ -6,8 +6,8 @@ import {
   getSortedRowModel,
   SortingState,
   useReactTable,
-} from "@tanstack/react-table";
-import { useEffect, useState } from "react";
+} from '@tanstack/react-table';
+import { useEffect, useRef, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -15,16 +15,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Pagination } from "@/components/Pagination";
-import { useRouter } from "next/navigation";
-import { useClientStore } from "@/store/useClientStore";
-import { Client, columns } from "./columns";
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/Pagination';
+import { useRouter } from 'next/navigation';
+import { useClientStore } from '@/store/useClientStore';
+import { Client, createColumns } from './columns';
 interface DataTableProps {
   fetchData: (
     cursor: string | null,
-    pageSize: number,
+    pageSize: number
   ) => Promise<{
     clients: Client[] | undefined;
     nextCursor?: string | null;
@@ -44,6 +44,10 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
   const [rowSelection, setRowSelection] = useState({});
   const { setSelectedClient } = useClientStore();
   const router = useRouter();
+  //  Track if modal/dialog is currently open
+  const isModalOpenRef = useRef(false);
+  //  Prevent rapid double-click navigation
+  const lastClickTimeRef = useRef(0);
   const fetchClients = async () => {
     setLoading(true);
     try {
@@ -51,7 +55,7 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
       setData(response.clients);
       setTotalCount(response.totalCount);
     } catch (error) {
-      console.error("Failed to fetch clients:", error);
+      console.error('Failed to fetch clients:', error);
     }
     setLoading(false);
   };
@@ -62,7 +66,8 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
 
   // Calculate total number of pages
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
-
+  // Create columns with refresh data callback and modal state ref
+  const columns = createColumns(fetchClients, isModalOpenRef);
   const table = useReactTable({
     data: data ? data : [],
     columns: columns,
@@ -81,22 +86,35 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
       rowSelection,
     },
   });
+  const handleRowClick = (client: Client) => {
+    const now = Date.now();
 
+    // Prevent navigation if modal open or double-click
+    if (isModalOpenRef.current || now - lastClickTimeRef.current < 300) {
+      return;
+    }
+
+    lastClickTimeRef.current = now;
+
+    setSelectedClient({
+      id: client.id ?? '',
+      username: client.contactName ?? '',
+    });
+
+    router.push(`/clients/${client.id}`);
+  };
   return (
     <>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+            {table.getHeaderGroups().map(headerGroup => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
+                {headerGroup.headers.map(header => (
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -110,23 +128,15 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
                 </TableCell>
               </TableRow>
             ) : data && data.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map(row => (
                 <TableRow
                   key={row.id}
-                  onClick={() => {
-                    setSelectedClient({
-                      id: row.original.id ?? "",
-                      username: row.original.contactName ?? "",
-                    });
-                    router.push(`/clients/${row.original.id}`);
-                  }}
+                  onClick={() => handleRowClick(row.original)}
+                  className="cursor-pointer"
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map(cell => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -144,7 +154,7 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
       {/* Integrate Pagination */}
       <div className="flex flex-row my-2">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
+          {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} row(s) selected.
         </div>
         <Pagination

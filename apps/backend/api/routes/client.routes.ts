@@ -28,4 +28,5 @@ router.delete(
   requireRole([Roles.SUPER_USER, Roles.TASK_SUPERVISOR]),
   controller.deleteClient
 );
+router.patch('/:id', verifyToken, controller.updateClientById);
 export const clientRoutes = router;
