@@ -27,60 +27,49 @@ export class ChatController {
    */
   static async registerTenant(req: AuthenticatedRequest, res: Response) {
     try {
-      // TODO: Add admin role check
-      // if (!req.user?.isAdmin) {
-      //   return res.status(403).json({ error: 'Admin access required' });
-      // }
+      const { tenantId, domain, adminEmail, name } = req.body;
 
-      // Get credentials from environment (provided by Chat App admin)
+      // Validate inputs
+      if (!tenantId || !domain || !adminEmail || !name) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required fields: tenantId, domain, adminEmail, name',
+        });
+      }
+
+      // Get credentials from environment
       const sharedSecret = env.CHAT_SHARED_SECRET;
       const registrationToken = env.CHAT_APP_REGISTRATION_TOKEN;
 
       if (!sharedSecret || !registrationToken) {
         return res.status(500).json({
-          error: 'Missing chat credentials. Contact Chat App admin for setup.',
+          success: false,
+          error:
+            'Missing chat credentials in backend. Please update AWS Secrets Manager with CHAT_SHARED_SECRET and CHAT_APP_REGISTRATION_TOKEN, then redeploy.',
         });
       }
 
-      if (env.NODE_ENV === 'development') {
-        logger.debug(
-          `values for shared secret: ${sharedSecret}, registration token: ${registrationToken}`
-        );
-      }
-
-      // Domain for this environment
-      const domain = req.get('host') || 'localhost:5001';
-
-      // Allowed origins for this tenant. Be tolerant of formats:
-      // - JSON array: ["https://a","https://b"]
-      // - Single-quoted array from some .env: ['https://a','https://b']
-      // - Accidental "KEY=..." inclusion: ALLOWED_ORIGINS=['...']
+      // Parse allowed origins
       const raw = env.ALLOWED_ORIGINS || '[]';
       let allowedOrigins: string[] = [];
       try {
-        // If someone accidentally set "ALLOWED_ORIGINS=[...]"
         const maybeValue = raw.includes('=') ? raw.split('=')[1] : raw;
-        // Convert single quotes to double quotes to make valid JSON if necessary
         const normalized = maybeValue.trim().replace(/'/g, '"');
         allowedOrigins = JSON.parse(normalized);
         if (!Array.isArray(allowedOrigins)) {
           throw new Error('ALLOWED_ORIGINS parsed to non-array');
         }
       } catch (err) {
-        console.warn(
-          'Failed to parse ALLOWED_ORIGINS, falling back to empty array. raw=',
-          raw,
-          err
-        );
+        logger.warn('Failed to parse ALLOWED_ORIGINS, falling back to empty array', { raw, err });
         allowedOrigins = [];
       }
 
-      // Call Chat App registration endpoint with credentials
+      // Call Chat App registration endpoint
       const response = await fetch(`${CHAT_APP_URL}/api/tenants/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId: TENANT_ID,
+          tenantId,
           domain,
           allowedOrigins,
           sharedSecret,
@@ -91,16 +80,12 @@ export class ChatController {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Registration failed:', data);
+        console.log('Chat app registration failed', data);
+        logger.info('Chat app registration failed', { data });
         throw new Error(data.error || 'Registration failed');
       }
 
-      console.log(
-        '✅ Tenant registered successfully:',
-        allowedOrigins,
-        typeof allowedOrigins,
-        domain
-      );
+      logger.info('Tenant registered successfully', { tenantId, domain });
 
       res.json({
         success: true,
@@ -108,7 +93,7 @@ export class ChatController {
         tenant: data.tenant,
       });
     } catch (error) {
-      console.error('Tenant registration error:', error);
+      logger.error('Tenant registration error', { error });
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : 'Failed to register tenant',

@@ -97,8 +97,19 @@ export function useChatAuth() {
 
       const data = await response.json();
 
-      if (!data.success) {
-        throw new Error(data.error || 'Authentication failed');
+      // In fetchChatToken, after the fetch call
+      if (!response.ok) {
+        const data = await response.json();
+        let errorMessage = 'Failed to get chat token';
+
+        if (response.status === 403) {
+          errorMessage =
+            'Chat integration not activated. Please complete setup in Settings → Integrations.';
+        } else if (data.error) {
+          errorMessage = data.error;
+        }
+
+        throw new Error(errorMessage);
       }
 
       console.log('[Chat Auth] Token received, creating iframe URL');
