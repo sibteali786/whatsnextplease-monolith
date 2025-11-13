@@ -92,6 +92,7 @@ export const getTasksByUserId = async (
         createdByUserId: true,
         createdByClientId: true,
         assignedToId: true,
+        associatedClientId: true,
         priority: {
           select: { priorityName: true },
         },
@@ -103,6 +104,9 @@ export const getTasksByUserId = async (
         },
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
         },
         dueDate: true,
         timeForTask: true,

@@ -21,6 +21,10 @@ export async function GET(request: Request) {
     if (!allowedRoles.includes(role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized Role' }, { status: 403 });
     }
+
+    const [first, ...rest] = search.split(' ');
+    const last = rest.join(' ');
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       role: {
@@ -41,6 +45,16 @@ export async function GET(request: Request) {
         OR: [
           { firstName: { contains: search, mode: 'insensitive' } },
           { lastName: { contains: search, mode: 'insensitive' } },
+          ...(last
+            ? [
+                {
+                  AND: [
+                    { firstName: { contains: first, mode: 'insensitive' } },
+                    { lastName: { startsWith: last, mode: 'insensitive' } },
+                  ],
+                },
+              ]
+            : []),
         ],
       }),
     };

@@ -48,6 +48,7 @@ interface SearchableDropdownProps<T extends BaseItem> {
   onScrollEnd?: (currentSearch: string) => void;
   /** Called when user types search text */
   onSearch?: (query: string) => void;
+  searchQuery?: string;
   /** Debounce delay in ms */
   debounceMs?: number;
   /** Custom UI for “no selection” (like No Assignee) */
@@ -71,6 +72,7 @@ export function SearchableDropdown<T extends BaseItem>({
   renderOption,
   onScrollEnd,
   onSearch,
+  searchQuery,
   debounceMs = 500,
   noSelectionContent,
   noSelectionValue = 'none',
@@ -122,6 +124,10 @@ export function SearchableDropdown<T extends BaseItem>({
       onSearch(query); // notify parent
     }, debounceMs);
   };
+  React.useEffect(() => {
+    if (!searchQuery) return;
+    setSearch(searchQuery || '');
+  }, [searchQuery]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

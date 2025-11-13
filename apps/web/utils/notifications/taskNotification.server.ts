@@ -13,6 +13,7 @@ interface TaskUpdateNotificationData {
   createdByUserId?: string;
   createdByClientId?: string;
   assignedToId?: string;
+  associatedClientId?: string;
   changes: TaskChange[]; // Now accepts multiple changes
 }
 
@@ -57,6 +58,8 @@ function formatChangeDescription(change: TaskChange): string {
       return `Category: ${oldVal} → ${newVal}`;
     case 'assignedTo':
       return `Assignee: ${oldVal} → ${newVal}`;
+    case 'associatedClient':
+      return `Client: ${newVal}`;
     case 'title':
       return `Title: "${oldVal}" → "${newVal}"`;
     case 'description':
@@ -125,7 +128,15 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
       return;
     }
 
-    const { taskId, taskTitle, createdByUserId, createdByClientId, assignedToId, changes } = data;
+    const {
+      taskId,
+      taskTitle,
+      createdByUserId,
+      createdByClientId,
+      assignedToId,
+      associatedClientId,
+      changes,
+    } = data;
 
     if (changes.length === 0) {
       console.log('No changes to notify about');
@@ -163,7 +174,7 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
         createNotification({
           type: NotificationType.TASK_MODIFIED,
           message: baseMessage,
-          clientId: null,
+          clientId: associatedClientId || null,
           userId: createdByUserId,
           data: notificationData,
         })
@@ -190,7 +201,7 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
         createNotification({
           type: NotificationType.TASK_MODIFIED,
           message: baseMessage,
-          clientId: null,
+          clientId: associatedClientId || null,
           userId: assignedToId,
           data: notificationData,
         })

@@ -16,7 +16,7 @@ datasource db {
 }
 
 //// =========================================
-// Users and Roles
+// Users and Roles 
 //// =========================================
 enum Roles {
     SUPER_USER
@@ -105,6 +105,7 @@ model Client {
     state                String?
     zipCode              String?
     tasksCreated         Task[]                   @relation("TasksCreatedByClient")
+    tasksAssociated      Task[]                   @relation("TasksAssociatedWithClient")
     clientBilling        ClientBilling?
     files                File[]                   @relation("ClientFiles")
     createdAt            DateTime                 @default(now())
@@ -220,6 +221,8 @@ model Task {
     createdByUser     User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
     createdByClientId String? // Nullable, used if created by Client
     createdByClient   Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
+    associatedClientId String?
+    associatedClient   Client?       @relation("TasksAssociatedWithClient", fields: [associatedClientId], references: [id])
     creatorType       CreatorType
     dueDate           DateTime?
     timeForTask       Decimal       @db.Decimal(10, 2) // Time to complete the task in hours
