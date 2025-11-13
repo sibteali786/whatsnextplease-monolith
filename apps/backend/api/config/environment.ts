@@ -32,6 +32,15 @@ const envSchema = z.object({
   SES_FROM_NAME: z.string().min(1),
   EMAIL_VERIFICATION_TOKEN_EXPIRY_HOURS: z.string(),
   PASSWORD_RESET_TOKEN_EXPIRY_HOURS: z.string(),
+  CHAT_APP_API_URL: z.string().url().default('http://localhost:5002'),
+  CHAT_SHARED_SECRET: z.string().min(64),
+  CHAT_APP_REGISTRATION_TOKEN: z.string().min(64),
+  TENANT_ID: z.string().min(1).default('whatsnextplease'),
+  ALLOWED_ORIGINS: z
+    .string()
+    .default(
+      "['http://localhost:3000','http://localhost:5000','https://api.whatnextplease.com','https://api-staging.whatnextplease.com','https://whatnextplease.com','https://app.whatnextplease.com']"
+    ),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;

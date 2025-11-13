@@ -5,7 +5,6 @@ import {
   Home,
   Users,
   Settings,
-  LogOut,
   LayoutDashboard,
   Gamepad2,
   FolderClock,
@@ -13,11 +12,10 @@ import {
   UserCheck,
 } from 'lucide-react'; // Added UserCheck icon for Task Agents
 import { ActiveMenu } from './ActiveMenu';
-import { Button } from './ui/button';
-import { signout } from '@/utils/user';
 import { Roles } from '@prisma/client';
 import { Logo } from './assets/Logo';
 import { LinkButton } from './ui/LinkButton';
+import { LogoutButton } from './auth/LogOutButton';
 
 // Define role-based permissions for sidebar links
 const ROLE_PERMISSIONS: Record<
@@ -49,6 +47,7 @@ const ROLE_PERMISSIONS: Record<
   TASK_SUPERVISOR: [
     { path: '/home', label: 'Home', Icon: Home },
     { path: '/taskAgents', label: 'Task Agents', Icon: UserCheck }, // Added Task Agents
+    { path: '/clients', label: 'Clients', Icon: LayoutDashboard },
     { path: '/settings', label: 'Settings', Icon: Settings },
   ],
   // Add other roles as needed
@@ -90,14 +89,7 @@ const Sidebar = ({ role }: { role: Roles }) => {
 
       {/* Logout Section */}
       <div className="mt-8 flex flex-col items-center">
-        <Button
-          className={`flex items-center gap-3 text-textPrimary ${commonProperties}`}
-          onClick={() => signout()}
-          variant="ghost"
-        >
-          <LogOut className="w-5 h-5" />
-          Log Out
-        </Button>
+        <LogoutButton />
       </div>
     </aside>
   );

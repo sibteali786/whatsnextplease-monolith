@@ -25,5 +25,5 @@ export const ROLE_PERMISSIONS: Record<Roles, string[]> = {
     '/settings/myprofile',
     '/settings/notifications',
   ],
-  [Roles.TASK_SUPERVISOR]: ['/home', '/settings/*', '/users/*'], // Can access all settings including permissions
+  [Roles.TASK_SUPERVISOR]: ['/home', '/settings/*', '/users/*', '/clients/*'], // Can access all settings including permissions
 };

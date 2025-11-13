@@ -144,6 +144,18 @@ export const generateUserTaskColumns = (
         );
       },
     },
+    {
+      accessorKey: 'title',
+      header: ({ column }: { column: Column<TaskTable, unknown> }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Title
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+    },
     ...(showDescription
       ? [
           {
@@ -351,13 +363,13 @@ export const generateUserTaskColumns = (
       },
     },
     {
-      id: 'customer',
+      id: 'client',
       header: ({ column }: { column: Column<TaskTable, unknown> }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Customer
+          Client
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -366,12 +378,38 @@ export const generateUserTaskColumns = (
         const companyName = client?.companyName?.trim();
         const contactName = client?.contactName?.trim();
 
-        const displayName = companyName || contactName || 'N/A'; // 👈 recommended fallback
+        const displayName = companyName || contactName || 'N/A';
 
         return <span>{displayName}</span>;
       },
     },
+    {
+      id: 'createdByUser',
+      header: ({ column }: { column: Column<TaskTable, unknown> }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Created By
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const createdBy = row.original.createdByUser;
+        const client = row.original.createdByClient;
+        /* If client created then show client as createdByUser will be null */
+        if (!createdBy) {
+          const contactName = client?.contactName?.trim();
 
+          const displayName = contactName || 'N/A';
+
+          return <span>{displayName}</span>;
+        }
+        const displayName = createdBy?.firstName + ' ' + createdBy?.lastName || 'N/A';
+
+        return <span>{displayName}</span>;
+      },
+    },
     {
       accessorKey: 'assignedTo',
       header: 'Assignee',

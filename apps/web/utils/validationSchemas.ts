@@ -195,11 +195,17 @@ export type InputParamsType = typeof InputParamsSchema;
 
 export const ClientSchema = z.object({
   id: z.string(),
+  username: z.string(),
   companyName: z.string(),
   contactName: z.string().nullable(),
   email: z.string().nullable(),
   phone: z.string().nullable(),
   website: z.string().nullable(),
+  address1: z.string().nullable(),
+  address2: z.string().nullable(),
+  city: z.string().nullable(),
+  state: z.string().nullable(),
+  zipCode: z.string().nullable(),
 });
 export const ClientsListResponseSchema = errorSchema.merge(
   z.object({
@@ -279,6 +285,14 @@ export const TaskSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   createdByUserId: z.string().nullable().optional(),
+  createdByUser: z
+    .object({
+      id: z.string(),
+      firstName: z.string().nullable().optional(),
+      lastName: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   createdByClient: z
     .object({
       id: z.string(),

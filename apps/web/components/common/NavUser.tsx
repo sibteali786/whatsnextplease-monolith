@@ -1,4 +1,4 @@
-import { BadgeCheck, ChevronsUpDown, Copy, CreditCard, LogOut } from 'lucide-react';
+import { BadgeCheck, ChevronsUpDown, Copy, CreditCard } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
 import { signout, UserState } from '@/utils/user';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 import { useRouter } from 'next/navigation';
+import { LogoutButton } from '../auth/LogOutButton';
 
 interface NavUserProps {
   user: UserState;
@@ -84,8 +85,7 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signout()}>
-            <LogOut className="mr-2" />
-            Log out
+            <LogoutButton />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

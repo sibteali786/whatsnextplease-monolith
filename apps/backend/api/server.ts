@@ -16,6 +16,7 @@ import { commentRoutes } from './routes/comment.routes';
 import { logger } from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
 import { passwordResetRoutes } from './routes/passwordReset.routes';
+import { chatRoutes } from './routes/chat.routes';
 
 export async function createServer() {
   const app = express();
@@ -76,6 +77,7 @@ export async function createServer() {
   app.use('/files', fileRoutes);
   app.use('/tasks', taskRoutes);
   app.use('/password-reset', passwordResetRoutes);
+  app.use('/chat', chatRoutes);
   app.use('/', commentRoutes);
   // Health check route
   app.get('/ping', (req, res) => {

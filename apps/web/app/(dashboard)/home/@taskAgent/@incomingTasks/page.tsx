@@ -108,7 +108,7 @@ const IncomingTasksPage = () => {
               <TableHead className="font-medium">Task Details</TableHead>
               <TableHead className="font-medium">Priority</TableHead>
               <TableHead className="font-medium">Status</TableHead>
-              <TableHead className="font-medium">Customer</TableHead>
+              <TableHead className="font-medium">Client</TableHead>
               <TableHead className="text-right font-medium">Due Date</TableHead>
             </TableRow>
           </TableHeader>

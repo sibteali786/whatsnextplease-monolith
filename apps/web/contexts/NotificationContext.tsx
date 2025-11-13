@@ -114,13 +114,11 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   // Create SSE connection with multi-tab support
   const createSSEConnection = useCallback(() => {
     if (!userId || !isPageVisible.current) {
-      console.log(`[Tab:${tabId.current}] Skipping SSE connection - page not visible or no userId`);
       return;
     }
 
     // Don't retry beyond max attempts
     if (retryCount.current >= maxRetries) {
-      console.log(`[Tab:${tabId.current}] SSE max retries reached, relying on push notifications`);
       return;
     }
 
@@ -135,15 +133,10 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     try {
       // Include tabId in SSE URL for backend identification
       const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}&tabId=${tabId.current}`;
-      console.log(
-        `[Tab:${tabId.current}] Creating SSE connection (attempt ${retryCount.current + 1}/${maxRetries})`
-      );
-
       const eventSource = new EventSource(sseUrl);
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
-        console.log(`[Tab:${tabId.current}] SSE connection established`);
         setSseConnected(true);
         setError(null);
         retryCount.current = 0; // Reset retry count on success
@@ -156,9 +149,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
           // Handle connection confirmation
           if (data.type === 'connected') {
             setConnectionId(data.connectionId);
-            console.log(
-              `[Tab:${tabId.current}] Connection confirmed with ID: ${data.connectionId}`
-            );
+
             return;
           }
 
@@ -184,18 +175,11 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
               updatedAt: data.updatedAt || new Date().toISOString(),
             };
 
-            console.log(
-              `[Tab:${tabId.current}] Received notification via connection: ${data.connectionId}`
-            );
-
             // Use functional update to avoid stale closure
             setNotifications(prev => {
               // Check if notification already exists to avoid duplicates
               const exists = prev.some(n => n.id === newNotification.id);
               if (exists) {
-                console.log(
-                  `[Tab:${tabId.current}] Duplicate notification ignored: ${newNotification.id}`
-                );
                 return prev;
               }
               return [newNotification, ...prev];
@@ -222,7 +206,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         // Only retry if page is visible and within retry limit
         if (isPageVisible.current && retryCount.current < maxRetries) {
           const delay = Math.min(2000 * Math.pow(2, retryCount.current), 30000);
-          console.log(`[Tab:${tabId.current}] SSE reconnecting in ${delay}ms`);
 
           // Start countdown
           setReconnectIn(delay);
@@ -243,9 +226,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
             createSSEConnection();
           }, delay);
         } else {
-          console.log(
-            `[Tab:${tabId.current}] SSE giving up, push notifications will handle delivery`
-          );
           setReconnectIn(0);
         }
       };
@@ -265,7 +245,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
       if (!wasVisible && isPageVisible.current) {
         // Page became visible
-        console.log(`[Tab:${tabId.current}] Page became visible`);
 
         if (disconnectTimeout) {
           clearTimeout(disconnectTimeout);
@@ -273,7 +252,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         }
 
         if (!sseConnected) {
-          console.log(`[Tab:${tabId.current}] Page visible and SSE disconnected, reconnecting`);
           retryCount.current = 0; // Reset retry count
           createSSEConnection();
         }
@@ -282,15 +260,9 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
         refreshNotifications();
       } else if (wasVisible && !isPageVisible.current) {
         // Page became hidden - schedule disconnect after longer delay for multi-tab scenarios
-        console.log(
-          `[Tab:${tabId.current}] Page became hidden, scheduling SSE disconnect in 60 seconds`
-        );
 
         disconnectTimeout = setTimeout(() => {
           if (!isPageVisible.current) {
-            console.log(
-              `[Tab:${tabId.current}] Page still hidden after 60s, closing SSE connection`
-            );
             cleanupSSE();
           }
           disconnectTimeout = null;
@@ -299,9 +271,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     };
 
     const handleFocus = () => {
-      console.log(`[Tab:${tabId.current}] Window focused`);
       if (!sseConnected && isPageVisible.current) {
-        console.log(`[Tab:${tabId.current}] Window focused, ensuring SSE connection`);
         createSSEConnection();
       }
     };
@@ -312,7 +282,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
     // Handle tab/window closing
     const handleBeforeUnload = () => {
-      console.log(`[Tab:${tabId.current}] Tab/window closing, cleaning up SSE`);
       cleanupSSE();
     };
 
@@ -339,7 +308,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     // Listen for notifications from other tabs
     channel.onmessage = event => {
       if (event.data.type === 'NOTIFICATION_RECEIVED' && event.data.tabId !== tabId.current) {
-        console.log(`[Tab:${tabId.current}] Received notification sync from another tab`);
         // Another tab received a notification, sync our state
         refreshNotifications();
       } else if (event.data.type === 'MARK_AS_READ' && event.data.tabId !== tabId.current) {
@@ -369,7 +337,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
           const subscription = await registration.pushManager.getSubscription();
           setPushEnabled(!!subscription);
         } catch (err) {
-          console.log(`[Tab:${tabId.current}] Push notifications not available`);
           setPushEnabled(false);
         }
       }
@@ -381,7 +348,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   // Load initial notifications
   useEffect(() => {
     const loadInitialNotifications = async () => {
-      console.log(`[Tab:${tabId.current}] Loading initial notifications`);
       try {
         const response = await fetchNotifications(userId, role);
         setNotifications(response.notifications);
@@ -402,7 +368,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   // Initialize SSE connection
   useEffect(() => {
     if (userId && isPageVisible.current) {
-      console.log(`[Tab:${tabId.current}] Initializing SSE connection`);
       createSSEConnection();
     }
     return cleanupSSE;
@@ -410,7 +375,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
   // Manual reconnect function
   const manualReconnect = useCallback(() => {
-    console.log(`[Tab:${tabId.current}] Manual reconnect triggered`);
     retryCount.current = 0;
     setReconnectIn(0);
     if (countdownIntervalRef.current) {
@@ -486,7 +450,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   useEffect(() => {
     const handlePushNotification = () => {
       if (isPageVisible.current) {
-        console.log(`[Tab:${tabId.current}] Refreshing notifications due to push event`);
         refreshNotifications();
       }
     };

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { CheckIcon, XCircle, ChevronDown, XIcon, WandSparkles } from 'lucide-react';
+import { CheckIcon, XCircle, ChevronDown, XIcon, WandSparkles, Plus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +17,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
+import { Roles } from '@prisma/client';
 
 /**
  * Variants for the multi-select component to handle different styles.
@@ -118,6 +119,9 @@ interface MultiSelectProps
    * Optional, can be used to add custom styles.
    */
   className?: string;
+  onAddSkill?: () => void;
+  taskOffering?: boolean;
+  role?: Roles;
 }
 
 export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
@@ -134,6 +138,10 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
       modalPopover = false,
       asChild = false,
       className,
+
+      onAddSkill,
+      taskOffering = false,
+      role,
       ...props
     },
     ref
@@ -375,6 +383,16 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
                   </div>
                   <span>(Select All)</span>
                 </CommandItem>
+                {taskOffering && role === Roles.SUPER_USER && (
+                  <CommandItem
+                    key="add-skill-category"
+                    onSelect={() => onAddSkill?.()}
+                    className="cursor-pointer gap-2"
+                  >
+                    <Plus className="w-4 h-4 text-green-500" />
+                    <span>Add Skill</span>
+                  </CommandItem>
+                )}
               </CommandGroup>
               <CommandSeparator />
               {renderOptions()}

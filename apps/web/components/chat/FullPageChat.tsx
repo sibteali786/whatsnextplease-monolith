@@ -13,15 +13,23 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useChatAuth } from '@/hooks/use-chat-auth';
+
+const CHAT_BASE_URL = (process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000').replace(
+  /\/embed\/?$/,
+  ''
+);
+const CHAT_EMBED_URL = `${CHAT_BASE_URL}/embed`;
 
 const CHAT_CONFIG = {
-  url: process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000/',
+  baseUrl: CHAT_BASE_URL,
+  embedUrl: CHAT_EMBED_URL,
   title: 'Messages',
-  timeout: 15000,
+  timeout: 20000,
   maxRetries: 3,
 };
 
-type LoadingState = 'loading' | 'loaded' | 'error' | 'timeout' | 'blocked';
+type LoadingState = 'loading' | 'loaded' | 'error' | 'timeout';
 
 interface FullPageChatProps {
   className?: string;
@@ -37,70 +45,60 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Handle iframe load events
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+  // Use shared auth hook
+  const { iframeUrl, isLoading: isAuthenticating, error: authError } = useChatAuth();
 
-    const handleLoad = () => {
-      setTimeout(() => {
-        try {
-          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-          if (iframeDoc && iframeDoc.body && iframeDoc.body.innerHTML.length > 100) {
-            setLoadingState('loaded');
-            setErrorDetails('');
-          } else {
-            setLoadingState('blocked');
-            setErrorDetails('Content blocked by security policies');
-          }
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error('Iframe load error:', error);
-            // Cross-origin access denied but iframe might still work
-            setLoadingState('loaded');
-          }
-        }
+  // Set loading state based on auth status
+  useEffect(() => {
+    if (isAuthenticating) {
+      setLoadingState('loading');
+    } else if (authError) {
+      setErrorDetails(authError);
+      setLoadingState('error');
+    }
+  }, [isAuthenticating, authError]);
+
+  // Listen for CHAT_READY message (optional, for tracking)
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== new URL(CHAT_CONFIG.baseUrl).origin) {
+        return;
+      }
+
+      if (event.data?.source === 'chat-app' && event.data?.type === 'CHAT_READY') {
+        console.log('✅ [WNP] Chat ready');
+        setLoadingState('loaded');
 
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
         }
+      }
 
-        if (retryCount > 0) {
-          toast({
-            title: 'Chat Loaded Successfully',
-            description: 'Messages are now ready to use.',
-          });
-        }
-      }, 2000);
-    };
-
-    const handleError = () => {
-      setLoadingState('error');
-      setErrorDetails('Network or resource error');
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (event.data?.source === 'chat-app' && event.data?.type === 'CHAT_ERROR') {
+        console.error('❌ [WNP] Chat error:', event.data.payload?.error);
+        setErrorDetails(event.data.payload?.error || 'Chat initialization failed');
+        setLoadingState('error');
       }
     };
 
-    // Set loading timeout
-    timeoutRef.current = setTimeout(() => {
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Handle iframe load
+  const handleIframeLoad = () => {
+    console.log('📦 [WNP] Iframe loaded');
+
+    // Give socket 2 seconds to connect, then assume success
+    setTimeout(() => {
       if (loadingState === 'loading') {
-        setLoadingState('timeout');
-        setErrorDetails('Request timed out - server may be unreachable');
+        setLoadingState('loaded');
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
       }
-    }, CHAT_CONFIG.timeout);
-
-    iframe.addEventListener('load', handleLoad);
-    iframe.addEventListener('error', handleError);
-
-    return () => {
-      iframe.removeEventListener('load', handleLoad);
-      iframe.removeEventListener('error', handleError);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [retryCount, loadingState, toast]);
+    }, 5000);
+  };
 
   // Handle retry
   const handleRetry = () => {
@@ -113,14 +111,12 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
       return;
     }
 
+    console.log('🔄 [WNP] Retrying...');
     setLoadingState('loading');
     setRetryCount(prev => prev + 1);
     setErrorDetails('');
-
-    if (iframeRef.current) {
-      const newUrl = `${CHAT_CONFIG.url}?fullpage=true&retry=${retryCount + 1}&t=${Date.now()}`;
-      iframeRef.current.src = newUrl;
-    }
+    // Force re-fetch by reloading the page or resetting auth state
+    window.location.reload();
   };
 
   // Handle fullscreen toggle
@@ -142,7 +138,13 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Loading skeleton for full page
+  useEffect(() => {
+    if (iframeUrl) {
+      console.log('[FullPageChat] Iframe URL ready:', iframeUrl);
+    }
+  }, [iframeUrl]);
+
+  // Loading skeleton
   const LoadingSkeleton = () => (
     <div className="h-full w-full flex flex-col animate-pulse">
       <div className="h-16 border-b bg-muted/50 flex items-center justify-between px-4">
@@ -151,25 +153,16 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
           <div className="w-32 h-5 bg-muted rounded" />
           <div className="w-16 h-4 bg-muted rounded" />
         </div>
-        <div className="flex gap-2">
-          <div className="w-8 h-8 bg-muted rounded" />
-          <div className="w-16 h-8 bg-muted rounded" />
-        </div>
       </div>
       <div className="flex-1 p-4 space-y-4">
         <div className="w-full h-12 bg-muted rounded" />
         <div className="w-3/4 h-8 bg-muted rounded" />
         <div className="w-1/2 h-8 bg-muted rounded" />
-        <div className="w-full h-16 bg-muted rounded" />
-        <div className="flex gap-2 mt-8">
-          <div className="w-20 h-8 bg-muted rounded" />
-          <div className="w-24 h-8 bg-muted rounded" />
-        </div>
       </div>
     </div>
   );
 
-  // Error state for full page
+  // Error state
   const ErrorState = () => (
     <div className="h-full w-full flex flex-col">
       <div className="h-16 border-b bg-muted/50 flex items-center justify-between px-4">
@@ -188,9 +181,8 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
           <div className="space-y-2">
             <h2 className="text-2xl font-semibold">Unable to Load Messages</h2>
             <p className="text-muted-foreground">
-              {loadingState === 'timeout' && 'The chat application is taking too long to load.'}
-              {loadingState === 'blocked' && 'Content is blocked by security policies.'}
-              {loadingState === 'error' && 'Unable to connect to the chat service.'}
+              {loadingState === 'timeout' && 'Connection timed out'}
+              {loadingState === 'error' && (errorDetails || 'Unable to connect to chat')}
             </p>
           </div>
 
@@ -214,7 +206,7 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
             </Button>
 
             <Button asChild variant="outline">
-              <a href={CHAT_CONFIG.url} target="_blank" rel="noopener noreferrer">
+              <a href={`${CHAT_CONFIG.embedUrl}`} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Open in New Tab
               </a>
@@ -240,12 +232,10 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
           )}
           {loadingState === 'loading' && (
             <Badge variant="outline" className="text-xs">
-              Connecting...
+              Loading...
             </Badge>
           )}
-          {(loadingState === 'error' ||
-            loadingState === 'timeout' ||
-            loadingState === 'blocked') && (
+          {(loadingState === 'error' || loadingState === 'timeout') && (
             <Badge variant="destructive" className="text-xs">
               Connection Issue
             </Badge>
@@ -270,22 +260,23 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
       {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden">
         {loadingState === 'loading' && <LoadingSkeleton />}
-        {(loadingState === 'error' || loadingState === 'timeout' || loadingState === 'blocked') && (
-          <ErrorState />
-        )}
+        {(loadingState === 'error' || loadingState === 'timeout') && <ErrorState />}
 
         {/* Chat Iframe */}
-        <iframe
-          ref={iframeRef}
-          src={`${CHAT_CONFIG.url}?fullpage=true&embedded=true&t=${Date.now()}`}
-          title={CHAT_CONFIG.title}
-          className={`w-full h-full border-0 transition-opacity duration-300 ${
-            loadingState === 'loaded' ? 'opacity-100' : 'opacity-0 absolute'
-          }`}
-          allow="camera; microphone; clipboard-write; fullscreen"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+        {iframeUrl && !authError && (
+          <iframe
+            ref={iframeRef}
+            src={iframeUrl}
+            title={CHAT_CONFIG.title}
+            className={`w-full h-full border-0 transition-opacity duration-300 ${
+              loadingState === 'loaded' ? 'opacity-100' : 'opacity-0 absolute'
+            }`}
+            onLoad={handleIframeLoad}
+            allow="camera; microphone; clipboard-write; fullscreen"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation allow-storage-access-by-user-activation"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        )}
       </div>
     </div>
   );
