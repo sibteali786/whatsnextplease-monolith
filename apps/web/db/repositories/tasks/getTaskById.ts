@@ -45,6 +45,30 @@ export const getTaskById = async (taskId: string) => {
             avatarUrl: true,
           },
         },
+        associatedClient: {
+          select: {
+            id: true,
+            companyName: true,
+            contactName: true,
+            avatarUrl: true,
+          },
+        },
+        createdByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+        createdByClient: {
+          select: {
+            id: true,
+            companyName: true,
+            contactName: true,
+            avatarUrl: true,
+          },
+        },
         taskSkills: {
           select: {
             skill: {

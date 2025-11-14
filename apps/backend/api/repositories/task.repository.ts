@@ -77,7 +77,11 @@ export class TaskRepository {
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
         assignedToId: true,
+        associatedClientId: true,
         dueDate: true,
         timeForTask: true,
         overTime: true,
@@ -167,6 +171,11 @@ export class TaskRepository {
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
+
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
+
         taskSkills: {
           include: {
             skill: { select: { id: true, name: true } },
@@ -632,7 +641,11 @@ export class TaskRepository {
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
         assignedToId: true,
+        associatedClientId: true,
         dueDate: true,
         timeForTask: true,
         overTime: true,

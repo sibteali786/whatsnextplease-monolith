@@ -206,6 +206,7 @@ export const ClientSchema = z.object({
   city: z.string().nullable(),
   state: z.string().nullable(),
   zipCode: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
 });
 export const ClientsListResponseSchema = errorSchema.merge(
   z.object({
@@ -278,6 +279,14 @@ export const TaskSchema = z.object({
       avatarUrl: z.string().nullable(),
     })
     .nullable(),
+  associatedClient: z
+    .object({
+      id: z.string(),
+      companyName: z.string(),
+      contactName: z.string(),
+      avatarUrl: z.string().nullable(),
+    })
+    .nullable(),
   taskSkills: z.array(z.string()),
   timeForTask: z.instanceof(Prisma.Decimal), // Update to expect a number
   overTime: z.instanceof(Prisma.Decimal).nullable(),
@@ -303,6 +312,7 @@ export const TaskSchema = z.object({
     .optional(),
   createdByClientId: z.string().nullable().optional(),
   assignedToId: z.string().nullable().optional(),
+  associatedClientId: z.string().nullable().optional(),
   taskFiles: z.array(TaskFileSchema).optional().nullable(),
 });
 export type Task = z.infer<typeof TaskSchema>;
@@ -509,6 +519,7 @@ export const UpdateTaskParamsSchema = z.object({
   overTime: z.string().optional(),
   skills: z.array(z.string()).optional(),
   assignedToId: z.string().optional().nullable(),
+  assignedToClientId: z.string().optional().nullable(),
   initialComment: z.string().max(5000).optional(),
 });
 

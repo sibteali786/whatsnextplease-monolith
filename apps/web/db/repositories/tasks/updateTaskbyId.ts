@@ -52,6 +52,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       priorityName,
       taskCategoryName,
       assignedToId,
+      assignedToClientId,
       skills,
       initialComment,
       ...updateData
@@ -75,6 +76,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         timeForTask: true,
         overTime: true,
         assignedToId: true,
+        associatedClientId: true,
         createdByUserId: true,
         createdByClientId: true,
         status: { select: { statusName: true } },
@@ -122,6 +124,8 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
     // Validate assignedToId - only if user has permission to assign tasks
     let assignee = null;
     let assigneeName = null;
+    let assigneeClient = null;
+    let assigneeClientName = null;
 
     // Check if current user role is allowed to assign tasks
     const canAssignTasks =
@@ -130,11 +134,13 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       userRole === Roles.DISTRICT_MANAGER ||
       userRole === Roles.TERRITORY_MANAGER;
     const isAssignmentChanging = assignedToId && assignedToId !== originalTask.assignedToId;
+    const isAssignmentClientChanging =
+      assignedToClientId && assignedToClientId !== originalTask.associatedClientId;
     logger.info(
       { canAssignTasks, isAssignmentChanging, assignedToId },
       'Checking assignment permissions and changes'
     );
-
+    /* User Assignee */
     if (isAssignmentChanging && !canAssignTasks) {
       // If user tries to change assignment but doesn't have permission, return error
       return {
@@ -182,6 +188,57 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
       });
       if (originalAssigneeData) {
         originalAssigneeName = `${originalAssigneeData.firstName} ${originalAssigneeData.lastName}`;
+      }
+    }
+    /* Client Assignee */
+    if (isAssignmentClientChanging && !canAssignTasks) {
+      // If user tries to change client but doesn't have permission, return error
+      return {
+        success: false,
+        task: null,
+        message: "You don't have permission to change associated client.",
+      };
+    }
+    if (isAssignmentClientChanging && canAssignTasks) {
+      if (typeof assignedToClientId !== 'string') {
+        return {
+          success: false,
+          task: null,
+          message: 'Invalid assignedToClientId format provided.',
+        };
+      }
+
+      const assigneeClientData = await prisma.client.findFirst({
+        where: { id: assignedToClientId },
+        select: {
+          id: true,
+          username: true,
+          contactName: true,
+          companyName: true,
+        },
+      });
+
+      if (!assigneeClientData) {
+        return {
+          success: false,
+          task: null,
+          message: 'Assigned client not found in database.',
+        };
+      }
+
+      assigneeClient = assigneeClientData;
+      assigneeClientName = `${assigneeClientData.contactName} (${assigneeClientData.companyName})`;
+    }
+
+    // Get original assignee name for comparison
+    let originalClientAssigneeName = 'Unassigned';
+    if (originalTask.associatedClientId) {
+      const originalAssigneeData = await prisma.client.findFirst({
+        where: { id: originalTask.associatedClientId },
+        select: { username: true, contactName: true, companyName: true },
+      });
+      if (originalAssigneeData) {
+        originalClientAssigneeName = `${originalAssigneeData.contactName} (${originalAssigneeData.companyName})`;
       }
     }
 
@@ -322,7 +379,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         });
       }
 
-      // Assignment change
+      // User Assignment change
       const newAssignedToId = assignee ? assignee.id : originalTask.assignedToId;
       if (newAssignedToId !== originalTask.assignedToId) {
         changes.push({
@@ -331,6 +388,20 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           newValue: newAssignedToId,
           displayOldValue: originalAssigneeName,
           displayNewValue: assigneeName || 'Unassigned',
+        });
+      }
+
+      // Client Assignment change
+      const newAssignedToClientId = assigneeClient
+        ? assigneeClient.id
+        : originalTask.associatedClientId;
+      if (newAssignedToClientId !== originalTask.associatedClientId) {
+        changes.push({
+          field: 'associatedClient',
+          oldValue: originalTask.associatedClientId,
+          newValue: newAssignedToClientId,
+          displayOldValue: originalClientAssigneeName,
+          displayNewValue: assigneeClientName || 'Unassigned',
         });
       }
 
@@ -406,6 +477,11 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
             ? assignee.id
             : null
           : originalTask.assignedToId,
+        associatedClientId: isAssignmentClientChanging
+          ? assigneeClient
+            ? assigneeClient.id
+            : null
+          : originalTask.associatedClientId,
         statusId: status.id,
         priorityId: priority.id,
         taskCategoryId: category.id,
@@ -430,6 +506,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         timeForTask: true,
         overTime: true,
         assignedToId: true,
+        associatedClientId: true,
       },
     });
 
@@ -511,12 +588,13 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
         }
       }
       // If task was assigned during creation
+      /* Notify the assigned user */
       if (updatedTask.assignedToId && updatedTask.assignedToId !== currentUser?.id) {
         try {
           await createNotification({
             type: NotificationType.TASK_ASSIGNED,
             message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser?.name}`,
-            clientId: null,
+            clientId: assignedToClientId || null,
             userId: updatedTask.assignedToId,
             data: {
               type: NotificationType.TASK_ASSIGNED,
@@ -548,6 +626,8 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
             createdByUserId: originalTask.createdByUserId || undefined,
             createdByClientId: originalTask.createdByClientId || undefined,
             assignedToId: originalTask.assignedToId || undefined,
+            associatedClientId: originalTask.associatedClientId || undefined,
+
             changes: changes, // Pass ALL changes as an array
           });
         } catch (error) {
@@ -565,8 +645,39 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           await createNotification({
             type: NotificationType.TASK_ASSIGNED,
             message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser?.name}`,
-            clientId: null,
+            clientId: assignedToClientId || null,
             userId: updatedTask.assignedToId,
+            data: {
+              type: NotificationType.TASK_ASSIGNED,
+              taskId: updatedTask.id,
+              details: {
+                status: updatedTask.status.statusName,
+                priority: updatedTask.priority.priorityName,
+                category: updatedTask.taskCategory.categoryName,
+              },
+              name: currentUser?.name,
+              username: currentUser?.username,
+              avatarUrl: currentUser?.avatarUrl,
+              url: `/taskOfferings/${updatedTask.id}`,
+            },
+          });
+        } catch (error) {
+          logger.error({ error }, 'Failed to send assignment notification');
+        }
+      }
+
+      // Separate client assignment notification (if client assignment changed)
+      // This handles NEW client assignments separately from field updates
+      if (
+        originalTask.associatedClientId !== updatedTask.associatedClientId &&
+        updatedTask.associatedClientId
+      ) {
+        try {
+          await createNotification({
+            type: NotificationType.TASK_ASSIGNED,
+            message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser?.name}`,
+            clientId: updatedTask.associatedClientId || null,
+            userId: updatedTask.assignedToId || originalTask.assignedToId,
             data: {
               type: NotificationType.TASK_ASSIGNED,
               taskId: updatedTask.id,

@@ -1,5 +1,6 @@
 'use server';
 import prisma from '@/db/db';
+import getClientsList from '@/db/repositories/clients/getClients';
 
 interface ClientById {
   client: ClientDetailsCardProps | null;
@@ -140,4 +141,14 @@ export const getFileIdsByClientId = async (clientId: string) => {
     console.error(e);
     throw new Error('Failed to retrieve file ids by given client id');
   }
+};
+export const fetchClients = async (cursor: string | null, pageSize: number, search?: string) => {
+  'use server';
+
+  const { clients, nextCursor, totalCount, hasNextPage } = await getClientsList({
+    cursor: cursor,
+    pageSize: pageSize, // Change page size as required
+    search,
+  });
+  return { clients, nextCursor, totalCount, hasNextPage };
 };

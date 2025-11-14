@@ -6,31 +6,42 @@ import {
   ClientsListResponseSchema,
   GetClientsListParamsSchema,
 } from '@/utils/validationSchemas';
+import { Prisma } from '@prisma/client';
 import 'server-only';
 
 interface GetClientsListParams {
   cursor: string | null; // Cursor to start fetching the next set of records
   pageSize?: number; // Number of records to fetch
-}
-
-interface GetClientsListParams {
-  cursor: string | null;
-  pageSize?: number;
+  search?: string; // Optional search query
 }
 
 const getClientsList = async ({
   cursor,
   pageSize = 10,
+  search = '',
 }: GetClientsListParams): Promise<ClientsListResponse> => {
   try {
     // Validate input parameters
     GetClientsListParamsSchema.parse({ cursor, pageSize });
 
+    // Build base where clause for search
+    const whereClause =
+      search.trim() !== ''
+        ? {
+            OR: [
+              { contactName: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
+              { companyName: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
+            ],
+          }
+        : {};
     // Fetch total count of clients
-    const totalCount = await prisma.client.count();
+    const totalCount = await prisma.client.count({
+      where: whereClause,
+    });
 
     // Fetch clients
     const clients = await prisma.client.findMany({
+      where: whereClause,
       take: pageSize + 1, // Fetch one extra to check for next page
       ...(cursor && { cursor: { id: cursor }, skip: 1 }), // Skip cursor if provided
       select: {
@@ -46,6 +57,7 @@ const getClientsList = async ({
         city: true,
         state: true,
         zipCode: true,
+        avatarUrl: true,
       },
       orderBy: {
         id: 'asc',
