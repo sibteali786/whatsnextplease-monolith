@@ -51,13 +51,13 @@ jobs:
         working-directory: ./apps/backend
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
       - name: Run frontend migrations
         working-directory: ./apps/web
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
 
       - name: Notify migrations complete
         run: echo "✅ Database migrations completed successfully"
