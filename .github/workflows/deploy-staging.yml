@@ -7,6 +7,7 @@ on:
       - staging
     paths:
       - 'apps/backend/**'
+      - 'apps/web/prisma/migrations/**'
       - 'Dockerfile'
       - '.github/workflows/deploy-staging.yml'
   pull_request:
@@ -14,6 +15,7 @@ on:
       - staging
     paths:
       - 'apps/backend/**'
+      - 'apps/web/prisma/migrations/**'
       - 'Dockerfile'
     types: [closed]
 
@@ -23,10 +25,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # First job: Run database migrations
+  migrations:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run backend migrations
+        working-directory: ./apps/backend
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run frontend migrations
+        working-directory: ./apps/web
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Notify migrations complete
+        run: echo "✅ Database migrations completed successfully"
+
   # Job to build and deploy to staging
   deploy-staging:
-    # Only run on push to staging or when PR is merged
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    needs: migrations
     runs-on: ubuntu-latest
 
     # Set environment variables for the job
