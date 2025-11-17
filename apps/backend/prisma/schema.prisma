@@ -105,6 +105,7 @@ model Client {
     state                String?
     zipCode              String?
     tasksCreated         Task[]                   @relation("TasksCreatedByClient")
+    tasksAssociated      Task[]                   @relation("TasksAssociatedWithClient")
     clientBilling        ClientBilling?
     files                File[]                   @relation("ClientFiles")
     createdAt            DateTime                 @default(now())
@@ -205,32 +206,34 @@ model TaskCategory {
 // TODO: Also add ability to attach files with a task, overtime, time to complete a task, required hours to complete task.
 // Updated Task model
 model Task {
-    id                String        @id @default(uuid())
-    title             String
-    description       String
-    priorityId        String
-    priority          TaskPriority  @relation(fields: [priorityId], references: [id])
-    statusId          String
-    status            TaskStatus    @relation(fields: [statusId], references: [id])
-    taskCategoryId    String
-    taskCategory      TaskCategory  @relation(fields: [taskCategoryId], references: [id])
-    assignedToId      String?
-    assignedTo        User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
-    createdByUserId   String? // Nullable, used if created by User
-    createdByUser     User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
-    createdByClientId String? // Nullable, used if created by Client
-    createdByClient   Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
-    creatorType       CreatorType
-    dueDate           DateTime?
-    timeForTask       Decimal       @db.Decimal(10, 2) // Time to complete the task in hours
-    overTime          Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
-    taskHistories     TaskHistory[]
-    invoices          Invoice[]
-    taskSkills        TaskSkill[]
-    taskFiles         TaskFile[] // Relation to TaskFile for attachments
-    createdAt         DateTime      @default(now())
-    updatedAt         DateTime      @updatedAt
-    taskComments      TaskComment[]
+    id                 String        @id @default(uuid())
+    title              String
+    description        String
+    priorityId         String
+    priority           TaskPriority  @relation(fields: [priorityId], references: [id])
+    statusId           String
+    status             TaskStatus    @relation(fields: [statusId], references: [id])
+    taskCategoryId     String
+    taskCategory       TaskCategory  @relation(fields: [taskCategoryId], references: [id])
+    assignedToId       String?
+    assignedTo         User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+    createdByUserId    String? // Nullable, used if created by User
+    createdByUser      User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
+    createdByClientId  String? // Nullable, used if created by Client
+    createdByClient    Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
+    associatedClientId String?
+    associatedClient   Client?       @relation("TasksAssociatedWithClient", fields: [associatedClientId], references: [id])
+    creatorType        CreatorType
+    dueDate            DateTime?
+    timeForTask        Decimal       @db.Decimal(10, 2) // Time to complete the task in h ours
+    overTime           Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
+    taskHistories      TaskHistory[]
+    invoices           Invoice[]
+    taskSkills         TaskSkill[]
+    taskFiles          TaskFile[] // Relation to TaskFile for attachments
+    createdAt          DateTime      @default(now())
+    updatedAt          DateTime      @updatedAt
+    taskComments       TaskComment[]
 }
 
 // Enum to distinguish between User and Client as the creator

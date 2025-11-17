@@ -374,7 +374,9 @@ export const generateUserTaskColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const client = row.original.createdByClient;
+        const createdByClient = row.original.createdByClient;
+        const associatedClient = row.original.associatedClient;
+        const client = createdByClient || associatedClient;
         const companyName = client?.companyName?.trim();
         const contactName = client?.contactName?.trim();
 

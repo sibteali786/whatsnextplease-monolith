@@ -19,7 +19,8 @@ export interface TaskChange {
     | 'timeForTask'
     | 'overTime'
     | 'skills'
-    | 'assignedTo';
+    | 'assignedTo'
+    | 'associatedClient';
   oldValue: any;
   newValue: any;
   displayOldValue?: string;

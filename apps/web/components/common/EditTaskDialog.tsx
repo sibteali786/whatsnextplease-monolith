@@ -58,6 +58,7 @@ import { getTaskById } from '@/db/repositories/tasks/getTaskById';
 import { taskApiClient } from '@/utils/taskApi';
 import { AddSkillDialog } from '../skills/AddSkillDialog';
 import { SearchableDropdown } from '../ui/searchable-dropdown';
+import { SearchableClient } from '../clients/SearchableClients';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -67,6 +68,7 @@ const editTaskSchema = z.object({
   statusName: z.nativeEnum(TaskStatusEnum),
   taskCategoryName: z.string().min(1, 'Task Category is required'),
   assignedToId: z.string().optional(),
+  assignedToClientId: z.string().optional(),
   skills: z.array(z.string()).optional(),
   timeForTask: z
     .string()
@@ -152,7 +154,6 @@ export default function EditTaskDialog({
 }: EditTaskDialogProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState<boolean | undefined>(true);
   const [page, setPage] = useState(1);
@@ -404,7 +405,7 @@ export default function EditTaskDialog({
       setLoading(false);
     }
   };
-
+  console.log('task in edit dialog', task);
   useEffect(() => {
     if (open && task) {
       form.reset({
@@ -414,6 +415,7 @@ export default function EditTaskDialog({
         statusName: task.status.statusName,
         taskCategoryName: task.taskCategory.categoryName,
         assignedToId: task?.assignedTo?.id || '',
+        assignedToClientId: task?.associatedClient?.id || '',
         skills: task.taskSkills || [],
         timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
         overTime:
@@ -422,6 +424,11 @@ export default function EditTaskDialog({
             : '',
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
       });
+      if (task?.assignedTo) {
+        setSearchQuery(task?.assignedTo?.firstName + ' ' + task?.assignedTo?.lastName || '');
+        fetchUsers(1, task?.assignedTo?.firstName + ' ' + task?.assignedTo?.lastName || '');
+      }
+
       // set files
       if (task.taskFiles) {
         setFiles(task.taskFiles);
@@ -612,6 +619,7 @@ export default function EditTaskDialog({
           statusName: task.status.statusName,
           taskCategoryName: task.taskCategory.categoryName,
           assignedToId: task?.assignedTo?.id || '',
+          assignedToClientId: task?.associatedClient?.id || '',
           skills: task.taskSkills || [],
           timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
           overTime:
@@ -960,6 +968,7 @@ export default function EditTaskDialog({
                             }
                             value={field.value || 'none'}
                             onChange={value => field.onChange(value === 'none' ? '' : value)}
+                            searchQuery={searchQuery}
                             placeholder="Select Assignee"
                             onScrollEnd={() => {
                               if (hasMore && !loading) {
@@ -1122,6 +1131,85 @@ export default function EditTaskDialog({
                       ) : (
                         <span className="text-sm text-muted-foreground">
                           Not yet assigned. Task Supervisors will assign this task.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </FormItem>
+              )}
+
+              {/* Client - Only show if the user has permission to assign tasks */}
+              {canAssignTasks ? (
+                <FormField
+                  control={form.control}
+                  name="assignedToClientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <FormLabel>Client</FormLabel>
+                        </div>
+
+                        <FormControl>
+                          <SearchableClient
+                            search={task?.associatedClient?.contactName || ''}
+                            value={field.value || ''} // Pass the current form value
+                            onChange={value => field.onChange(value)} // Update form when user selects a client
+                            disabled={form.formState.isSubmitting} // Optional: disable during submit
+                          />
+                        </FormControl>
+
+                        {/*  Optional Preview */}
+                        {/*   {field.value &&
+                    field.value !== '' &&
+                    (() => {
+                      const selectedClient = clients?.find(c => c.id === field.value);
+                      if (selectedClient) {
+                        return (
+                          <div className="text-sm text-muted-foreground bg-green-50 border border-green-200 p-3 rounded-md">
+                            <strong>Preview:</strong> This task will be assigned to{' '}
+                            {selectedClient.username}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()} */}
+                      </div>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormItem>
+                  <FormLabel>Client</FormLabel>
+                  <div className="border rounded-md p-4 w-full bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                      {task.associatedClient ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8 rounded-lg">
+                            <AvatarImage
+                              src={
+                                task.associatedClient.avatarUrl || 'https://github.com/shadcn.png'
+                              }
+                              alt={task.associatedClient.contactName ?? 'avatar'}
+                              className="rounded-full"
+                            />
+                            <AvatarFallback className="rounded-full">
+                              {task.associatedClient.contactName
+                                ? task.associatedClient.contactName.substring(0, 2).toUpperCase()
+                                : 'CN'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            Assigned to:{' '}
+                            <strong>{`${task.associatedClient.contactName} (${task.associatedClient.companyName})`}</strong>
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          No client associated yet.
                         </span>
                       )}
                     </div>

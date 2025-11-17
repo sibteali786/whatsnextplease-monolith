@@ -31,6 +31,7 @@ export const createTaskSchema = z.object({
   priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.NORMAL),
   taskCategoryName: z.string().default('General Tasks'),
   assignedToId: z.string().optional(),
+  assignedToClientId: z.string().optional(),
   timeForTask: z
     .string()
     .min(1, 'Time for Task is required')
@@ -253,6 +254,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       }
     }
   };
+
   // Fetch skills dynamically
   useEffect(() => {
     const fetchDependencies = async () => {

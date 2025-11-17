@@ -38,6 +38,7 @@ import { Badge } from '../ui/badge';
 import { AddSkillDialog } from '../skills/AddSkillDialog';
 import { COOKIE_NAME } from '@/utils/constant';
 import { SearchableDropdown } from '../ui/searchable-dropdown';
+import { SearchableClient } from '../clients/SearchableClients';
 
 interface CreateTaskFormProps {
   form: UseFormReturn<z.infer<typeof createTaskSchema>>;
@@ -78,6 +79,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   const [, setFiles] = useState<FileWithMetadataFE[]>([]);
   const [skillsCategory, setSkillsCategory] = useState<SkillCategory[]>([]);
   const [open, setOpen] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const selectedAssigneeId = form.watch('assignedToId');
 
@@ -446,7 +448,59 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
             </div>
           </div>
         )}
+        {/* Client - Only show if the user has permission to assign tasks */}
+        {canAssignTasks ? (
+          <FormField
+            control={form.control}
+            name="assignedToClientId"
+            render={({ field }) => (
+              <FormItem>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FormLabel>Client</FormLabel>
+                  </div>
 
+                  <FormControl>
+                    <SearchableClient
+                      value={field.value || ''} // Pass the current form value
+                      onChange={value => field.onChange(value)} // Update form when user selects a client
+                      disabled={form.formState.isSubmitting} // Optional: disable during submit
+                    />
+                  </FormControl>
+
+                  {/*  Optional Preview */}
+                  {/*   {field.value &&
+                    field.value !== '' &&
+                    (() => {
+                      const selectedClient = clients?.find(c => c.id === field.value);
+                      if (selectedClient) {
+                        return (
+                          <div className="text-sm text-muted-foreground bg-green-50 border border-green-200 p-3 rounded-md">
+                            <strong>Preview:</strong> This task will be assigned to{' '}
+                            {selectedClient.username}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()} */}
+                </div>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="border rounded-md p-4 w-full">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                <span>
+                  This task will be sent to Task Supervisors for assignment after creation.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Time for Task */}
         <FormField
           control={form.control}

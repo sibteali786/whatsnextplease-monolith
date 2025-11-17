@@ -157,7 +157,6 @@ export default function TaskDetailsView({
 
     return () => clearTimeout(timer);
   }, [taskId]);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -263,13 +262,47 @@ export default function TaskDetailsView({
           </div>
           <Separator />
 
+          <div className="flex">
+            <h3 className="font-semibold w-1/4">Client</h3>
+            <p className="w-3/4">
+              {(() => {
+                const client = taskDetails?.associatedClient || taskDetails?.createdByClient;
+                return client ? `${client.contactName} (${client.companyName})` : 'N/A';
+              })()}
+            </p>
+          </div>
+          <Separator />
+          <div className="flex">
+            <h3 className="font-semibold w-1/4">Created By</h3>
+            <p className="w-3/4">
+              {taskDetails?.createdByClient
+                ? `${taskDetails.createdByClient.contactName} (${taskDetails.createdByClient.companyName})`
+                : taskDetails?.createdByUser
+                  ? `${taskDetails.createdByUser.firstName} ${taskDetails.createdByUser.lastName}`
+                  : 'System'}
+            </p>
+          </div>
+
+          <Separator />
+          <div className="flex">
+            <h3 className="font-semibold w-1/4">Assigned To</h3>
+            <p className="w-3/4">
+              {taskDetails?.assignedTo
+                ? `${taskDetails.assignedTo.firstName} ${taskDetails.assignedTo.lastName}`
+                : 'Unassigned'}
+            </p>
+          </div>
           {/* Show Task Attachments if any */}
           {files.length > 0 && (
-            <FileAttachmentsList
-              files={files}
-              onDownload={handleDownload}
-              loadingFileIds={loadingFileIds}
-            />
+            <>
+              <Separator />
+
+              <FileAttachmentsList
+                files={files}
+                onDownload={handleDownload}
+                loadingFileIds={loadingFileIds}
+              />
+            </>
           )}
 
           {/* Add Comments Section */}
