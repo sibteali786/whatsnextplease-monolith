@@ -1,5 +1,11 @@
-// apps/backend/api/repositories/task.repository.ts
-import { PrismaClient, Prisma, TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
+import {
+  PrismaClient,
+  Prisma,
+  TaskStatusEnum,
+  TaskPriorityEnum,
+  CreatorType,
+  Roles,
+} from '@prisma/client';
 // import { DurationEnum } from '@wnp/types';
 
 export interface TaskFilters {
@@ -664,5 +670,195 @@ export class TaskRepository {
     }
 
     return { tasks, hasNextCursor, nextCursor };
+  }
+
+  /**
+   * Find task category by name
+   */
+  async findTaskCategoryByName(categoryName: string) {
+    return this.prisma.taskCategory.findFirst({
+      where: { categoryName },
+      select: { id: true, categoryName: true },
+    });
+  }
+
+  /**
+   * Find first task category (fallback)
+   */
+  async findFirstTaskCategory() {
+    return this.prisma.taskCategory.findFirst({
+      select: { id: true, categoryName: true },
+    });
+  }
+
+  /**
+   * Create a new task category
+   */
+  async createTaskCategory(categoryName: string) {
+    return this.prisma.taskCategory.create({
+      data: { categoryName },
+      select: { id: true, categoryName: true },
+    });
+  }
+
+  /**
+   * Find client by ID
+   */
+  async findClientById(clientId: string) {
+    return this.prisma.client.findUnique({
+      where: { id: clientId },
+      select: { id: true, username: true, companyName: true, contactName: true },
+    });
+  }
+
+  /**
+   * Find skills by names
+   */
+  async findSkillsByNames(skillNames: string[]) {
+    return this.prisma.skill.findMany({
+      where: { name: { in: skillNames } },
+      select: { id: true, name: true },
+    });
+  }
+
+  /**
+   * Create a draft task
+   */
+  async createDraftTask(data: {
+    statusId: string;
+    priorityId: string;
+    taskCategoryId: string;
+    creatorType: CreatorType;
+    createdByUserId?: string;
+    createdByClientId?: string;
+  }) {
+    return this.prisma.task.create({
+      data: {
+        title: '',
+        description: '',
+        timeForTask: 0,
+        ...data,
+      },
+      select: { id: true },
+    });
+  }
+
+  /**
+   * Update a task
+   */
+  async updateTask(taskId: string, data: any) {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        statusId: true,
+        priorityId: true,
+        taskCategoryId: true,
+        assignedToId: true,
+        associatedClientId: true,
+        dueDate: true,
+        timeForTask: true,
+        overTime: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  /**
+   * Update task skills
+   */
+  async updateTaskSkills(taskId: string, skillIds: string[]) {
+    // Remove existing skills
+    await this.prisma.taskSkill.deleteMany({
+      where: { taskId },
+    });
+
+    // Add new skills if any
+    if (skillIds.length > 0) {
+      await this.prisma.taskSkill.createMany({
+        data: skillIds.map(skillId => ({ taskId, skillId })),
+      });
+    }
+  }
+
+  /**
+   * Delete a task
+   */
+  async deleteTask(taskId: string) {
+    return this.prisma.task.delete({
+      where: { id: taskId },
+    });
+  }
+
+  /**
+   * Create a task comment
+   */
+  async createTaskComment(data: {
+    content: string;
+    taskId: string;
+    authorUserId?: string | null;
+    authorClientId?: string | null;
+    authorType: CreatorType;
+  }) {
+    return this.prisma.taskComment.create({
+      data: {
+        ...data,
+        mentionedUserIds: [],
+      },
+    });
+  }
+
+  /**
+   * Search tasks by title or description
+   */
+  async searchTasks(searchTerm: string) {
+    return this.prisma.task.findMany({
+      where: {
+        OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { description: { contains: searchTerm, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        dueDate: true,
+        priority: { select: { priorityName: true } },
+        status: { select: { statusName: true } },
+        taskCategory: { select: { categoryName: true } },
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  /**
+   * Find users by role (excluding specific user)
+   */
+  async findUsersByRole(role: Roles, excludeUserId?: string) {
+    return this.prisma.user.findMany({
+      where: {
+        role: { name: role },
+        ...(excludeUserId && { id: { not: excludeUserId } }),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
   }
 }

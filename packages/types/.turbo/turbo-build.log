@@ -1,4 +1,5 @@
 
-> @wnp/types@1.0.0 build D:\Study Related\HCC\whatsnextplease-monolith\packages\types
+
+> @wnp/types@1.0.0 build /home/sibteali-baqar/Documents/whatsnextplease-monolith/packages/types
 > tsc
 

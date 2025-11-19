@@ -1,62 +1,16 @@
-import { handleError } from '@/utils/errorHandler';
-import prisma from '@/db/db';
-import {
-  SearchTasksResponse,
-  SearchTasksResponseSchema,
-  SearchTasksSchema,
-} from '@/utils/validationSchemas';
+'use client';
+import { taskAPI } from '@/utils/tasks/taskAPI';
 
-// Function to search tasks
-export const searchTasks = async (searchTerm: string): Promise<SearchTasksResponse> => {
-  // TODO: decide if searching by description is needed or not
+export const searchTasks = async (searchTerm: string) => {
   try {
-    // Validate input
-    SearchTasksSchema.parse({ searchTerm });
-
-    // Query the database for tasks matching the search term
-    const tasks = await prisma.task.findMany({
-      where: {
-        OR: [
-          { title: { contains: searchTerm, mode: 'insensitive' } },
-          //   { description: { contains: searchTerm, mode: "insensitive" } },
-        ],
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        dueDate: true,
-        priority: {
-          select: { priorityName: true },
-        },
-        status: {
-          select: { statusName: true },
-        },
-        taskCategory: {
-          select: { categoryName: true },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-          },
-        },
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    // Return response wrapped in Zod schema validation
-    const validatedResponse = SearchTasksResponseSchema.parse({
-      success: true,
-      tasks,
-    });
-
-    return validatedResponse;
+    const response = await taskAPI.searchTasks(searchTerm);
+    return response;
   } catch (error) {
-    // Handle and return errors
-    return handleError(error, 'searchTasks') as SearchTasksResponse;
+    console.error('Error searching tasks:', error);
+    return {
+      success: false,
+      tasks: [],
+      message: error instanceof Error ? error.message : 'Failed to search tasks',
+    };
   }
 };

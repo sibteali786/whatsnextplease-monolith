@@ -5,7 +5,7 @@ import { TaskByPriority } from '@/utils/validationSchemas';
 import { TaskPriorityEnum } from '@prisma/client';
 import { CallToAction } from '@/components/CallToAction';
 import { useState } from 'react';
-import { useTasksByPriorityLevel } from '@/utils/tasks/taskAPI';
+import { useTasksByPriorityLevel } from '@/utils/tasks/useTasksByPriorityLevel';
 
 export default function TasksSection() {
   const [open, setOpen] = useState(false);

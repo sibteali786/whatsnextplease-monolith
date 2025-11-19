@@ -108,6 +108,9 @@ importers:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.36.0
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.0

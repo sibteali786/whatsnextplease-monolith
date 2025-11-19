@@ -418,7 +418,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
   const onSubmit = async (data: z.infer<typeof createTaskSchema>) => {
     try {
-      const trimmedData = trimWhitespace(data);
+      const trimmedData: z.infer<typeof createTaskSchema> = trimWhitespace(data);
       const totalHours = parseOriginalEstimate(trimmedData.timeForTask);
       if (totalHours === null) {
         throw new Error('Invalid time format');
@@ -426,7 +426,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       const formattedData = {
         ...trimmedData,
         id: taskId,
-        deuDate: trimmedData.dueDate.toISOString(),
+        dueDate: trimmedData.dueDate,
         timeForTask: totalHours.toString(),
         initialComment: trimmedData.initialComment?.trim() || undefined,
       };

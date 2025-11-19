@@ -89,6 +89,37 @@ router.patch(
   authMiddleware,
   controller.updateTaskStatusWithValidation
 );
+
+/**
+ * @route POST /tasks/draft
+ * @desc Create a draft task (step 1 of task creation)
+ * @access Private (users who can create tasks)
+ * @body { creatorType: 'USER' | 'CLIENT' }
+ */
+router.post('/draft', authMiddleware, controller.createDraftTask);
+
+/**
+ * @route PUT /tasks/:taskId
+ * @desc Update/finalize a task
+ * @access Private (task creator or admin)
+ * @body { title, description, statusName, priorityName, taskCategoryName, etc. }
+ */
+router.put('/:taskId', authMiddleware, controller.updateTask);
+
+/**
+ * @route DELETE /tasks/:taskId
+ * @desc Delete a task
+ * @access Private (admin roles or task creator)
+ */
+router.delete('/:taskId', authMiddleware, controller.deleteTask);
+
+/**
+ * @route GET /tasks/search
+ * @desc Search tasks by title or description
+ * @access Private (all authenticated users)
+ * @query search
+ */
+router.get('/search', authMiddleware, controller.searchTasks);
 /**
  * @route GET /tasks/:taskId
  * @desc Get task by ID
