@@ -538,7 +538,7 @@ export default function EditTaskDialog({
 
   const onSubmit = async (data: EditTaskFormValues) => {
     try {
-      const trimmedData = trimWhitespace(data);
+      const trimmedData: z.infer<typeof editTaskSchema> = trimWhitespace(data);
 
       const totalHours = parseOriginalEstimate(trimmedData.timeForTask);
       if (totalHours === null) {

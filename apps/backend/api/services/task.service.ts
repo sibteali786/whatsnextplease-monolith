@@ -12,6 +12,8 @@ import {
 } from '../repositories/task.repository';
 import { NotificationService } from './notification.service';
 import { NotificationFormatterService } from './notificationFormatter.service';
+import { UserService } from './user.service';
+import { ClientService } from './client.service';
 
 export interface BatchUpdateRequest {
   taskIds: string[];
@@ -28,7 +30,16 @@ export interface BatchUpdateRequest {
 export interface BatchDeleteRequest {
   taskIds: string[];
 }
-
+interface CurrentUser {
+  id: string;
+  role: {
+    id: string;
+    name: Roles;
+  };
+  name?: string;
+  username?: string;
+  avatarUrl?: string;
+}
 export interface TaskQueryParams {
   userId?: string;
   role: Roles;
@@ -780,7 +791,7 @@ export class TaskService {
    */
   async updateTask(
     request: UpdateTaskRequest,
-    currentUser: {
+    userFromRequest: {
       id: string;
       role: Roles;
       name?: string;
@@ -800,6 +811,31 @@ export class TaskService {
       ...updateData
     } = request;
 
+    // fetching user since we need to use the name feild
+    const userService = new UserService();
+    const clientService = new ClientService();
+    const user =
+      userFromRequest.role !== Roles.CLIENT
+        ? await userService.getUserProfile(userFromRequest.id)
+        : await clientService.getClientProfile(userFromRequest.id);
+
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    const currentUser: CurrentUser = {
+      id: user.id,
+      role: {
+        id: user?.role?.id ?? '',
+        name: user?.role?.name ?? ('' as Roles),
+      },
+      name:
+        user?.role?.name === Roles.CLIENT
+          ? (user as any).contactName
+          : `${(user as any).firstName} ${(user as any).lastName}`,
+      username: user.username,
+      avatarUrl: user.avatarUrl ?? '',
+    };
     // Get the original task with all relationships
     const originalTask = await this.taskRepository.findTaskById(id);
     if (!originalTask) {
@@ -828,7 +864,7 @@ export class TaskService {
         Roles.DISTRICT_MANAGER,
         Roles.TERRITORY_MANAGER,
       ] as Roles[]
-    ).includes(currentUser.role);
+    ).includes(currentUser?.role?.name as Roles);
 
     const isAssignmentChanging = assignedToId && assignedToId !== originalTask.assignedToId;
     const isClientAssignmentChanging =
@@ -969,7 +1005,10 @@ export class TaskService {
 
       // Due date change
       if (updateData.dueDate) {
-        const newDueDateStr = updateData.dueDate.toISOString().split('T')[0];
+        const newDueDateStr =
+          typeof updateData.dueDate === 'string'
+            ? updateData.dueDate
+            : updateData.dueDate.toISOString().split('T')[0];
         const oldDueDateStr = originalTask.dueDate
           ? originalTask.dueDate.toISOString().split('T')[0]
           : null;
@@ -1089,22 +1128,22 @@ export class TaskService {
         await this.taskRepository.createTaskComment({
           content: initialComment.trim(),
           taskId: id,
-          authorUserId: currentUser.role === Roles.CLIENT ? null : currentUser.id,
-          authorClientId: currentUser.role === Roles.CLIENT ? currentUser.id : null,
-          authorType: currentUser.role === Roles.CLIENT ? CreatorType.CLIENT : CreatorType.USER,
+          authorUserId: currentUser?.role?.name === Roles.CLIENT ? null : currentUser.id,
+          authorClientId: currentUser?.role?.name === Roles.CLIENT ? currentUser.id : null,
+          authorType:
+            currentUser?.role?.name === Roles.CLIENT ? CreatorType.CLIENT : CreatorType.USER,
         });
       } catch (error) {
         console.error('Failed to create initial comment:', error);
       }
     }
-
     // ===== NOTIFICATION HANDLING =====
     try {
       if (isNewTask) {
         await this.handleNewTaskNotifications(
           updatedTask,
           originalTask,
-          currentUser,
+          currentUser as CurrentUser,
           assignedToClientId
         );
       } else {
@@ -1112,7 +1151,7 @@ export class TaskService {
           updatedTask,
           originalTask,
           changes,
-          currentUser,
+          currentUser as CurrentUser,
           assignedToClientId
         );
       }
@@ -1141,7 +1180,7 @@ export class TaskService {
   private async handleNewTaskNotifications(
     updatedTask: any,
     originalTask: any,
-    currentUser: { id: string; role: Roles; name?: string; username?: string; avatarUrl?: string },
+    currentUser: CurrentUser,
     assignedToClientId?: string
   ) {
     const notificationService = new NotificationService();
@@ -1150,7 +1189,7 @@ export class TaskService {
     let notificationMessage = '';
 
     // Determine if we should send notifications based on creator role
-    switch (currentUser.role) {
+    switch (currentUser.role.name) {
       case Roles.CLIENT:
         shouldNotifySupervisors = true;
         notificationMessage = `New task "${updatedTask.title}" has been created by ${currentUser.name} and needs assignment`;
@@ -1273,14 +1312,13 @@ export class TaskService {
       displayOldValue: string;
       displayNewValue: string;
     }>,
-    currentUser: { id: string; role: Roles; name?: string; username?: string; avatarUrl?: string },
+    currentUser: CurrentUser,
     assignedToClientId?: string
   ) {
     const NotificationService = (await import('./notification.service')).NotificationService;
     const notificationService = new NotificationService();
     const { NotificationFormatterService } = await import('./notificationFormatter.service');
     const formatter = new NotificationFormatterService();
-
     // Send batched update notifications if there are changes
     if (changes.length > 0) {
       try {

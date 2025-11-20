@@ -64,7 +64,7 @@ WORKDIR /app
 # Use both --frozen-lockfile and --ignore-scripts, but allow specific scripts
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts && \
     cd apps/backend/node_modules/bcrypt && pnpm rebuild && cd ../.. && \
-    pnpm dlx prisma generate
+    pnpm prisma generate
 
 # Add health check endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \

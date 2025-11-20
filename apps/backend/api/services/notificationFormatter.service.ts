@@ -116,7 +116,6 @@ export class NotificationFormatterService {
    */
   formatTaskUpdateNotification(options: NotificationFormatterOptions) {
     const { taskId, taskTitle, changes, currentUser } = options;
-
     if (changes.length === 0) {
       throw new Error('No changes provided for notification');
     }
@@ -199,7 +198,6 @@ export class NotificationFormatterService {
     };
   }) {
     const { taskId, taskTitle, priority, status, category, currentUser } = options;
-
     return {
       type: NotificationType.TASK_ASSIGNED,
       message: `Task "${taskTitle}" has been assigned to you by ${currentUser.name}`,

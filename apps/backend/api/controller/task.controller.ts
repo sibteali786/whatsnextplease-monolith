@@ -708,15 +708,12 @@ export class TaskController {
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
-
       const result = await this.taskService.updateTask(
         { id: taskId, ...updateData },
         {
           id: req.user.id,
           role: req.user.role,
-          name: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim(),
           username: req.user.username,
-          avatarUrl: req.user.avatarUrl,
         }
       );
 
