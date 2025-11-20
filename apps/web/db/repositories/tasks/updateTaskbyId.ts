@@ -587,6 +587,32 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           }
         }
       }
+      // Notify associated client when a task is created and has a client
+      if (updatedTask.associatedClientId && updatedTask.associatedClientId !== currentUser?.id) {
+        try {
+          await createNotification({
+            type: NotificationType.TASK_CREATED,
+            message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser?.name}`,
+            clientId: assignedToClientId || null,
+            userId: updatedTask.assignedToId || null,
+            data: {
+              type: NotificationType.TASK_CREATED,
+              taskId: updatedTask.id,
+              details: {
+                status: updatedTask.status.statusName,
+                priority: updatedTask.priority.priorityName,
+                category: updatedTask.taskCategory.categoryName,
+              },
+              name: currentUser?.name,
+              username: currentUser?.username,
+              avatarUrl: currentUser?.avatarUrl,
+              url: `/taskOfferings/${updatedTask.id}`,
+            },
+          });
+        } catch (error) {
+          logger.error({ error }, 'Failed to send client notification on task creation');
+        }
+      }
       // If task was assigned during creation
       /* Notify the assigned user */
       if (updatedTask.assignedToId && updatedTask.assignedToId !== currentUser?.id) {
@@ -594,7 +620,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           await createNotification({
             type: NotificationType.TASK_ASSIGNED,
             message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser?.name}`,
-            clientId: assignedToClientId || null,
+            clientId: null,
             userId: updatedTask.assignedToId,
             data: {
               type: NotificationType.TASK_ASSIGNED,
@@ -626,6 +652,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
             createdByUserId: originalTask.createdByUserId || undefined,
             createdByClientId: originalTask.createdByClientId || undefined,
             assignedToId: originalTask.assignedToId || undefined,
+
             associatedClientId: originalTask.associatedClientId || undefined,
 
             changes: changes, // Pass ALL changes as an array
@@ -645,7 +672,7 @@ export const updateTaskById = async (params: UpdateTaskParams): Promise<UpdateTa
           await createNotification({
             type: NotificationType.TASK_ASSIGNED,
             message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser?.name}`,
-            clientId: assignedToClientId || null,
+            clientId: null,
             userId: updatedTask.assignedToId,
             data: {
               type: NotificationType.TASK_ASSIGNED,
