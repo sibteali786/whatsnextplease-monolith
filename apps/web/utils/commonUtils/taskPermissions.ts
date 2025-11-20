@@ -44,7 +44,14 @@ export const canViewAllTasks = (role: Roles): boolean => {
 };
 
 // Context-specific filter functions
-export const getUserProfileTaskFilter = (profileUserId: string) => {
+export const getUserProfileTaskFilter = (profileUserId: string, profileUserRole?: Roles) => {
+  // For Clients
+  if (profileUserRole === Roles.CLIENT) {
+    return {
+      OR: [{ createdByClientId: profileUserId }, { associatedClientId: profileUserId }],
+    };
+  }
+
   // For user profiles - always show tasks assigned to the profile user
   return { assignedToId: profileUserId };
 };
@@ -58,8 +65,16 @@ export const getGeneralTaskFilter = (currentUserId: string, currentUserRole: Rol
   }
 
   // Clients see tasks they created
+  /*   if (currentUserRole === Roles.CLIENT) {
+    return {
+      createdByClientId: currentUserId,
+      associatedClientId: currentUserId,
+    };
+  } */
   if (currentUserRole === Roles.CLIENT) {
-    return { createdByClientId: currentUserId };
+    return {
+      OR: [{ createdByClientId: currentUserId }, { associatedClientId: currentUserId }],
+    };
   }
 
   // Super Users can see all tasks

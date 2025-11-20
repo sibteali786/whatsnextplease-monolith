@@ -83,6 +83,8 @@ export interface GetTaskIdsByUserIdResponse {
 // Import the utility function
 
 export const getTaskIdsByUserId = async (
+  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
+
   userId: string,
   searchTerm: string,
   duration: DurationEnum = DurationEnum.ALL,
@@ -101,18 +103,44 @@ export const getTaskIdsByUserId = async (
     // Get the appropriate filter condition based on role
     const whereCondition = getTaskFilterCondition(userId, role);
     const dateFilter = getDateFilter(duration);
+    const assignedToId =
+      type === 'assigned' ? { not: null } : type === 'unassigned' ? null : undefined;
+
+    const searchFilter = searchTerm
+      ? {
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+          ],
+        }
+      : undefined;
+
+    const AND: any[] = [];
+
+    // A. Client visibility
+    if (whereCondition?.OR) {
+      AND.push({ OR: whereCondition.OR });
+    }
+
+    // B. Date filter
+    if (Object.keys(dateFilter).length > 0) {
+      AND.push(dateFilter);
+    }
+
+    // C. Assigned filter
+    if (assignedToId !== undefined) {
+      AND.push({ assignedToId });
+    }
+
+    // D. Search
+    if (searchFilter?.OR) {
+      AND.push({ OR: searchFilter.OR });
+    }
+
+    const where = { AND };
 
     const taskIds = await prisma.task.findMany({
-      where: {
-        ...whereCondition,
-        ...dateFilter,
-        OR: searchTerm
-          ? [
-              { title: { contains: searchTerm, mode: 'insensitive' } },
-              { description: { contains: searchTerm, mode: 'insensitive' } },
-            ]
-          : undefined,
-      },
+      where,
       orderBy: { id: 'asc' },
       select: {
         id: true,

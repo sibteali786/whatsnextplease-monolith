@@ -58,10 +58,12 @@ export const createDraftTask = async (
 
     let createdByUserId: string | undefined;
     let createdByClientId: string | undefined;
+    let associatedClientId: string | undefined;
 
     if (creatorType === CreatorType.CLIENT) {
       // Assign the client ID as the creator
       createdByClientId = userId;
+      associatedClientId = userId;
     } else if (creatorType === CreatorType.USER) {
       // Allowed roles for user creators as enum values
       const allowedRoles: Roles[] = [Roles.SUPER_USER, Roles.TASK_SUPERVISOR, Roles.TASK_AGENT];
@@ -89,6 +91,7 @@ export const createDraftTask = async (
         creatorType,
         ...(createdByUserId && { createdByUserId }),
         ...(createdByClientId && { createdByClientId }),
+        ...(associatedClientId && { associatedClientId }),
       },
       select: {
         id: true,

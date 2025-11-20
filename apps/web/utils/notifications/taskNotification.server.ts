@@ -201,7 +201,7 @@ export async function sendTaskUpdateNotifications(data: TaskUpdateNotificationDa
         createNotification({
           type: NotificationType.TASK_MODIFIED,
           message: baseMessage,
-          clientId: associatedClientId || null,
+          clientId: null,
           userId: assignedToId,
           data: notificationData,
         })

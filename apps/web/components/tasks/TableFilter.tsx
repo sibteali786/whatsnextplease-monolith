@@ -13,11 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-export default function TableFilter({ role }: { role?: Roles }) {
+export default function TableFilter({
+  role,
+  statusFilter,
+}: {
+  role?: Roles;
+  statusFilter?: TaskStatusEnum[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [selectedType, setSelectedType] = useState<string>('Unassigned');
+  const [selectedType, setSelectedType] = useState<string>('unassigned');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
   const updateParams = (key: string, values: string[] | string) => {
@@ -61,32 +67,38 @@ export default function TableFilter({ role }: { role?: Roles }) {
   return (
     <div className="flex gap-4">
       {/* Type Filter (assigned, unassigned etc.) */}
-      {role !== Roles.CLIENT && (
-        <Select onValueChange={handleTypeChange} value={selectedType}>
-          <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {['all', 'assigned', 'unassigned', 'my-tasks'].map(value => (
-              <SelectItem key={value} value={value} className="pr-10">
-                {
-                  value
-                    .split('-') // ["my", "tasks"]
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // ["My", "Tasks"]
-                    .join(' ') // "My Tasks"
-                }
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
+
+      <Select onValueChange={handleTypeChange} value={selectedType}>
+        <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit">
+          <SelectValue placeholder="Type" />
+        </SelectTrigger>
+        <SelectContent>
+          {(role === Roles.CLIENT
+            ? ['all', 'assigned', 'unassigned']
+            : ['all', 'assigned', 'unassigned', 'my-tasks']
+          ).map(value => (
+            <SelectItem key={value} value={value} className="pr-10">
+              {
+                value
+                  .split('-') // ["my", "tasks"]
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // ["My", "Tasks"]
+                  .join(' ') // "My Tasks"
+              }
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {/* Status Filter */}
       <MultiSelect
-        options={Object.entries(TaskStatusEnum).map(([, value]) => ({
-          label: transformEnumValue(value), // Applying the transform function here
-          value: value,
-        }))}
+        options={(statusFilter && statusFilter.length > 0
+          ? statusFilter // show only passed statuses
+          : Object.values(TaskStatusEnum)
+        ) // default: show all
+          .map(value => ({
+            label: transformEnumValue(value),
+            value: value,
+          }))}
         onValueChange={handleStatusChange}
         value={selectedStatus}
         placeholder="Status"

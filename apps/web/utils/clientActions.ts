@@ -1,6 +1,10 @@
 'use server';
 import prisma from '@/db/db';
 import getClientsList from '@/db/repositories/clients/getClients';
+import { DurationEnum } from '@/types';
+import { getTaskFilterCondition } from './commonUtils/taskPermissions';
+import { getDateFilter } from './dateFilter';
+import { Roles } from '@prisma/client';
 
 interface ClientById {
   client: ClientDetailsCardProps | null;
@@ -70,7 +74,13 @@ export const getAllClientIds = async () => {
   }
 };
 
-export const getTaskIdsByClientId = async (clientId: string) => {
+export const getTaskIdsByClientId = async (
+  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
+  searchTerm = '',
+  duration: DurationEnum = DurationEnum.ALL,
+
+  clientId: string
+) => {
   try {
     if (typeof clientId !== 'string' || clientId.trim().length === 0) {
       return {
@@ -78,10 +88,47 @@ export const getTaskIdsByClientId = async (clientId: string) => {
         taskIds: null,
       };
     }
+
+    // Get the appropriate filter condition based on role
+    const whereCondition = getTaskFilterCondition(clientId, Roles.CLIENT);
+    const dateFilter = getDateFilter(duration);
+    const assignedToId =
+      type === 'assigned' ? { not: null } : type === 'unassigned' ? null : undefined;
+    const searchFilter = searchTerm
+      ? {
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+          ],
+        }
+      : undefined;
+
+    const AND: any[] = [];
+
+    // A. Client visibility
+    if (whereCondition?.OR) {
+      AND.push({ OR: whereCondition.OR });
+    }
+
+    // B. Date filter
+    if (Object.keys(dateFilter).length > 0) {
+      AND.push(dateFilter);
+    }
+
+    // C. Assigned filter
+    if (assignedToId !== undefined) {
+      AND.push({ assignedToId });
+    }
+
+    // D. Search
+    if (searchFilter?.OR) {
+      AND.push({ OR: searchFilter.OR });
+    }
+
+    const where = { AND };
+
     const taskIds = await prisma.task.findMany({
-      where: {
-        createdByClientId: clientId,
-      },
+      where,
       orderBy: { id: 'asc' },
       select: {
         id: true,

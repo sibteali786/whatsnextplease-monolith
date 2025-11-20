@@ -13,16 +13,18 @@ import {
 } from '../ui/select';
 import { DurationEnum, DurationEnumList } from '@/types';
 import TableFilter from '../tasks/TableFilter';
-import { Roles } from '@prisma/client';
+import { Roles, TaskStatusEnum } from '@prisma/client';
 
 export const SearchNFilter = ({
   filterList,
   onSearch,
   role,
+  statusFilter,
 }: {
   filterList?: DurationEnumList;
   onSearch: (term: string, duration: DurationEnum) => void; // Updated to include duration
   role?: Roles;
+  statusFilter?: TaskStatusEnum[];
 }) => {
   const [term, setTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL); // New state for duration
@@ -32,7 +34,7 @@ export const SearchNFilter = ({
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchTerm(term.trim());
-    }, 300); // Adjust the debounce delay as needed
+    }, 500); // Adjust the debounce delay as needed
 
     return () => {
       clearTimeout(handler);
@@ -74,7 +76,7 @@ export const SearchNFilter = ({
           </SelectContent>
         </Select>
       )}
-      <TableFilter role={role} />
+      <TableFilter role={role} statusFilter={statusFilter} />
     </div>
   );
 };
