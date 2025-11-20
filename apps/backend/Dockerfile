@@ -36,7 +36,7 @@ COPY apps/backend/tsconfig.json .
 COPY apps/backend/.env* .
 
 # Generate Prisma Client and build
-RUN pnpm dlx prisma generate
+RUN pnpm prisma generate
 RUN pnpm tsc
 
 # Production Stage
