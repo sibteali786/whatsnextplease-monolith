@@ -10,6 +10,8 @@ import {
   TaskQueryOptions,
   BatchUpdateData,
 } from '../repositories/task.repository';
+import { NotificationService } from './notification.service';
+import { NotificationFormatterService } from './notificationFormatter.service';
 
 export interface BatchUpdateRequest {
   taskIds: string[];
@@ -1142,10 +1144,8 @@ export class TaskService {
     currentUser: { id: string; role: Roles; name?: string; username?: string; avatarUrl?: string },
     assignedToClientId?: string
   ) {
-    const NotificationService = (await import('./notification.service')).NotificationService;
     const notificationService = new NotificationService();
-    const { NotificationType } = await import('@prisma/client');
-
+    const notificationFormatter = new NotificationFormatterService();
     let shouldNotifySupervisors = false;
     let notificationMessage = '';
 
@@ -1170,7 +1170,15 @@ export class TaskService {
       default:
         shouldNotifySupervisors = false;
     }
-
+    // format base notification data
+    const taskCreationNotification = notificationFormatter.formatTaskCreationNotification({
+      taskId: updatedTask.id,
+      taskTitle: updatedTask.title,
+      priority: updatedTask.priority?.priorityName || TaskPriorityEnum.NORMAL,
+      status: updatedTask.status?.statusName || TaskStatusEnum.NEW,
+      category: updatedTask.taskCategory?.categoryName || 'General',
+      currentUser,
+    });
     // Notify Task Supervisors
     if (shouldNotifySupervisors) {
       const taskSupervisors = await this.taskRepository.findUsersByRole(
@@ -1181,37 +1189,25 @@ export class TaskService {
       for (const supervisor of taskSupervisors) {
         try {
           const notification = await notificationService.createNotification({
-            type: NotificationType.TASK_CREATED,
+            type: taskCreationNotification.type,
             message: notificationMessage,
             userId: supervisor.id,
             clientId: null,
-            data: {
-              type: NotificationType.TASK_CREATED,
-              taskId: updatedTask.id,
-              details: {
-                status: updatedTask.status?.statusName,
-                priority: updatedTask.priority?.priorityName,
-                category: updatedTask.taskCategory?.categoryName,
-              },
-              name: currentUser.name,
-              username: currentUser.username,
-              avatarUrl: currentUser.avatarUrl,
-              url: `/taskOfferings/${updatedTask.id}`,
-            },
+            data: taskCreationNotification.data,
           });
 
           await notificationService.deliverNotification(
             {
-              type: NotificationType.TASK_CREATED,
+              type: taskCreationNotification.type,
               message: notificationMessage,
-              data: notification.data || {},
+              data: taskCreationNotification.data,
             },
             {
-              type: NotificationType.TASK_CREATED,
+              type: taskCreationNotification.type,
               message: notificationMessage,
               userId: supervisor.id,
               clientId: null,
-              data: notification.data,
+              data: taskCreationNotification.data,
             }
           );
 
@@ -1225,38 +1221,35 @@ export class TaskService {
     // Notify assigned user if task was assigned during creation
     if (updatedTask.assignedToId && updatedTask.assignedToId !== currentUser.id) {
       try {
+        const assignmentNotification = notificationFormatter.formatTaskAssignmentNotification({
+          taskId: updatedTask.id,
+          taskTitle: updatedTask.title,
+          priority: updatedTask.priority?.priorityName || 'NORMAL',
+          status: updatedTask.status?.statusName || 'NEW',
+          category: updatedTask.taskCategory?.categoryName || 'General',
+          currentUser,
+        });
+
         const notification = await notificationService.createNotification({
-          type: NotificationType.TASK_ASSIGNED,
-          message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`,
+          type: assignmentNotification.type,
+          message: assignmentNotification.message,
           userId: updatedTask.assignedToId,
           clientId: assignedToClientId || null,
-          data: {
-            type: NotificationType.TASK_ASSIGNED,
-            taskId: updatedTask.id,
-            details: {
-              status: updatedTask.status?.statusName,
-              priority: updatedTask.priority?.priorityName,
-              category: updatedTask.taskCategory?.categoryName,
-            },
-            name: currentUser.name,
-            username: currentUser.username,
-            avatarUrl: currentUser.avatarUrl,
-            url: `/taskOfferings/${updatedTask.id}`,
-          },
+          data: assignmentNotification.data,
         });
 
         await notificationService.deliverNotification(
           {
-            type: NotificationType.TASK_ASSIGNED,
-            message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`,
-            data: notification.data || {},
+            type: assignmentNotification.type,
+            message: assignmentNotification.message,
+            data: assignmentNotification.data,
           },
           {
-            type: NotificationType.TASK_ASSIGNED,
-            message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`,
+            type: assignmentNotification.type,
+            message: assignmentNotification.message,
             userId: updatedTask.assignedToId,
             clientId: assignedToClientId || null,
-            data: notification.data,
+            data: assignmentNotification.data,
           }
         );
 
@@ -1285,11 +1278,20 @@ export class TaskService {
   ) {
     const NotificationService = (await import('./notification.service')).NotificationService;
     const notificationService = new NotificationService();
-    const { NotificationType } = await import('@prisma/client');
+    const { NotificationFormatterService } = await import('./notificationFormatter.service');
+    const formatter = new NotificationFormatterService();
 
     // Send batched update notifications if there are changes
     if (changes.length > 0) {
       try {
+        // Format notification using the formatter service
+        const updateNotification = formatter.formatTaskUpdateNotification({
+          taskId: updatedTask.id,
+          taskTitle: updatedTask.title,
+          changes,
+          currentUser,
+        });
+
         // Determine recipients
         const recipients: Array<{ userId?: string; clientId?: string | null }> = [];
 
@@ -1311,48 +1313,29 @@ export class TaskService {
           recipients.push({ userId: undefined, clientId: originalTask.associatedClientId });
         }
 
-        // Create batched change summary
-        const changeSummary = changes
-          .map(change => `${change.field}: ${change.displayOldValue} → ${change.displayNewValue}`)
-          .join(', ');
-
-        const message = `Task "${updatedTask.title}" was updated by ${currentUser.name}. Changes: ${changeSummary}`;
-
+        // Send to all recipients
         for (const recipient of recipients) {
           try {
             const notification = await notificationService.createNotification({
-              type: NotificationType.TASK_MODIFIED,
-              message,
+              type: updateNotification.type,
+              message: updateNotification.message,
               userId: recipient.userId,
               clientId: recipient.clientId,
-              data: {
-                type: NotificationType.TASK_MODIFIED,
-                taskId: updatedTask.id,
-                changes,
-                details: {
-                  status: updatedTask.status?.statusName,
-                  priority: updatedTask.priority?.priorityName,
-                  category: updatedTask.taskCategory?.categoryName,
-                },
-                name: currentUser.name,
-                username: currentUser.username,
-                avatarUrl: currentUser.avatarUrl,
-                url: `/taskOfferings/${updatedTask.id}`,
-              },
+              data: updateNotification.data,
             });
 
             await notificationService.deliverNotification(
               {
-                type: NotificationType.TASK_MODIFIED,
-                message,
-                data: notification.data || {},
+                type: updateNotification.type,
+                message: updateNotification.message,
+                data: updateNotification.data,
               },
               {
-                type: NotificationType.TASK_MODIFIED,
-                message,
+                type: updateNotification.type,
+                message: updateNotification.message,
                 userId: recipient.userId,
                 clientId: recipient.clientId,
-                data: notification.data,
+                data: updateNotification.data,
               }
             );
 
@@ -1369,38 +1352,35 @@ export class TaskService {
     // Handle NEW assignment notifications separately
     if (originalTask.assignedToId !== updatedTask.assignedToId && updatedTask.assignedToId) {
       try {
+        const assignmentNotification = formatter.formatTaskAssignmentNotification({
+          taskId: updatedTask.id,
+          taskTitle: updatedTask.title,
+          priority: updatedTask.priority?.priorityName || 'NORMAL',
+          status: updatedTask.status?.statusName || 'NEW',
+          category: updatedTask.taskCategory?.categoryName || 'General',
+          currentUser,
+        });
+
         const notification = await notificationService.createNotification({
-          type: NotificationType.TASK_ASSIGNED,
-          message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`,
+          type: assignmentNotification.type,
+          message: assignmentNotification.message,
           userId: updatedTask.assignedToId,
           clientId: assignedToClientId || null,
-          data: {
-            type: NotificationType.TASK_ASSIGNED,
-            taskId: updatedTask.id,
-            details: {
-              status: updatedTask.status?.statusName,
-              priority: updatedTask.priority?.priorityName,
-              category: updatedTask.taskCategory?.categoryName,
-            },
-            name: currentUser.name,
-            username: currentUser.username,
-            avatarUrl: currentUser.avatarUrl,
-            url: `/taskOfferings/${updatedTask.id}`,
-          },
+          data: assignmentNotification.data,
         });
 
         await notificationService.deliverNotification(
           {
-            type: NotificationType.TASK_ASSIGNED,
-            message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`,
-            data: notification.data || {},
+            type: assignmentNotification.type,
+            message: assignmentNotification.message,
+            data: assignmentNotification.data,
           },
           {
-            type: NotificationType.TASK_ASSIGNED,
-            message: `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`,
+            type: assignmentNotification.type,
+            message: assignmentNotification.message,
             userId: updatedTask.assignedToId,
             clientId: assignedToClientId || null,
-            data: notification.data,
+            data: assignmentNotification.data,
           }
         );
 
@@ -1416,38 +1396,38 @@ export class TaskService {
       updatedTask.associatedClientId
     ) {
       try {
+        const clientAssignmentNotification = formatter.formatTaskAssignmentNotification({
+          taskId: updatedTask.id,
+          taskTitle: updatedTask.title,
+          priority: updatedTask.priority?.priorityName || 'NORMAL',
+          status: updatedTask.status?.statusName || 'NEW',
+          category: updatedTask.taskCategory?.categoryName || 'General',
+          currentUser,
+        });
+
+        // Customize message for client
+        const clientMessage = `Task "${updatedTask.title}" has been assigned to your organization by ${currentUser.name}`;
+
         const notification = await notificationService.createNotification({
-          type: NotificationType.TASK_ASSIGNED,
-          message: `Task "${updatedTask.title}" has been assigned to your organization by ${currentUser.name}`,
+          type: clientAssignmentNotification.type,
+          message: clientMessage,
           userId: updatedTask.assignedToId || originalTask.assignedToId,
           clientId: updatedTask.associatedClientId,
-          data: {
-            type: NotificationType.TASK_ASSIGNED,
-            taskId: updatedTask.id,
-            details: {
-              status: updatedTask.status?.statusName,
-              priority: updatedTask.priority?.priorityName,
-              category: updatedTask.taskCategory?.categoryName,
-            },
-            name: currentUser.name,
-            username: currentUser.username,
-            avatarUrl: currentUser.avatarUrl,
-            url: `/taskOfferings/${updatedTask.id}`,
-          },
+          data: clientAssignmentNotification.data,
         });
 
         await notificationService.deliverNotification(
           {
-            type: NotificationType.TASK_ASSIGNED,
-            message: `Task "${updatedTask.title}" has been assigned to your organization by ${currentUser.name}`,
-            data: notification.data || {},
+            type: clientAssignmentNotification.type,
+            message: clientMessage,
+            data: clientAssignmentNotification.data,
           },
           {
-            type: NotificationType.TASK_ASSIGNED,
-            message: `Task "${updatedTask.title}" has been assigned to your organization by ${currentUser.name}`,
+            type: clientAssignmentNotification.type,
+            message: clientMessage,
             userId: updatedTask.assignedToId || originalTask.assignedToId,
             clientId: updatedTask.associatedClientId,
-            data: notification.data,
+            data: clientAssignmentNotification.data,
           }
         );
 
