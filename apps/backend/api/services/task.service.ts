@@ -14,6 +14,8 @@ import { NotificationService } from './notification.service';
 import { NotificationFormatterService } from './notificationFormatter.service';
 import { UserService } from './user.service';
 import { ClientService } from './client.service';
+import { TaskSerialNumberService } from './taskSerialNumber.service';
+import { logger } from '../utils/logger';
 
 export interface BatchUpdateRequest {
   taskIds: string[];
@@ -81,6 +83,7 @@ export interface UpdateTaskRequest {
   overTime?: string;
   dueDate?: Date;
   initialComment?: string;
+  customPrefix?: string;
 }
 
 export interface DeleteTaskRequest {
@@ -89,7 +92,10 @@ export interface DeleteTaskRequest {
   role: Roles;
 }
 export class TaskService {
-  constructor(private readonly taskRepository: TaskRepository = new TaskRepository()) {}
+  constructor(
+    private readonly taskRepository: TaskRepository = new TaskRepository(),
+    private readonly serialNumberService: TaskSerialNumberService = new TaskSerialNumberService()
+  ) {}
 
   /**
    * Get tasks with filtering and pagination
@@ -1114,6 +1120,31 @@ export class TaskService {
       taskUpdateData.associatedClientId = assigneeClient ? assigneeClient.id : null;
     }
 
+    if (isNewTask && updateData.title) {
+      try {
+        // Check if custom prefix was provided
+        const prefixToUse = request.customPrefix || category.prefix;
+
+        if (!prefixToUse) {
+          throw new BadRequestError(
+            `Category "${category.categoryName}" does not have a prefix assigned`
+          );
+        }
+
+        // Generate serial number
+        const serialNumber = await this.serialNumberService.generateSerialNumber(prefixToUse);
+        taskUpdateData.serialNumber = serialNumber;
+
+        logger.info(
+          { taskId: id, serialNumber, prefix: prefixToUse, category: category.categoryName },
+          'Generated serial number for new task'
+        );
+      } catch (error) {
+        logger.error({ error, taskId: id }, 'Failed to generate serial number');
+        // Don't fail the task creation if serial number generation fails
+        // The task can be updated with a serial number later
+      }
+    }
     // Update the task
     const updatedTask = await this.taskRepository.updateTask(id, taskUpdateData);
 

@@ -678,7 +678,7 @@ export class TaskRepository {
   async findTaskCategoryByName(categoryName: string) {
     return this.prisma.taskCategory.findFirst({
       where: { categoryName },
-      select: { id: true, categoryName: true },
+      select: { id: true, categoryName: true, prefix: true },
     });
   }
 
@@ -687,7 +687,7 @@ export class TaskRepository {
    */
   async findFirstTaskCategory() {
     return this.prisma.taskCategory.findFirst({
-      select: { id: true, categoryName: true },
+      select: { id: true, categoryName: true, prefix: true },
     });
   }
 
@@ -697,7 +697,7 @@ export class TaskRepository {
   async createTaskCategory(categoryName: string) {
     return this.prisma.taskCategory.create({
       data: { categoryName },
-      select: { id: true, categoryName: true },
+      select: { id: true, categoryName: true, prefix: true },
     });
   }
 
@@ -860,5 +860,55 @@ export class TaskRepository {
         lastName: true,
       },
     });
+  }
+
+  /**
+   * Find task by serial number
+   */
+  async findTaskBySerialNumber(serialNumber: string) {
+    return this.prisma.task.findUnique({
+      where: { serialNumber },
+      include: {
+        priority: { select: { id: true, priorityName: true } },
+        status: { select: { id: true, statusName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+        assignedTo: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
+        taskSkills: {
+          include: {
+            skill: { select: { id: true, name: true } },
+          },
+        },
+        taskFiles: {
+          include: {
+            file: {
+              select: {
+                id: true,
+                fileName: true,
+                filePath: true,
+                fileSize: true,
+                uploadedBy: true,
+                uploadedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Check if serial number exists
+   */
+  async serialNumberExists(serialNumber: string): Promise<boolean> {
+    const task = await this.prisma.task.findUnique({
+      where: { serialNumber },
+      select: { id: true },
+    });
+    return !!task;
   }
 }
