@@ -86,7 +86,11 @@ export const UserTasks = ({
   const [error, setError] = useState<string | null>(null);
   const statusFilter = searchParams.get('status');
   const priorityFilter = searchParams.get('priority');
-
+  const typeFilter: 'all' | 'assigned' | 'unassigned' | 'my-tasks' = searchParams.get('type') as
+    | 'all'
+    | 'assigned'
+    | 'unassigned'
+    | 'my-tasks';
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -109,6 +113,7 @@ export const UserTasks = ({
             .filter(priority => priority !== null)
         : [];
       const response = await getTasksByUserId(
+        typeFilter ?? 'unassigned',
         userId,
         role,
         cursor,
@@ -119,7 +124,14 @@ export const UserTasks = ({
         normalizedStatus,
         normalizedPriority
       );
-      const { taskIds, success } = await getTaskIdsByUserId(userId, searchTerm, duration, role);
+
+      const { taskIds, success } = await getTaskIdsByUserId(
+        typeFilter ?? 'unassigned',
+        userId,
+        searchTerm,
+        duration,
+        role
+      );
 
       if (response.success && success) {
         setTaskIDs(taskIds);
@@ -138,7 +150,7 @@ export const UserTasks = ({
 
   useEffect(() => {
     fetchTasks();
-  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter]);
+  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter, typeFilter]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -152,7 +164,7 @@ export const UserTasks = ({
         <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
           <Plus className="h-5 w-5" /> Create New Task
         </Button>
-        <CreateTaskContainer open={open} setOpen={setOpen} />
+        <CreateTaskContainer open={open} setOpen={setOpen} fetchTasks={fetchTasks} />
       </div>
       <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} role={role} />
 

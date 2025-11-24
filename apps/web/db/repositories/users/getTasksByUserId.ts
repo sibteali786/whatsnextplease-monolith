@@ -13,6 +13,8 @@ import {
 } from '@/utils/commonUtils/taskPermissions';
 
 export const getTasksByUserId = async (
+  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
+
   userId: string,
   role: Roles,
   cursor: string | null,
@@ -40,7 +42,7 @@ export const getTasksByUserId = async (
     // Get the appropriate filter condition based on role
     const whereCondition =
       context === USER_CREATED_TASKS_CONTEXT.USER_PROFILE
-        ? getUserProfileTaskFilter(userId)
+        ? getUserProfileTaskFilter(userId, role)
         : getGeneralTaskFilter(userId, role);
     const dateFilter = getDateFilter(duration);
     // Optional filters for status & priority
@@ -69,19 +71,58 @@ export const getTasksByUserId = async (
             },
           }
         : {};
+
+    const assignedToId =
+      type === 'assigned' ? { not: null } : type === 'unassigned' ? null : undefined;
+
+    const searchFilter = searchTerm
+      ? {
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+          ],
+        }
+      : undefined;
+
+    // start with the role-based/user filter + other filters
+
+    const AND: any[] = [];
+
+    // A. Visibility filter (createdByClientId OR associatedClientId)
+    if (whereCondition?.OR) {
+      AND.push({ OR: whereCondition.OR });
+    }
+
+    // B. Date filter
+    if (Object.keys(dateFilter).length > 0) {
+      AND.push(dateFilter);
+    }
+
+    // C. Status filter
+    if (Object.keys(statusFilter).length > 0) {
+      AND.push(statusFilter);
+    }
+
+    // D. Priority filter
+    if (Object.keys(priorityFilter).length > 0) {
+      AND.push(priorityFilter);
+    }
+
+    // E. Assigned/unassigned filter
+    if (assignedToId !== undefined) {
+      AND.push({ assignedToId });
+    }
+
+    // F. Search OR conditions
+    if (searchFilter?.OR) {
+      AND.push({ OR: searchFilter.OR });
+    }
+
+    // Final WHERE object
+    const where = { AND };
+
     const tasks = await prisma.task.findMany({
-      where: {
-        ...whereCondition,
-        ...dateFilter,
-        ...statusFilter,
-        ...priorityFilter,
-        OR: searchTerm
-          ? [
-              { title: { contains: searchTerm, mode: 'insensitive' } },
-              { description: { contains: searchTerm, mode: 'insensitive' } },
-            ]
-          : undefined,
-      },
+      where,
       take: pageSize + 1,
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       orderBy: { id: 'asc' },
@@ -143,18 +184,7 @@ export const getTasksByUserId = async (
     }
 
     const totalCount = await prisma.task.count({
-      where: {
-        ...whereCondition,
-        ...dateFilter,
-        ...statusFilter,
-        ...priorityFilter,
-        OR: searchTerm
-          ? [
-              { title: { contains: searchTerm, mode: 'insensitive' } },
-              { description: { contains: searchTerm, mode: 'insensitive' } },
-            ]
-          : undefined,
-      },
+      where,
     });
 
     // Format tasks to match the shape needed by update:
