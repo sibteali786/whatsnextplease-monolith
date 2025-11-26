@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   PrismaClient,
   Prisma,
@@ -229,7 +230,6 @@ export class TaskRepository {
       const updatedTasks = await Promise.all(
         taskIds.map(taskId => {
           // Build the update data with proper Prisma relation syntax
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const prismaUpdateData: any = {};
 
           // Handle status update
@@ -695,10 +695,51 @@ export class TaskRepository {
    * Create a new task category
    */
   async createTaskCategory(categoryName: string) {
-    return this.prisma.taskCategory.create({
-      data: { categoryName },
-      select: { id: true, categoryName: true, prefix: true },
+    // Generate prefix automatically
+    const prefix = this.generatePrefixFromName(categoryName);
+
+    // Check uniqueness
+    let finalPrefix = prefix;
+    let counter = 1;
+    while (await this.prisma.taskCategory.findFirst({ where: { prefix: finalPrefix } })) {
+      finalPrefix = `${prefix}${counter}`;
+      counter++;
+    }
+
+    const category = await this.prisma.taskCategory.create({
+      data: {
+        categoryName,
+        prefix: finalPrefix,
+      },
     });
+
+    // Create corresponding TaskSequence
+    await this.prisma.taskSequence.create({
+      data: {
+        prefix: finalPrefix,
+        taskCategoryId: category.id,
+        currentNumber: 0,
+      },
+    });
+
+    return category;
+  }
+
+  private generatePrefixFromName(categoryName: string): string {
+    const words = categoryName
+      .replace(/[^a-zA-Z\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    } else {
+      return words
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 3);
+    }
   }
 
   /**
