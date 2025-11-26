@@ -29,6 +29,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.2.1",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "1.4.5-lts.1",
@@ -41,8 +42,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@repo/eslint-config": "workspace:*",
     "@eslint/js": "^9.17.0",
+    "@repo/eslint-config": "workspace:*",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",

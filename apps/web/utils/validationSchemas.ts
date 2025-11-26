@@ -270,6 +270,7 @@ export const TaskSchema = z.object({
   }),
   taskCategory: z.object({
     categoryName: z.string(),
+    prefix: z.string(),
   }),
   assignedTo: z
     .object({
