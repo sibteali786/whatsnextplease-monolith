@@ -260,7 +260,11 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
             <FormItem>
               <FormLabel>Task Category*</FormLabel>
               <Select
-                onValueChange={field.onChange}
+                onValueChange={value => {
+                  field.onChange(value); // Update form value
+                  setCustomPrefix(undefined); // Reset custom prefix
+                  form.setValue('customPrefix', undefined); // Clear form field
+                }}
                 defaultValue={field.value}
                 value={field.value}
                 disabled={taskCategories.length === 0}
@@ -298,6 +302,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         {/* NEW: Serial Number Input - Add this right after Task Category */}
         {form.watch('taskCategoryName') && (
           <SerialNumberPrefixInput
+            key={form.watch('taskCategoryName')}
             categoryId={
               taskCategories.find(cat => cat.categoryName === form.watch('taskCategoryName'))?.id ||
               ''

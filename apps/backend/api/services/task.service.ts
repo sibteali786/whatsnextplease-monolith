@@ -1133,6 +1133,15 @@ export class TaskService {
         // Generate serial number
         const serialNumber = await this.serialNumberService.generateSerialNumber(prefixToUse);
         taskUpdateData.serialNumber = serialNumber;
+        // delete the customPrefix from updateData to avoid issues
+        delete taskUpdateData.customPrefix;
+
+        if (taskUpdateData.customPrefix) {
+          logger.error(
+            'Custom prefix was tried to be deleted from request object',
+            taskUpdateData.customPrefix
+          );
+        }
 
         logger.info(
           { taskId: id, serialNumber, prefix: prefixToUse, category: category.categoryName },
