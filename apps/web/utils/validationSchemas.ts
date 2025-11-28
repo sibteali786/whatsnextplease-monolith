@@ -262,6 +262,7 @@ export const TaskSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
+  serialNumber: z.string(),
   priority: z.object({
     priorityName: z.nativeEnum(TaskPriorityEnum),
   }),

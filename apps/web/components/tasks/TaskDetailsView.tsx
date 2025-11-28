@@ -20,6 +20,7 @@ import { fileAPI } from '@/utils/fileAPI';
 import { useRouter } from 'next/navigation';
 import CommentSection from '../comments/CommentSection';
 import { handleCommentFragment } from '@/utils/commentNavigation';
+import { SerialNumberBadge } from './SerialNumberBadge';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -203,7 +204,13 @@ export default function TaskDetailsView({
             </Badge>
           </div>
           <Separator />
-
+          {/* Header with Serial Number */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <SerialNumberBadge serialNumber={taskDetails?.serialNumber} size="lg" showCopy />
+              <h1 className="text-3xl font-bold">{taskDetails?.title}</h1>
+            </div>
+          </div>
           <div className="flex">
             <h3 className="font-semibold w-1/4">Due Date</h3>
             <p className="w-3/4">

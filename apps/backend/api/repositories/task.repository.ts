@@ -78,9 +78,10 @@ export class TaskRepository {
         id: true,
         title: true,
         description: true,
+        serialNumber: true,
         priority: { select: { id: true, priorityName: true } },
         status: { select: { id: true, statusName: true } },
-        taskCategory: { select: { id: true, categoryName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
@@ -773,6 +774,7 @@ export class TaskRepository {
     createdByUserId?: string;
     createdByClientId?: string;
   }) {
+    console.log('Creating draft task with data:', data);
     return this.prisma.task.create({
       data: {
         title: '',

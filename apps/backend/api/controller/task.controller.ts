@@ -685,6 +685,7 @@ export class TaskController {
 
       res.status(201).json(result);
     } catch (error) {
+      console.log('Error in handleCreateDraftTask:', error);
       next(error);
     }
   };

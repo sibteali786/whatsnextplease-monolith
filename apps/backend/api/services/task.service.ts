@@ -775,7 +775,6 @@ export class TaskService {
     } else {
       throw new BadRequestError('Invalid creator type provided.');
     }
-
     // Create the draft task
     const task = await this.taskRepository.createDraftTask({
       statusId: defaultStatus.id,
