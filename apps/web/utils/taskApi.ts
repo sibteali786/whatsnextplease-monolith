@@ -220,7 +220,7 @@ class TaskApiClient {
    * NEW: Get tasks by priority level (critical, high, medium, low, hold)
    */
   async getTasksByPriorityLevel(
-    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    level: TaskPriorityEnum,
     params?: {
       cursor?: string;
       pageSize?: number;

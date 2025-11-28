@@ -410,29 +410,24 @@ export class TaskController {
       const userId = req.query.userId as string;
 
       const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
-
-      if (!['critical', 'high', 'medium', 'low', 'hold'].includes(level)) {
+      if (level === undefined || !(level in TaskPriorityEnum)) {
         throw new BadRequestError('Invalid priority level');
       }
-
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
 
-      const result = await this.taskService.getTasksByPriorityLevel(
-        level as 'critical' | 'high' | 'medium' | 'low' | 'hold',
-        {
-          userId,
-          role: req.user.role,
-          cursor,
-          pageSize,
-          searchTerm,
-          duration,
-          status,
-          assignedToId: assignedToId === 'null' ? null : assignedToId,
-          categoryId,
-        }
-      );
+      const result = await this.taskService.getTasksByPriorityLevel(level as TaskPriorityEnum, {
+        userId,
+        role: req.user.role,
+        cursor,
+        pageSize,
+        searchTerm,
+        duration,
+        status,
+        assignedToId: assignedToId === 'null' ? null : assignedToId,
+        categoryId,
+      });
 
       res.status(200).json(result);
     } catch (error) {

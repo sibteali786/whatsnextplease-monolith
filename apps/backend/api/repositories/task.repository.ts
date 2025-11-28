@@ -578,10 +578,10 @@ export class TaskRepository {
    */
   getPriorityLevelMapping(): Record<string, TaskPriorityEnum[]> {
     return {
-      critical: [TaskPriorityEnum.CRITICAL, TaskPriorityEnum.URGENT],
+      critical: [TaskPriorityEnum.CRITICAL],
       high: [TaskPriorityEnum.HIGH],
-      medium: [TaskPriorityEnum.MEDIUM, TaskPriorityEnum.NORMAL],
-      low: [TaskPriorityEnum.LOW, TaskPriorityEnum.LOW_PRIORITY],
+      medium: [TaskPriorityEnum.MEDIUM],
+      low: [TaskPriorityEnum.LOW],
       hold: [TaskPriorityEnum.HOLD],
     };
   }
@@ -590,17 +590,10 @@ export class TaskRepository {
    * Get tasks by priority level (combines legacy and new priorities)
    */
   async getTasksByPriorityLevel(
-    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    level: TaskPriorityEnum,
     filters: TaskFilters,
     options: TaskQueryOptions
   ) {
-    const priorityMapping = this.getPriorityLevelMapping();
-    const priorities = priorityMapping[level] || [];
-
-    if (priorities.length === 0) {
-      return { tasks: [], hasNextCursor: false, nextCursor: null };
-    }
-
     const updatedFilters = {
       ...filters,
       priority: undefined, // Remove single priority filter
@@ -611,7 +604,7 @@ export class TaskRepository {
     const where: Prisma.TaskWhereInput = {
       ...updatedFilters.whereCondition,
       ...updatedFilters.dateFilter,
-      priority: { priorityName: { in: priorities } }, // Use multiple priorities
+      priority: { priorityName: { in: [level] } }, // Use multiple priorities
       ...(updatedFilters.status && {
         status: {
           statusName: {
@@ -632,7 +625,6 @@ export class TaskRepository {
         ],
       }),
     };
-
     const tasks = await this.prisma.task.findMany({
       where,
       take: pageSize + 1,
@@ -642,9 +634,10 @@ export class TaskRepository {
         id: true,
         title: true,
         description: true,
+        serialNumber: true,
         priority: { select: { id: true, priorityName: true } },
         status: { select: { id: true, statusName: true } },
-        taskCategory: { select: { id: true, categoryName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
@@ -663,7 +656,6 @@ export class TaskRepository {
         updatedAt: true,
       },
     });
-
     const hasNextCursor = tasks.length > pageSize;
     const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
     if (hasNextCursor) {
@@ -774,7 +766,6 @@ export class TaskRepository {
     createdByUserId?: string;
     createdByClientId?: string;
   }) {
-    console.log('Creating draft task with data:', data);
     return this.prisma.task.create({
       data: {
         title: '',

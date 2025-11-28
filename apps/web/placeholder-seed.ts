@@ -102,6 +102,50 @@ async function main() {
       include: { taskOfferings: true },
     }),
   ]);
+  // Step 2.5: Generate prefixes and sequences for task categories
+  console.log('Generating serial number prefixes for task categories...');
+
+  // Helper function to generate prefix from category name
+  function generatePrefixFromName(categoryName: string): string {
+    const words = categoryName
+      .replace(/[^a-zA-Z\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+
+    if (words.length === 0) {
+      return 'XX'; // Default prefix if no valid words found
+    } else if (words.length === 1) {
+      return (words[0] ?? '').substring(0, 2).toUpperCase() || 'XX';
+    } else {
+      return words
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 3);
+    }
+  }
+
+  // Update task categories with prefixes and create sequences
+  for (const category of taskCategories) {
+    const prefix = generatePrefixFromName(category.categoryName);
+
+    // Update category with prefix
+    await prisma.taskCategory.update({
+      where: { id: category.id },
+      data: { prefix },
+    });
+
+    // Create TaskSequence for this category
+    await prisma.taskSequence.create({
+      data: {
+        prefix,
+        taskCategoryId: category.id,
+        currentNumber: 0, // Will be incremented as tasks are created
+      },
+    });
+
+    console.log(`  ✓ Category "${category.categoryName}" → Prefix: ${prefix}`);
+  }
 
   // Step 3: Create Districts and Territories
   console.log('Seeding districts and territories...');
@@ -279,18 +323,49 @@ async function main() {
     files.push(file);
   }
 
-  // Step 12: Create Tasks
-  console.log('Seeding tasks...');
+  // Step 12: Create Tasks with Serial Numbers
+  console.log('Seeding tasks with serial numbers...');
   const tasks = [];
+
+  // Helper function to generate serial number
+  async function generateSerialNumber(categoryId: string): Promise<string> {
+    // Get category with its prefix
+    const category = await prisma.taskCategory.findUnique({
+      where: { id: categoryId },
+      select: { prefix: true },
+    });
+
+    if (!category?.prefix) {
+      throw new Error(`Category ${categoryId} has no prefix`);
+    }
+
+    // Atomically increment the sequence
+    const sequence = await prisma.taskSequence.update({
+      where: { prefix: category.prefix },
+      data: { currentNumber: { increment: 1 } },
+      select: { currentNumber: true },
+    });
+
+    // Format as PREFIX-NNNNN
+    const formattedNumber = sequence.currentNumber.toString().padStart(5, '0');
+    return `${category.prefix}-${formattedNumber}`;
+  }
+
   for (let i = 0; i < 25; i++) {
     const isCreatedByUser = faker.datatype.boolean();
+    const categoryId = faker.helpers.arrayElement(taskCategories).id;
+
+    // Generate serial number for this task
+    const serialNumber = await generateSerialNumber(categoryId);
+
     const task = await prisma.task.create({
       data: {
         title: faker.hacker.verb() + ' ' + faker.hacker.noun(),
         description: faker.hacker.phrase(),
+        serialNumber, // Add serial number
         priorityId: faker.helpers.arrayElement(priorities).id,
         statusId: faker.helpers.arrayElement(statuses).id,
-        taskCategoryId: faker.helpers.arrayElement(taskCategories).id,
+        taskCategoryId: categoryId,
         assignedToId: faker.helpers.arrayElement(users).id,
         createdByUserId: isCreatedByUser ? faker.helpers.arrayElement(users).id : null,
         createdByClientId: !isCreatedByUser ? faker.helpers.arrayElement(clients).id : null,
@@ -301,6 +376,8 @@ async function main() {
       },
     });
     tasks.push(task);
+
+    console.log(`  ✓ Created task: ${serialNumber} - "${task.title}"`);
   }
 
   // Step 13: Create Task Skills

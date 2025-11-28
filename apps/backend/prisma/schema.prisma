@@ -148,10 +148,6 @@ model EmailVerificationToken {
 //// =========================================
 
 enum TaskPriorityEnum {
-    URGENT
-    LOW_PRIORITY
-    NORMAL
-
     CRITICAL // P1 - Will block all progress
     HIGH // P2 - Could block progress  
     MEDIUM // P3 - Standard priority
@@ -161,7 +157,7 @@ enum TaskPriorityEnum {
 
 model TaskPriority {
     id           String           @id @default(uuid())
-    priorityName TaskPriorityEnum @unique @default(NORMAL)
+    priorityName TaskPriorityEnum @unique @default(MEDIUM)
     tasks        Task[]
     rates        Rate[]
     createdAt    DateTime         @default(now())

@@ -648,10 +648,7 @@ export class TaskService {
   /**
    * Get tasks by priority level (combines legacy and new priorities)
    */
-  async getTasksByPriorityLevel(
-    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
-    params: TaskQueryParams
-  ) {
+  async getTasksByPriorityLevel(level: TaskPriorityEnum, params: TaskQueryParams) {
     const {
       userId,
       role,
@@ -692,10 +689,6 @@ export class TaskService {
       queryOptions
     );
 
-    // Get total count for this priority level
-    const priorityMapping = this.taskRepository.getPriorityLevelMapping();
-    const priorities = priorityMapping[level] || [];
-
     const countFilters = {
       ...filters,
       priority: undefined, // Will be handled in count method
@@ -706,7 +699,7 @@ export class TaskService {
       ...countFilters,
       whereCondition: {
         ...countFilters.whereCondition,
-        priority: { priorityName: { in: priorities } },
+        priority: { priorityName: { in: [level] } },
       },
     });
 
@@ -715,7 +708,6 @@ export class TaskService {
       ...task,
       taskSkills: task.taskSkills.map(ts => ts.skill.name),
     }));
-
     return {
       success: true,
       tasks: formattedTasks,
@@ -723,7 +715,7 @@ export class TaskService {
       nextCursor: taskResult.nextCursor,
       totalCount,
       level,
-      prioritiesIncluded: priorities,
+      prioritiesIncluded: level,
     };
   }
   /**
@@ -735,7 +727,7 @@ export class TaskService {
     // Get default status and priority
     const [defaultStatus, defaultPriority] = await Promise.all([
       this.taskRepository.findTaskStatusByName(TaskStatusEnum.NEW),
-      this.taskRepository.findTaskPriorityByName(TaskPriorityEnum.LOW_PRIORITY),
+      this.taskRepository.findTaskPriorityByName(TaskPriorityEnum.LOW),
     ]);
 
     if (!defaultStatus) {
@@ -1252,7 +1244,7 @@ export class TaskService {
     const taskCreationNotification = notificationFormatter.formatTaskCreationNotification({
       taskId: updatedTask.id,
       taskTitle: updatedTask.title,
-      priority: updatedTask.priority?.priorityName || TaskPriorityEnum.NORMAL,
+      priority: updatedTask.priority?.priorityName || TaskPriorityEnum.MEDIUM,
       status: updatedTask.status?.statusName || TaskStatusEnum.NEW,
       category: updatedTask.taskCategory?.categoryName || 'General',
       currentUser,
@@ -1302,8 +1294,8 @@ export class TaskService {
         const assignmentNotification = notificationFormatter.formatTaskAssignmentNotification({
           taskId: updatedTask.id,
           taskTitle: updatedTask.title,
-          priority: updatedTask.priority?.priorityName || 'NORMAL',
-          status: updatedTask.status?.statusName || 'NEW',
+          priority: updatedTask.priority?.priorityName || TaskPriorityEnum.MEDIUM,
+          status: updatedTask.status?.statusName || TaskStatusEnum.NEW,
           category: updatedTask.taskCategory?.categoryName || 'General',
           currentUser,
         });

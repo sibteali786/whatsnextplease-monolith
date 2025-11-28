@@ -16,7 +16,7 @@ datasource db {
 }
 
 //// =========================================
-// Users and Roles 
+// Users and Roles
 //// =========================================
 enum Roles {
     SUPER_USER
@@ -148,10 +148,6 @@ model EmailVerificationToken {
 //// =========================================
 
 enum TaskPriorityEnum {
-    URGENT
-    LOW_PRIORITY
-    NORMAL
-
     CRITICAL // P1 - Will block all progress
     HIGH // P2 - Could block progress  
     MEDIUM // P3 - Standard priority
@@ -161,7 +157,7 @@ enum TaskPriorityEnum {
 
 model TaskPriority {
     id           String           @id @default(uuid())
-    priorityName TaskPriorityEnum @unique @default(NORMAL)
+    priorityName TaskPriorityEnum @unique @default(MEDIUM)
     tasks        Task[]
     rates        Rate[]
     createdAt    DateTime         @default(now())
@@ -196,44 +192,69 @@ model TaskStatus {
 model TaskCategory {
     id            String         @id @default(uuid())
     categoryName  String
+    prefix        String?         @unique
     tasks         Task[]
+    taskSequence  TaskSequence?
     taskOfferings TaskOffering[]
     createdAt     DateTime       @default(now())
     updatedAt     DateTime       @updatedAt
+
+}
+
+model TaskSequence {
+    id String @id @default(cuid())
+
+    // The unique prefix code, e.g., "WD", "DC", "DE"
+    prefix String @unique
+
+    // The last number used for this prefix (BigInt for scalability)
+    currentNumber BigInt @default(0)
+
+    // Link to TaskCategory (one-to-one relationship)
+    taskCategoryId String?       @unique
+    taskCategory   TaskCategory? @relation(fields: [taskCategoryId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([prefix])
 }
 
 // TODO: Task can be created by Client / Super User / Task SuperVisor, modify schema to reflect this, A
 // TODO: Also add ability to attach files with a task, overtime, time to complete a task, required hours to complete task.
 // Updated Task model
 model Task {
-    id                String        @id @default(uuid())
-    title             String
-    description       String
-    priorityId        String
-    priority          TaskPriority  @relation(fields: [priorityId], references: [id])
-    statusId          String
-    status            TaskStatus    @relation(fields: [statusId], references: [id])
-    taskCategoryId    String
-    taskCategory      TaskCategory  @relation(fields: [taskCategoryId], references: [id])
-    assignedToId      String?
-    assignedTo        User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
-    createdByUserId   String? // Nullable, used if created by User
-    createdByUser     User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
-    createdByClientId String? // Nullable, used if created by Client
-    createdByClient   Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
+    id                 String        @id @default(uuid())
+    title              String
+    description        String
+    priorityId         String
+    priority           TaskPriority  @relation(fields: [priorityId], references: [id])
+    statusId           String
+    status             TaskStatus    @relation(fields: [statusId], references: [id])
+    taskCategoryId     String
+    taskCategory       TaskCategory  @relation(fields: [taskCategoryId], references: [id])
+    assignedToId       String?
+    assignedTo         User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+    createdByUserId    String? // Nullable, used if created by User
+    createdByUser      User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
+    createdByClientId  String? // Nullable, used if created by Client
+    createdByClient    Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
     associatedClientId String?
     associatedClient   Client?       @relation("TasksAssociatedWithClient", fields: [associatedClientId], references: [id])
-    creatorType       CreatorType
-    dueDate           DateTime?
-    timeForTask       Decimal       @db.Decimal(10, 2) // Time to complete the task in hours
-    overTime          Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
-    taskHistories     TaskHistory[]
-    invoices          Invoice[]
-    taskSkills        TaskSkill[]
-    taskFiles         TaskFile[] // Relation to TaskFile for attachments
-    createdAt         DateTime      @default(now())
-    updatedAt         DateTime      @updatedAt
-    taskComments      TaskComment[]
+    creatorType        CreatorType
+    dueDate            DateTime?
+    timeForTask        Decimal       @db.Decimal(10, 2) // Time to complete the task in h ours
+    overTime           Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
+    taskHistories      TaskHistory[]
+    invoices           Invoice[]
+    taskSkills         TaskSkill[]
+    taskFiles          TaskFile[] // Relation to TaskFile for attachments
+    serialNumber       String?       @unique
+    createdAt          DateTime      @default(now())
+    updatedAt          DateTime      @updatedAt
+    taskComments       TaskComment[]
+
+    @@index([serialNumber])
 }
 
 // Enum to distinguish between User and Client as the creator

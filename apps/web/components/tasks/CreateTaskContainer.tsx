@@ -28,7 +28,7 @@ export const createTaskSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   skills: z.array(z.string()).optional(),
   statusName: z.nativeEnum(TaskStatusEnum).default(TaskStatusEnum.NEW),
-  priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.NORMAL),
+  priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.MEDIUM),
   taskCategoryName: z.string().default('General Tasks'),
   customPrefix: z
     .string()
@@ -102,7 +102,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     description: '',
     skills: [],
     statusName: TaskStatusEnum.NEW,
-    priorityName: TaskPriorityEnum.NORMAL,
+    priorityName: TaskPriorityEnum.MEDIUM,
     taskCategoryName: taskCategories.length > 0 ? taskCategories[0]?.categoryName || '' : '',
     assignedToId: '',
     timeForTask: '1d',

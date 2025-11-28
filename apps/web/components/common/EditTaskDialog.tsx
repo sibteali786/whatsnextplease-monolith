@@ -186,7 +186,7 @@ export default function EditTaskDialog({
     defaultValues: {
       title: '',
       description: '',
-      priorityName: TaskPriorityEnum.NORMAL,
+      priorityName: TaskPriorityEnum.MEDIUM,
       statusName: TaskStatusEnum.NEW,
       taskCategoryName: '',
       skills: [],
