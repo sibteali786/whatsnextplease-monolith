@@ -17,15 +17,16 @@ import { PlusCircle, ClipboardList } from 'lucide-react';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 import { DurationEnum } from '@/types';
-import { taskApiClient } from '@/utils/taskApi';
 import { TaskByUserIdResponse } from '@/utils/validationSchemas';
+import { taskApiServer } from '@/actions/taskActions';
+import { SerialNumberBadge } from '@/components/tasks/SerialNumberBadge';
 
 const RecentTasksPage = async () => {
   const user = await getCurrentUser();
   if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
-  const { tasks }: TaskByUserIdResponse = await taskApiClient.getTasksByUserId(user.id, {
+  const { tasks }: TaskByUserIdResponse = await taskApiServer.getTasksByUserId(user.id, {
     pageSize: 5,
     search: '',
     duration: DurationEnum.ALL,
@@ -56,6 +57,7 @@ const RecentTasksPage = async () => {
           <Table className="border rounded-md">
             <TableHeader className="bg-muted/50">
               <TableRow>
+                <TableHead>Serial</TableHead>
                 <TableHead className="font-medium">Task Details</TableHead>
                 <TableHead className="font-medium">Priority</TableHead>
                 <TableHead className="font-medium">Status</TableHead>
@@ -69,6 +71,13 @@ const RecentTasksPage = async () => {
                     key={task.id}
                     className="hover:bg-muted/30 cursor-pointer transition-colors"
                   >
+                    <TableCell className="font-medium">
+                      <SerialNumberBadge
+                        serialNumber={task.serialNumber}
+                        showCopy={true}
+                        size="md"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{task.description}</TableCell>
                     <TableCell>
                       <Badge
