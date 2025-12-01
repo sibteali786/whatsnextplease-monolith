@@ -1,4 +1,3 @@
-import { getTasksByUserId } from '@/db/repositories/users/getTasksByUserId';
 import {
   Table,
   TableBody,
@@ -18,22 +17,20 @@ import { PlusCircle, ClipboardList } from 'lucide-react';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 import { DurationEnum } from '@/types';
+import { taskApiClient } from '@/utils/taskApi';
+import { TaskByUserIdResponse } from '@/utils/validationSchemas';
 
 const RecentTasksPage = async () => {
   const user = await getCurrentUser();
   if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
-  const { tasks } = await getTasksByUserId(
-    'all',
-    user.id,
-    Roles.CLIENT,
-    null,
-    5,
-    '', // searchTerm (empty)
-    DurationEnum.ALL, // duration (default)
-    USER_CREATED_TASKS_CONTEXT.GENERAL // context (correct position)
-  );
+  const { tasks }: TaskByUserIdResponse = await taskApiClient.getTasksByUserId(user.id, {
+    pageSize: 5,
+    search: '',
+    duration: DurationEnum.ALL,
+    context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+  });
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3">

@@ -7,6 +7,7 @@ import {
   CreatorType,
   Roles,
 } from '@prisma/client';
+import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 // import { DurationEnum } from '@wnp/types';
 
 export interface TaskFilters {
@@ -23,6 +24,7 @@ export interface TaskQueryOptions {
   cursor?: string;
   pageSize: number;
   orderBy?: Prisma.TaskOrderByWithRelationInput;
+  context?: USER_CREATED_TASKS_CONTEXT;
 }
 
 export interface BatchUpdateData {

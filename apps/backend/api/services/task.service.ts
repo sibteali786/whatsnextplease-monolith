@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Roles, TaskStatusEnum, TaskPriorityEnum, CreatorType, Prisma } from '@prisma/client';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@wnp/types';
-import { canViewTasks, getTaskFilterCondition } from '../utils/tasks/taskPermissions';
+import {
+  canViewTasks,
+  getGeneralTaskFilter,
+  getTaskFilterCondition,
+  getUserProfileTaskFilter,
+  USER_CREATED_TASKS_CONTEXT,
+} from '../utils/tasks/taskPermissions';
 import { getDateFilter } from '../utils/dateFilter';
 import { DurationEnum } from '@wnp/types';
 import {
@@ -53,6 +59,7 @@ export interface TaskQueryParams {
   priority?: TaskPriorityEnum;
   assignedToId?: string | null | { not: null };
   categoryId?: string;
+  context?: USER_CREATED_TASKS_CONTEXT;
 }
 
 export interface UpdateTaskFieldRequest {
@@ -112,6 +119,7 @@ export class TaskService {
       priority,
       assignedToId,
       categoryId,
+      context = USER_CREATED_TASKS_CONTEXT.GENERAL,
     } = params;
     // Authorization check
     if (!canViewTasks(role)) {
@@ -137,9 +145,14 @@ export class TaskService {
       }
       return [];
     })();
+    const whereCondition = userId
+      ? context === USER_CREATED_TASKS_CONTEXT.USER_PROFILE
+        ? getUserProfileTaskFilter(userId) // Always show tasks assigned to this user
+        : getGeneralTaskFilter(userId, role) // Role-based filtering
+      : {};
     // Build filters
     const filters: TaskFilters = {
-      whereCondition: userId ? getTaskFilterCondition(userId, role) : {},
+      whereCondition,
       dateFilter: getDateFilter(duration),
       searchTerm,
       status: normalizedStatus.length ? normalizedStatus : undefined,
@@ -212,6 +225,7 @@ export class TaskService {
       priority,
       assignedToId,
       categoryId,
+      context,
     } = params;
 
     // Authorization check
@@ -242,9 +256,14 @@ export class TaskService {
       }
       return []; // Return empty array if no priority is provided
     })();
+    const whereCondition = userId
+      ? context === USER_CREATED_TASKS_CONTEXT.USER_PROFILE
+        ? getUserProfileTaskFilter(userId)
+        : getGeneralTaskFilter(userId, role)
+      : {};
     // Build filters
     const filters: TaskFilters = {
-      whereCondition: userId ? getTaskFilterCondition(userId, role) : {},
+      whereCondition,
       dateFilter: getDateFilter(duration),
       searchTerm,
       status: normalizedStatus.length ? normalizedStatus : undefined,

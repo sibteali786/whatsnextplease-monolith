@@ -9,6 +9,7 @@ import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType } from '@prisma/cl
 import z from 'zod';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
+import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 
 const getUserTaskCountSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
@@ -40,6 +41,7 @@ export class TaskController {
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
       const categoryId = req.query.categoryId as string;
+      const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
       const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
 
@@ -80,6 +82,7 @@ export class TaskController {
         priority,
         assignedToId: processedAssignedToId,
         categoryId,
+        context,
       });
 
       res.status(200).json(result);
@@ -131,6 +134,7 @@ export class TaskController {
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
       const categoryId = req.query.categoryId as string;
+      const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
       if (!req.user) {
         throw new BadRequestError('User authentication required');
@@ -155,6 +159,7 @@ export class TaskController {
         priority,
         assignedToId: processedAssignedToId,
         categoryId,
+        context,
       });
 
       res.status(200).json(result);
