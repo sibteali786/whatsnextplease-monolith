@@ -1,4 +1,5 @@
 
-> cdk@0.1.0 build D:\Study Related\HCC\whatsnextplease-monolith\apps\web\cdk
+
+> cdk@0.1.0 build /home/sibteali-baqar/Documents/whatsnextplease-monolith/apps/web/cdk
 > tsc
 

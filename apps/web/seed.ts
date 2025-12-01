@@ -73,9 +73,6 @@ async function main() {
   // Step 2: Seed Task Priorities - required for task creation
   console.log('⚡ Seeding task priorities...');
   const taskPrioritiesData = [
-    { priorityName: TaskPriorityEnum.URGENT },
-    { priorityName: TaskPriorityEnum.NORMAL },
-    { priorityName: TaskPriorityEnum.LOW_PRIORITY },
 
     // New priority system
     { priorityName: TaskPriorityEnum.CRITICAL },

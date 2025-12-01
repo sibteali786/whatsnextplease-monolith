@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react';
 import { SearchNFilter } from '../common/SearchNFilter';
 import { UserTasksTable } from './UserTaskTable';
-import { getTasksByUserId } from '@/db/repositories/users/getTasksByUserId';
-import { getTaskIdsByUserId } from '@/utils/userTools';
 import { DurationEnum, DurationEnumList } from '@/types';
 import { CreatorType, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { Button } from '../ui/button';
@@ -19,6 +17,7 @@ import { CallToAction } from '../CallToAction';
 import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 import { useSearchParams } from 'next/navigation';
 import { DynamicBreadcrumb } from '../skills/DynamicBreadcrumb';
+import { taskApiClient } from '@/utils/taskApi';
 
 export const UserTasks = ({
   userId,
@@ -112,26 +111,22 @@ export const UserTasks = ({
             )
             .filter(priority => priority !== null)
         : [];
-      const response = await getTasksByUserId(
-        typeFilter ?? 'unassigned',
-        userId,
-        role,
-        cursor,
+      const params = {
+        cursor: cursor ?? undefined,
         pageSize,
-        searchTerm,
+        search: searchTerm,
         duration,
+        status: normalizedStatus,
+        priority: normalizedPriority,
         context,
-        normalizedStatus,
-        normalizedPriority
-      );
-
-      const { taskIds, success } = await getTaskIdsByUserId(
-        typeFilter ?? 'unassigned',
+      };
+      const response = await taskApiClient.getTasksByUserId(userId, params);
+      const { taskIds, success } = await taskApiClient.getTaskIds({
         userId,
-        searchTerm,
+        search: searchTerm,
         duration,
-        role
-      );
+        context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+      });
 
       if (response.success && success) {
         setTaskIDs(taskIds);

@@ -20,6 +20,7 @@ export const getTaskById = async (taskId: string) => {
         id: true,
         title: true,
         description: true,
+        serialNumber: true,
         priority: {
           select: {
             priorityName: true,
@@ -33,6 +34,7 @@ export const getTaskById = async (taskId: string) => {
         taskCategory: {
           select: {
             categoryName: true,
+            prefix: true,
           },
         },
         timeForTask: true,

@@ -39,6 +39,7 @@ import { AddSkillDialog } from '../skills/AddSkillDialog';
 import { COOKIE_NAME } from '@/utils/constant';
 import { SearchableDropdown } from '../ui/searchable-dropdown';
 import { SearchableClient } from '../clients/SearchableClients';
+import { SerialNumberPrefixInput } from './SerialNumberInput';
 
 interface CreateTaskFormProps {
   form: UseFormReturn<z.infer<typeof createTaskSchema>>;
@@ -54,6 +55,8 @@ interface CreateTaskFormProps {
   page?: number;
   hasMore?: boolean;
   loading?: boolean;
+  customPrefix?: string;
+  setCustomPrefix: (prefix: string | undefined) => void;
 }
 interface SkillCategory {
   id: string;
@@ -73,6 +76,8 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   page,
   hasMore,
   loading,
+  customPrefix,
+  setCustomPrefix,
 }) => {
   /*   const user = await getCurrentUser(); */
 
@@ -255,7 +260,11 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
             <FormItem>
               <FormLabel>Task Category*</FormLabel>
               <Select
-                onValueChange={field.onChange}
+                onValueChange={value => {
+                  field.onChange(value); // Update form value
+                  setCustomPrefix(undefined); // Reset custom prefix
+                  form.setValue('customPrefix', undefined); // Clear form field
+                }}
                 defaultValue={field.value}
                 value={field.value}
                 disabled={taskCategories.length === 0}
@@ -289,6 +298,24 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
             </FormItem>
           )}
         />
+
+        {/* NEW: Serial Number Input - Add this right after Task Category */}
+        {form.watch('taskCategoryName') && (
+          <SerialNumberPrefixInput
+            key={form.watch('taskCategoryName')}
+            categoryId={
+              taskCategories.find(cat => cat.categoryName === form.watch('taskCategoryName'))?.id ||
+              ''
+            }
+            categoryName={form.watch('taskCategoryName')}
+            value={customPrefix}
+            onChange={prefix => {
+              setCustomPrefix(prefix);
+              form.setValue('customPrefix', prefix);
+            }}
+            disabled={form.formState.isSubmitting}
+          />
+        )}
 
         {/* Assignee - Only show if the user has permission to assign tasks */}
         {canAssignTasks ? (

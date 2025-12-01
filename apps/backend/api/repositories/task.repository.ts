@@ -1,5 +1,13 @@
-// apps/backend/api/repositories/task.repository.ts
-import { PrismaClient, Prisma, TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  PrismaClient,
+  Prisma,
+  TaskStatusEnum,
+  TaskPriorityEnum,
+  CreatorType,
+  Roles,
+} from '@prisma/client';
+import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 // import { DurationEnum } from '@wnp/types';
 
 export interface TaskFilters {
@@ -16,6 +24,7 @@ export interface TaskQueryOptions {
   cursor?: string;
   pageSize: number;
   orderBy?: Prisma.TaskOrderByWithRelationInput;
+  context?: USER_CREATED_TASKS_CONTEXT;
 }
 
 export interface BatchUpdateData {
@@ -71,9 +80,10 @@ export class TaskRepository {
         id: true,
         title: true,
         description: true,
+        serialNumber: true,
         priority: { select: { id: true, priorityName: true } },
         status: { select: { id: true, statusName: true } },
-        taskCategory: { select: { id: true, categoryName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
@@ -223,7 +233,6 @@ export class TaskRepository {
       const updatedTasks = await Promise.all(
         taskIds.map(taskId => {
           // Build the update data with proper Prisma relation syntax
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const prismaUpdateData: any = {};
 
           // Handle status update
@@ -571,10 +580,10 @@ export class TaskRepository {
    */
   getPriorityLevelMapping(): Record<string, TaskPriorityEnum[]> {
     return {
-      critical: [TaskPriorityEnum.CRITICAL, TaskPriorityEnum.URGENT],
+      critical: [TaskPriorityEnum.CRITICAL],
       high: [TaskPriorityEnum.HIGH],
-      medium: [TaskPriorityEnum.MEDIUM, TaskPriorityEnum.NORMAL],
-      low: [TaskPriorityEnum.LOW, TaskPriorityEnum.LOW_PRIORITY],
+      medium: [TaskPriorityEnum.MEDIUM],
+      low: [TaskPriorityEnum.LOW],
       hold: [TaskPriorityEnum.HOLD],
     };
   }
@@ -583,17 +592,10 @@ export class TaskRepository {
    * Get tasks by priority level (combines legacy and new priorities)
    */
   async getTasksByPriorityLevel(
-    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    level: TaskPriorityEnum,
     filters: TaskFilters,
     options: TaskQueryOptions
   ) {
-    const priorityMapping = this.getPriorityLevelMapping();
-    const priorities = priorityMapping[level] || [];
-
-    if (priorities.length === 0) {
-      return { tasks: [], hasNextCursor: false, nextCursor: null };
-    }
-
     const updatedFilters = {
       ...filters,
       priority: undefined, // Remove single priority filter
@@ -604,7 +606,7 @@ export class TaskRepository {
     const where: Prisma.TaskWhereInput = {
       ...updatedFilters.whereCondition,
       ...updatedFilters.dateFilter,
-      priority: { priorityName: { in: priorities } }, // Use multiple priorities
+      priority: { priorityName: { in: [level] } }, // Use multiple priorities
       ...(updatedFilters.status && {
         status: {
           statusName: {
@@ -625,7 +627,6 @@ export class TaskRepository {
         ],
       }),
     };
-
     const tasks = await this.prisma.task.findMany({
       where,
       take: pageSize + 1,
@@ -635,9 +636,10 @@ export class TaskRepository {
         id: true,
         title: true,
         description: true,
+        serialNumber: true,
         priority: { select: { id: true, priorityName: true } },
         status: { select: { id: true, statusName: true } },
-        taskCategory: { select: { id: true, categoryName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
@@ -656,7 +658,6 @@ export class TaskRepository {
         updatedAt: true,
       },
     });
-
     const hasNextCursor = tasks.length > pageSize;
     const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
     if (hasNextCursor) {
@@ -664,5 +665,286 @@ export class TaskRepository {
     }
 
     return { tasks, hasNextCursor, nextCursor };
+  }
+
+  /**
+   * Find task category by name
+   */
+  async findTaskCategoryByName(categoryName: string) {
+    return this.prisma.taskCategory.findFirst({
+      where: { categoryName },
+      select: { id: true, categoryName: true, prefix: true },
+    });
+  }
+
+  /**
+   * Find first task category (fallback)
+   */
+  async findFirstTaskCategory() {
+    return this.prisma.taskCategory.findFirst({
+      select: { id: true, categoryName: true, prefix: true },
+    });
+  }
+
+  /**
+   * Create a new task category
+   */
+  async createTaskCategory(categoryName: string) {
+    // Generate prefix automatically
+    const prefix = this.generatePrefixFromName(categoryName);
+
+    // Check uniqueness
+    let finalPrefix = prefix;
+    let counter = 1;
+    while (await this.prisma.taskCategory.findFirst({ where: { prefix: finalPrefix } })) {
+      finalPrefix = `${prefix}${counter}`;
+      counter++;
+    }
+
+    const category = await this.prisma.taskCategory.create({
+      data: {
+        categoryName,
+        prefix: finalPrefix,
+      },
+    });
+
+    // Create corresponding TaskSequence
+    await this.prisma.taskSequence.create({
+      data: {
+        prefix: finalPrefix,
+        taskCategoryId: category.id,
+        currentNumber: 0,
+      },
+    });
+
+    return category;
+  }
+
+  private generatePrefixFromName(categoryName: string): string {
+    const words = categoryName
+      .replace(/[^a-zA-Z\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 0);
+
+    if (words.length === 1) {
+      return words[0].substring(0, 2).toUpperCase();
+    } else {
+      return words
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 3);
+    }
+  }
+
+  /**
+   * Find client by ID
+   */
+  async findClientById(clientId: string) {
+    return this.prisma.client.findUnique({
+      where: { id: clientId },
+      select: { id: true, username: true, companyName: true, contactName: true },
+    });
+  }
+
+  /**
+   * Find skills by names
+   */
+  async findSkillsByNames(skillNames: string[]) {
+    return this.prisma.skill.findMany({
+      where: { name: { in: skillNames } },
+      select: { id: true, name: true },
+    });
+  }
+
+  /**
+   * Create a draft task
+   */
+  async createDraftTask(data: {
+    statusId: string;
+    priorityId: string;
+    taskCategoryId: string;
+    creatorType: CreatorType;
+    createdByUserId?: string;
+    createdByClientId?: string;
+  }) {
+    return this.prisma.task.create({
+      data: {
+        title: '',
+        description: '',
+        timeForTask: 0,
+        ...data,
+      },
+      select: { id: true },
+    });
+  }
+
+  /**
+   * Update a task
+   */
+  async updateTask(taskId: string, data: any) {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        statusId: true,
+        priorityId: true,
+        taskCategoryId: true,
+        assignedToId: true,
+        associatedClientId: true,
+        dueDate: true,
+        timeForTask: true,
+        overTime: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  /**
+   * Update task skills
+   */
+  async updateTaskSkills(taskId: string, skillIds: string[]) {
+    // Remove existing skills
+    await this.prisma.taskSkill.deleteMany({
+      where: { taskId },
+    });
+
+    // Add new skills if any
+    if (skillIds.length > 0) {
+      await this.prisma.taskSkill.createMany({
+        data: skillIds.map(skillId => ({ taskId, skillId })),
+      });
+    }
+  }
+
+  /**
+   * Delete a task
+   */
+  async deleteTask(taskId: string) {
+    return this.prisma.task.delete({
+      where: { id: taskId },
+    });
+  }
+
+  /**
+   * Create a task comment
+   */
+  async createTaskComment(data: {
+    content: string;
+    taskId: string;
+    authorUserId?: string | null;
+    authorClientId?: string | null;
+    authorType: CreatorType;
+  }) {
+    return this.prisma.taskComment.create({
+      data: {
+        ...data,
+        mentionedUserIds: [],
+      },
+    });
+  }
+
+  /**
+   * Search tasks by title or description
+   */
+  async searchTasks(searchTerm: string) {
+    return this.prisma.task.findMany({
+      where: {
+        OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { description: { contains: searchTerm, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        dueDate: true,
+        priority: { select: { priorityName: true } },
+        status: { select: { statusName: true } },
+        taskCategory: { select: { categoryName: true } },
+        assignedTo: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  /**
+   * Find users by role (excluding specific user)
+   */
+  async findUsersByRole(role: Roles, excludeUserId?: string) {
+    return this.prisma.user.findMany({
+      where: {
+        role: { name: role },
+        ...(excludeUserId && { id: { not: excludeUserId } }),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+  }
+
+  /**
+   * Find task by serial number
+   */
+  async findTaskBySerialNumber(serialNumber: string) {
+    return this.prisma.task.findUnique({
+      where: { serialNumber },
+      include: {
+        priority: { select: { id: true, priorityName: true } },
+        status: { select: { id: true, statusName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+        assignedTo: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
+        taskSkills: {
+          include: {
+            skill: { select: { id: true, name: true } },
+          },
+        },
+        taskFiles: {
+          include: {
+            file: {
+              select: {
+                id: true,
+                fileName: true,
+                filePath: true,
+                fileSize: true,
+                uploadedBy: true,
+                uploadedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Check if serial number exists
+   */
+  async serialNumberExists(serialNumber: string): Promise<boolean> {
+    const task = await this.prisma.task.findUnique({
+      where: { serialNumber },
+      select: { id: true },
+    });
+    return !!task;
   }
 }

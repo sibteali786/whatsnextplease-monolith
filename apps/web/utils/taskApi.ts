@@ -3,6 +3,7 @@ import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
 import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 import { DurationEnum } from '@/types';
+import { USER_CREATED_TASKS_CONTEXT } from './commonUtils/taskPermissions';
 interface BatchUpdateRequest {
   taskIds: string[];
   updates: {
@@ -29,6 +30,7 @@ interface TaskQueryParams {
   priority?: TaskPriorityEnum;
   assignedToId?: string | null;
   categoryId?: string;
+  context?: USER_CREATED_TASKS_CONTEXT;
 }
 
 class TaskApiClient {
@@ -220,7 +222,7 @@ class TaskApiClient {
    * NEW: Get tasks by priority level (critical, high, medium, low, hold)
    */
   async getTasksByPriorityLevel(
-    level: 'critical' | 'high' | 'medium' | 'low' | 'hold',
+    level: TaskPriorityEnum,
     params?: {
       cursor?: string;
       pageSize?: number;
@@ -295,6 +297,33 @@ class TaskApiClient {
 
     return response.json();
   }
+
+  /**
+   * GET: Tasks by User ID with enhanced filtering
+   */
+  async getTasksByUserId(
+    userId: string,
+    params: {
+      cursor?: string;
+      pageSize?: number;
+      search?: string;
+      duration?: DurationEnum;
+      status?: TaskStatusEnum[];
+      priority?: TaskPriorityEnum[];
+      context: USER_CREATED_TASKS_CONTEXT;
+    }
+  ) {
+    return this.getTasks({
+      userId,
+      cursor: params.cursor,
+      pageSize: params.pageSize,
+      search: params.search,
+      duration: params.duration,
+      status: params.status?.[0], // getTasks expects single value, not array
+      priority: params.priority?.[0], // getTasks expects single value, not array
+      context: params.context,
+    });
+  }
 }
 
 // Create singleton instance
@@ -323,12 +352,14 @@ export const getTaskIdsByUserId = async (
   userId: string,
   searchTerm: string,
   duration: DurationEnum = DurationEnum.ALL,
-  role: any
+  role: any,
+  context: USER_CREATED_TASKS_CONTEXT = USER_CREATED_TASKS_CONTEXT.GENERAL
 ) => {
   const result = await taskApiClient.getTaskIds({
     userId,
     search: searchTerm,
     duration,
+    context,
   });
 
   return {

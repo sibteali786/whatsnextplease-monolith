@@ -28,8 +28,12 @@ export const createTaskSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   skills: z.array(z.string()).optional(),
   statusName: z.nativeEnum(TaskStatusEnum).default(TaskStatusEnum.NEW),
-  priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.NORMAL),
+  priorityName: z.nativeEnum(TaskPriorityEnum).default(TaskPriorityEnum.MEDIUM),
   taskCategoryName: z.string().default('General Tasks'),
+  customPrefix: z
+    .string()
+    .regex(/^[A-Z0-9]{1,5}$/, 'Prefix must be 1-5 alphanumeric characters')
+    .optional(),
   assignedToId: z.string().optional(),
   assignedToClientId: z.string().optional(),
   timeForTask: z
@@ -90,6 +94,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   const [, setFormWasCancelled] = useState(false);
   const [lastSubmissionWasSuccessful, setLastSubmissionWasSuccessful] = useState(false);
   const [isFirstOpen, setIsFirstOpen] = useState(true); // Track if this is the first time opening
+  const [customPrefix, setCustomPrefix] = useState<string | undefined>(undefined);
   const router = useRouter();
 
   const getDefaultValues = () => ({
@@ -97,12 +102,13 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     description: '',
     skills: [],
     statusName: TaskStatusEnum.NEW,
-    priorityName: TaskPriorityEnum.NORMAL,
+    priorityName: TaskPriorityEnum.MEDIUM,
     taskCategoryName: taskCategories.length > 0 ? taskCategories[0]?.categoryName || '' : '',
     assignedToId: '',
     timeForTask: '1d',
     dueDate: undefined,
     initialComment: '',
+    customPrefix: undefined,
   });
 
   const form = useForm<z.infer<typeof createTaskSchema>>({
@@ -405,7 +411,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
   const handleResetForm = () => {
     form.reset(getDefaultValues());
-
+    setCustomPrefix(undefined);
     setFormWasCancelled(false); // Clear cancel state
     setLastSubmissionWasSuccessful(false); // Clear success state
     setIsFirstOpen(true); // Reset to first open state
@@ -418,7 +424,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
   const onSubmit = async (data: z.infer<typeof createTaskSchema>) => {
     try {
-      const trimmedData = trimWhitespace(data);
+      const trimmedData: z.infer<typeof createTaskSchema> = trimWhitespace(data);
       const totalHours = parseOriginalEstimate(trimmedData.timeForTask);
       if (totalHours === null) {
         throw new Error('Invalid time format');
@@ -426,9 +432,10 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       const formattedData = {
         ...trimmedData,
         id: taskId,
-        deuDate: trimmedData.dueDate.toISOString(),
+        dueDate: trimmedData.dueDate,
         timeForTask: totalHours.toString(),
         initialComment: trimmedData.initialComment?.trim() || undefined,
+        customPrefix: trimmedData.customPrefix || undefined,
       };
 
       const response = await updateTaskById(formattedData);
@@ -505,7 +512,8 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       (values.skills && values.skills.length > 0) ||
       values.assignedToId !== '' ||
       values.timeForTask !== '1d' ||
-      values.dueDate !== undefined
+      values.dueDate !== undefined ||
+      values.customPrefix !== undefined
     );
   };
 
@@ -536,6 +544,8 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           page={page}
           hasMore={hasMore}
           loading={loading}
+          customPrefix={customPrefix}
+          setCustomPrefix={setCustomPrefix}
         />
       </ModalWithConfirmation>
     </>

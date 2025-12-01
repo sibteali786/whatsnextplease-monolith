@@ -6,8 +6,6 @@ import {
 } from '@prisma/client';
 import { NotificationService } from '../notification.service';
 import { prismaMock } from '../../test/mockPrisma';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { sseManager } from '../../utils/SSEManager';
 import {
   createMockNotification,
   createMockNotifications,
