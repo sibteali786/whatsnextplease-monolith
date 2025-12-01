@@ -5,21 +5,33 @@ import { TaskByPriority } from '@/utils/validationSchemas';
 import { TaskPriorityEnum } from '@prisma/client';
 import { CallToAction } from '@/components/CallToAction';
 import { useState } from 'react';
-import { useTasksByPriorityLevel } from '@/utils/tasks/taskAPI';
+import { useTasksByPriorityLevel } from '@/utils/tasks/useTasksByPriorityLevel';
 
 export default function TasksSection() {
   const [open, setOpen] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<TaskPriorityEnum>(TaskPriorityEnum.CRITICAL);
 
-  const { data: criticalData, loading: criticalLoading } = useTasksByPriorityLevel('critical', {
+  const { data: criticalData, loading: criticalLoading } = useTasksByPriorityLevel(
+    TaskPriorityEnum.CRITICAL,
+    {
+      pageSize: 5,
+    }
+  );
+  const { data: highData, loading: highLoading } = useTasksByPriorityLevel(TaskPriorityEnum.HIGH, {
     pageSize: 5,
   });
-  const { data: highData, loading: highLoading } = useTasksByPriorityLevel('high', { pageSize: 5 });
-  const { data: mediumData, loading: mediumLoading } = useTasksByPriorityLevel('medium', {
+  const { data: mediumData, loading: mediumLoading } = useTasksByPriorityLevel(
+    TaskPriorityEnum.MEDIUM,
+    {
+      pageSize: 5,
+    }
+  );
+  const { data: lowData, loading: lowLoading } = useTasksByPriorityLevel(TaskPriorityEnum.LOW, {
     pageSize: 5,
   });
-  const { data: lowData, loading: lowLoading } = useTasksByPriorityLevel('low', { pageSize: 5 });
-  const { data: holdData, loading: holdLoading } = useTasksByPriorityLevel('hold', { pageSize: 5 });
+  const { data: holdData, loading: holdLoading } = useTasksByPriorityLevel(TaskPriorityEnum.HOLD, {
+    pageSize: 5,
+  });
   const handlePriorityChange = (level: TaskPriorityEnum) => {
     setSelectedLevel(level);
     setOpen(true);

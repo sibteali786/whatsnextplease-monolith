@@ -17,6 +17,7 @@ import { logger } from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
 import { passwordResetRoutes } from './routes/passwordReset.routes';
 import { chatRoutes } from './routes/chat.routes';
+import { serialNumberRoutes } from './routes/serialNumber.routes';
 
 export async function createServer() {
   const app = express();
@@ -77,6 +78,7 @@ export async function createServer() {
   app.use('/files', fileRoutes);
   app.use('/tasks', taskRoutes);
   app.use('/password-reset', passwordResetRoutes);
+  app.use('/task-sequences', serialNumberRoutes);
   app.use('/chat', chatRoutes);
   app.use('/', commentRoutes);
   // Health check route

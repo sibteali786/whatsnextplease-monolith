@@ -59,6 +59,7 @@ import { taskApiClient } from '@/utils/taskApi';
 import { AddSkillDialog } from '../skills/AddSkillDialog';
 import { SearchableDropdown } from '../ui/searchable-dropdown';
 import { SearchableClient } from '../clients/SearchableClients';
+import { SerialNumberBadge } from '../tasks/SerialNumberBadge';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -185,7 +186,7 @@ export default function EditTaskDialog({
     defaultValues: {
       title: '',
       description: '',
-      priorityName: TaskPriorityEnum.NORMAL,
+      priorityName: TaskPriorityEnum.MEDIUM,
       statusName: TaskStatusEnum.NEW,
       taskCategoryName: '',
       skills: [],
@@ -538,7 +539,7 @@ export default function EditTaskDialog({
 
   const onSubmit = async (data: EditTaskFormValues) => {
     try {
-      const trimmedData = trimWhitespace(data);
+      const trimmedData: z.infer<typeof editTaskSchema> = trimWhitespace(data);
 
       const totalHours = parseOriginalEstimate(trimmedData.timeForTask);
       if (totalHours === null) {
@@ -668,6 +669,12 @@ export default function EditTaskDialog({
         <DialogContent className="max-w-[700px] max-h-[98%] overflow-hidden px-0">
           <DialogHeader className="px-6 flex flex-row gap-2 items-center">
             <DialogTitle>Edit Task</DialogTitle>
+            {/* NEW: Serial Number Display */}
+            {task.serialNumber && (
+              <div className="ml-auto">
+                <SerialNumberBadge serialNumber={task.serialNumber} showCopy={true} size="md" />
+              </div>
+            )}
           </DialogHeader>
 
           <Form {...form}>

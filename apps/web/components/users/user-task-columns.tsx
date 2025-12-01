@@ -22,6 +22,7 @@ import { TaskTable } from '@/utils/validationSchemas';
 import { InlineDropdown } from '../common/InlineDropdown';
 import { updateTaskField } from '@/utils/tasks/taskInlineUpdates';
 import { TaskNotificationService } from '@/utils/notifications/taskNotifications';
+import { SerialNumberBadge } from '../tasks/SerialNumberBadge';
 
 type TaskAssignees = {
   firstName: string;
@@ -67,6 +68,22 @@ export const generateUserTaskColumns = (
       ),
       enableSorting: false,
       enableHiding: false,
+    },
+    {
+      accessorKey: 'serialNumber',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Serial Number
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const serialNumber: string = row.getValue('serialNumber');
+        return <SerialNumberBadge serialNumber={serialNumber} />;
+      },
     },
     {
       accessorKey: 'taskCategory',

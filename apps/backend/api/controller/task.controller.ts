@@ -5,10 +5,11 @@ import { TaskService, BatchUpdateRequest, BatchDeleteRequest } from '../services
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError } from '@wnp/types';
 import { DurationEnum } from '@wnp/types';
-import { TaskStatusEnum, TaskPriorityEnum, Roles } from '@prisma/client';
+import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType } from '@prisma/client';
 import z from 'zod';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
+import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 
 const getUserTaskCountSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
@@ -40,6 +41,7 @@ export class TaskController {
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
       const categoryId = req.query.categoryId as string;
+      const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
       const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
 
@@ -80,6 +82,7 @@ export class TaskController {
         priority,
         assignedToId: processedAssignedToId,
         categoryId,
+        context,
       });
 
       res.status(200).json(result);
@@ -131,6 +134,7 @@ export class TaskController {
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
       const categoryId = req.query.categoryId as string;
+      const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
       if (!req.user) {
         throw new BadRequestError('User authentication required');
@@ -155,6 +159,7 @@ export class TaskController {
         priority,
         assignedToId: processedAssignedToId,
         categoryId,
+        context,
       });
 
       res.status(200).json(result);
@@ -410,29 +415,24 @@ export class TaskController {
       const userId = req.query.userId as string;
 
       const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
-
-      if (!['critical', 'high', 'medium', 'low', 'hold'].includes(level)) {
+      if (level === undefined || !(level in TaskPriorityEnum)) {
         throw new BadRequestError('Invalid priority level');
       }
-
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
 
-      const result = await this.taskService.getTasksByPriorityLevel(
-        level as 'critical' | 'high' | 'medium' | 'low' | 'hold',
-        {
-          userId,
-          role: req.user.role,
-          cursor,
-          pageSize,
-          searchTerm,
-          duration,
-          status,
-          assignedToId: assignedToId === 'null' ? null : assignedToId,
-          categoryId,
-        }
-      );
+      const result = await this.taskService.getTasksByPriorityLevel(level as TaskPriorityEnum, {
+        userId,
+        role: req.user.role,
+        cursor,
+        pageSize,
+        searchTerm,
+        duration,
+        status,
+        assignedToId: assignedToId === 'null' ? null : assignedToId,
+        categoryId,
+      });
 
       res.status(200).json(result);
     } catch (error) {
@@ -657,6 +657,131 @@ export class TaskController {
       });
     }
   };
+
+  /**
+   * Create a draft task
+   */
+  private handleCreateDraftTask = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { creatorType } = req.body;
+
+      if (!creatorType || !Object.values(CreatorType).includes(creatorType)) {
+        throw new BadRequestError('Valid creator type is required');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.createDraftTask({
+        creatorType,
+        userId: req.user.id,
+        role: req.user.role,
+      });
+
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Update a task (handles both draft finalization and updates)
+   */
+  private handleUpdateTask = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { taskId } = req.params;
+      const updateData = req.body;
+
+      if (!taskId) {
+        throw new BadRequestError('Task ID is required');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+      const result = await this.taskService.updateTask(
+        { id: taskId, ...updateData },
+        {
+          id: req.user.id,
+          role: req.user.role,
+          username: req.user.username,
+        }
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Delete a task
+   */
+  private handleDeleteTask = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { taskId } = req.params;
+
+      if (!taskId) {
+        throw new BadRequestError('Task ID is required');
+      }
+
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+
+      const result = await this.taskService.deleteTask({
+        taskId,
+        userId: req.user.id,
+        role: req.user.role,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Search tasks
+   */
+  private handleSearchTasks = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const searchTerm = req.query.search as string;
+
+      if (!searchTerm) {
+        throw new BadRequestError('Search term is required');
+      }
+
+      const result = await this.taskService.searchTasks(searchTerm);
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // Expose migrated handlers from frontend
+  createDraftTask = asyncHandler(this.handleCreateDraftTask);
+  updateTask = asyncHandler(this.handleUpdateTask);
+  deleteTask = asyncHandler(this.handleDeleteTask);
+  searchTasks = asyncHandler(this.handleSearchTasks);
 
   // Publicly exposed route handlers
   getTasks = asyncHandler(this.handleGetTasks);

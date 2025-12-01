@@ -1,9 +1,6 @@
 'use server';
-import { getDateFilter } from '@/utils/dateFilter';
 import prisma from '@/db/db';
-import { DurationEnum } from '@/types';
-import { Roles } from '@prisma/client';
-import { canViewTasks, getTaskFilterCondition } from './commonUtils/taskPermissions';
+
 
 export const getUserIds = async () => {
   try {
@@ -81,82 +78,6 @@ export interface GetTaskIdsByUserIdResponse {
   success: boolean;
 }
 // Import the utility function
-
-export const getTaskIdsByUserId = async (
-  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
-
-  userId: string,
-  searchTerm: string,
-  duration: DurationEnum = DurationEnum.ALL,
-  role: Roles
-): Promise<GetTaskIdsByUserIdResponse> => {
-  try {
-    // Check if the role has permission to view tasks
-    if (!canViewTasks(role)) {
-      return {
-        success: false,
-        taskIds: [],
-        message: `Role ${role} is not authorized to view tasks.`,
-      };
-    }
-
-    // Get the appropriate filter condition based on role
-    const whereCondition = getTaskFilterCondition(userId, role);
-    const dateFilter = getDateFilter(duration);
-    const assignedToId =
-      type === 'assigned' ? { not: null } : type === 'unassigned' ? null : undefined;
-
-    const searchFilter = searchTerm
-      ? {
-          OR: [
-            { title: { contains: searchTerm, mode: 'insensitive' } },
-            { description: { contains: searchTerm, mode: 'insensitive' } },
-          ],
-        }
-      : undefined;
-
-    const AND: any[] = [];
-
-    // A. Client visibility
-    if (whereCondition?.OR) {
-      AND.push({ OR: whereCondition.OR });
-    }
-
-    // B. Date filter
-    if (Object.keys(dateFilter).length > 0) {
-      AND.push(dateFilter);
-    }
-
-    // C. Assigned filter
-    if (assignedToId !== undefined) {
-      AND.push({ assignedToId });
-    }
-
-    // D. Search
-    if (searchFilter?.OR) {
-      AND.push({ OR: searchFilter.OR });
-    }
-
-    const where = { AND };
-
-    const taskIds = await prisma.task.findMany({
-      where,
-      orderBy: { id: 'asc' },
-      select: {
-        id: true,
-      },
-    });
-
-    return {
-      taskIds: taskIds.map(task => task.id),
-      message: 'Successfully retrieved task IDs for the user.',
-      success: true,
-    };
-  } catch (e) {
-    console.error(e);
-    throw new Error('Failed to retrieve tasks by user ID');
-  }
-};
 
 // app/actions/getUserSkills.ts
 

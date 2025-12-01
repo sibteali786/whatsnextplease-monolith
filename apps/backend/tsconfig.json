@@ -5,6 +5,8 @@
     "target": "ESNext",
     "strict": true,
     "esModuleInterop": true,
+    "noUnusedLocals": true,
+    "noImplicitAny": true,
     "skipLibCheck": true
   },
   "include": ["api/**/*"] // Add this to specify what files to compile

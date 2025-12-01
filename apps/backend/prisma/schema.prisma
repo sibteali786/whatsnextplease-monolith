@@ -72,7 +72,7 @@ model User {
     emailVerified        Boolean                  @default(false)
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
-    passwordResetTokens   PasswordResetToken[]
+    passwordResetTokens  PasswordResetToken[]
 }
 
 model UserSkill {
@@ -120,7 +120,7 @@ model Client {
     emailVerified        Boolean                  @default(false)
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
-    passwordResetTokens   PasswordResetToken[]
+    passwordResetTokens  PasswordResetToken[]
 }
 
 model EmailVerificationToken {
@@ -148,10 +148,6 @@ model EmailVerificationToken {
 //// =========================================
 
 enum TaskPriorityEnum {
-    URGENT
-    LOW_PRIORITY
-    NORMAL
-
     CRITICAL // P1 - Will block all progress
     HIGH // P2 - Could block progress  
     MEDIUM // P3 - Standard priority
@@ -161,7 +157,7 @@ enum TaskPriorityEnum {
 
 model TaskPriority {
     id           String           @id @default(uuid())
-    priorityName TaskPriorityEnum @unique @default(NORMAL)
+    priorityName TaskPriorityEnum @unique @default(MEDIUM)
     tasks        Task[]
     rates        Rate[]
     createdAt    DateTime         @default(now())
@@ -196,10 +192,32 @@ model TaskStatus {
 model TaskCategory {
     id            String         @id @default(uuid())
     categoryName  String
+    prefix        String?         @unique
     tasks         Task[]
+    taskSequence  TaskSequence?
     taskOfferings TaskOffering[]
     createdAt     DateTime       @default(now())
     updatedAt     DateTime       @updatedAt
+
+}
+
+model TaskSequence {
+    id String @id @default(cuid())
+
+    // The unique prefix code, e.g., "WD", "DC", "DE"
+    prefix String @unique
+
+    // The last number used for this prefix (BigInt for scalability)
+    currentNumber BigInt @default(0)
+
+    // Link to TaskCategory (one-to-one relationship)
+    taskCategoryId String?       @unique
+    taskCategory   TaskCategory? @relation(fields: [taskCategoryId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([prefix])
 }
 
 // TODO: Task can be created by Client / Super User / Task SuperVisor, modify schema to reflect this, A
@@ -231,9 +249,12 @@ model Task {
     invoices           Invoice[]
     taskSkills         TaskSkill[]
     taskFiles          TaskFile[] // Relation to TaskFile for attachments
+    serialNumber       String?       @unique
     createdAt          DateTime      @default(now())
     updatedAt          DateTime      @updatedAt
     taskComments       TaskComment[]
+
+    @@index([serialNumber])
 }
 
 // Enum to distinguish between User and Client as the creator

@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '../ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { SearchNFilter } from '../common/SearchNFilter';
-import { getTasksListByPriority } from '@/db/repositories/tasks/getTaskListByPriority';
 import { Roles } from '@prisma/client';
 import { UserTasksTable } from '../users/UserTaskTable';
 import { TaskTable } from '@/utils/validationSchemas';
@@ -12,6 +11,7 @@ import { getTaskIdsByPriority } from '@/utils/taskTools';
 import { transformEnumValue } from '@/utils/utils';
 import { DurationEnum, DurationEnumList } from '@/types';
 import { State } from '@/components/DataState';
+import { taskApiClient } from '@/utils/taskApi';
 
 interface TasksListModalProps {
   open: boolean;
@@ -40,7 +40,11 @@ export default function TasksListModal({ open, setOpen, priority }: TasksListMod
     setLoading(true);
     setError(null);
     try {
-      const response = await getTasksListByPriority(priority, cursor, pageSize, searchTerm);
+      const response = await taskApiClient.getTasksByPriorityLevel(priority, {
+        cursor: cursor ?? undefined,
+        pageSize,
+        search: searchTerm,
+      });
       const responseIds = await getTaskIdsByPriority(priority);
 
       if (response.success && responseIds && response.tasks) {
