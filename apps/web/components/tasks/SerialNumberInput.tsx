@@ -9,7 +9,7 @@ import { CheckCircle2, AlertCircle, Loader2, Info } from 'lucide-react';
 import { debounce } from 'lodash';
 import { serialNumberAPI } from '@/utils/tasks/serialNumberAPI';
 
-interface SerialNumberInutProps {
+interface SerialNumberInputProps {
   categoryId: string;
   categoryName: string;
   value?: string;
@@ -23,7 +23,7 @@ export function SerialNumberPrefixInput({
   value,
   onChange,
   disabled,
-}: SerialNumberInutProps) {
+}: SerialNumberInputProps) {
   const [suggestedPrefix, setSuggestedPrefix] = useState<string>('');
   const [customPrefix, setCustomPrefix] = useState<string>(value || '');
   const [uniquenessStatus, setUniquenessStatus] = useState<
@@ -80,7 +80,7 @@ export function SerialNumberPrefixInput({
     const newPrefix = e.target.value.toUpperCase().trim();
 
     // validate format: 1-5 alphanumeric characters
-    if (newPrefix && !/^[A-Z0-9]{0,5}/.test(newPrefix)) {
+    if (newPrefix && !/^[A-Z0-9]{1,5}/.test(newPrefix)) {
       return; // Don't update if invalid format
     }
 

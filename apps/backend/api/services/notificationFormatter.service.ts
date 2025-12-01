@@ -75,7 +75,7 @@ export class NotificationFormatterService {
       return this.formatChangeDescription(changes[0]);
     }
 
-    // Groupd critical vs non-critical changes
+    // Grouped critical vs non-critical changes
     const criticalFields = ['status', 'priority', 'assignedTo'];
     const criticalChanges = changes.filter(change => criticalFields.includes(change.field));
     const nonCriticalChanges = changes.filter(change => !criticalFields.includes(change.field));

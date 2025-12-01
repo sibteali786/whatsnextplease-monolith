@@ -14,7 +14,7 @@ interface PrefixSuggestion {
 }
 
 interface PrefixCheck {
-  prefx: string;
+  prefix: string;
   isUnique: boolean;
   available: boolean;
 }

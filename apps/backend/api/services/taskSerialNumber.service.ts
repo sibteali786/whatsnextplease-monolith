@@ -156,7 +156,7 @@ export class TaskSerialNumberService {
     // Format as 5-digit zero padded number
     const formattedNumber = nextNumber.toString().padStart(5, '0');
 
-    // Combine prefi and number
+    // Combine prefix and number
     const serialNumber = `${normalizedPrefix}-${formattedNumber}`;
     logger.info({ serialNumber, prefix: normalizedPrefix }, 'Serial number generated successfully');
     return serialNumber;
