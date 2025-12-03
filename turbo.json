@@ -38,6 +38,10 @@
       "cache": false,
       "persistent": true
     },
+    "studio": {
+      "cache": false,
+      "persistent": true
+    },
     "add-shadcn-component": {
       "dependsOn": ["^topo"]
     },
