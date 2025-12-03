@@ -882,9 +882,10 @@ export class TaskService {
       ] as Roles[]
     ).includes(currentUser?.role?.name as Roles);
 
-    const isAssignmentChanging = assignedToId && assignedToId !== originalTask.assignedToId;
+    const isAssignmentChanging =
+      assignedToId !== undefined && assignedToId !== originalTask.assignedToId;
     const isClientAssignmentChanging =
-      assignedToClientId && assignedToClientId !== originalTask.associatedClientId;
+      assignedToClientId !== undefined && assignedToClientId !== originalTask.associatedClientId;
 
     if ((isAssignmentChanging || isClientAssignmentChanging) && !canAssignTasks) {
       throw new ForbiddenError("You don't have permission to assign tasks.");
@@ -896,20 +897,28 @@ export class TaskService {
     let assigneeClient = null;
     let assigneeClientName = null;
 
-    if (isAssignmentChanging && assignedToId) {
-      assignee = await this.taskRepository.findUserById(assignedToId);
-      if (!assignee) {
-        throw new BadRequestError('Assigned user not found.');
+    if (isAssignmentChanging) {
+      if (assignedToId && assignedToId.trim() !== '') {
+        assignee = await this.taskRepository.findUserById(assignedToId);
+        if (!assignee) {
+          throw new BadRequestError('Assigned user not found.');
+        }
+        assigneeName = `${assignee.firstName} ${assignee.lastName}`;
+      } else {
+        assigneeName = 'Unassigned';
       }
-      assigneeName = `${assignee.firstName} ${assignee.lastName}`;
     }
 
-    if (isClientAssignmentChanging && assignedToClientId) {
-      assigneeClient = await this.taskRepository.findClientById(assignedToClientId);
-      if (!assigneeClient) {
-        throw new BadRequestError('Assigned client not found.');
+    if (isClientAssignmentChanging) {
+      if (assignedToClientId && assignedToClientId !== '') {
+        assigneeClient = await this.taskRepository.findClientById(assignedToClientId);
+        if (!assigneeClient) {
+          throw new BadRequestError('Assigned client not found.');
+        }
+        assigneeClientName = `${assigneeClient.contactName} (${assigneeClient.companyName})`;
+      } else {
+        assigneeClientName = 'Unassigned';
       }
-      assigneeClientName = `${assigneeClient.contactName} (${assigneeClient.companyName})`;
     }
 
     // Get original assignee names for change tracking

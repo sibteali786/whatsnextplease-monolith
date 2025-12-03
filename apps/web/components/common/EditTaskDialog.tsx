@@ -222,11 +222,6 @@ export default function EditTaskDialog({
 
             if (response.ok) {
               const responseData = await response.json();
-              console.log(
-                `Task count response for ${user.firstName} ${user.lastName}:`,
-                responseData
-              );
-
               // Extract the active task count from the nested structure
               const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
 
@@ -252,14 +247,6 @@ export default function EditTaskDialog({
             };
           }
         })
-      );
-
-      console.log(
-        'Users with task counts:',
-        usersWithCounts.map(u => ({
-          name: `${u.firstName} ${u.lastName}`,
-          taskCount: u.currentTasksCount,
-        }))
       );
 
       return usersWithCounts;
@@ -406,7 +393,6 @@ export default function EditTaskDialog({
       setLoading(false);
     }
   };
-  console.log('task in edit dialog', task);
   useEffect(() => {
     if (open && task) {
       form.reset({
