@@ -55,6 +55,8 @@ interface SearchableDropdownProps<T extends BaseItem> {
   noSelectionContent?: React.ReactNode;
   /** Value that represents "no selection" (default: 'none') */
   noSelectionValue?: string;
+
+  ensureItemInList?: T;
 }
 
 /**
@@ -76,6 +78,7 @@ export function SearchableDropdown<T extends BaseItem>({
   debounceMs = 500,
   noSelectionContent,
   noSelectionValue = 'none',
+  ensureItemInList,
 }: SearchableDropdownProps<T>) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -83,7 +86,14 @@ export function SearchableDropdown<T extends BaseItem>({
   const listRef = React.useRef<HTMLDivElement>(null);
   const debounceTimeout = React.useRef<number | null>(null);
 
-  const selected = items.find(i => i.value === value);
+  // Ensure the selected item is in the list
+  const displayItems = React.useMemo(() => {
+    if (!ensureItemInList) return items;
+    const itemExists = items.some(item => item.value === ensureItemInList.value);
+    if (itemExists) return items;
+    return [ensureItemInList, ...items];
+  }, [items, ensureItemInList]);
+  const selected = displayItems.find(i => i.value === value);
 
   // -----------------------------
   // Adjust dropdown width
@@ -176,8 +186,8 @@ export function SearchableDropdown<T extends BaseItem>({
             onScroll={handleScroll}
             className="max-h-[170px] overflow-y-auto flex flex-col gap-1"
           >
-            {items.length > 0 ? (
-              items.map(item => (
+            {displayItems.length > 0 ? (
+              displayItems.map(item => (
                 <button
                   key={item.value}
                   onClick={() => {

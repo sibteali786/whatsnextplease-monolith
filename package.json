@@ -14,7 +14,8 @@
     "prepare": "husky",
     "lint-staged": "lint-staged",
     "format": "prettier --write",
-    "lint": "eslint"
+    "lint": "eslint",
+    "studio": "turbo run studio"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

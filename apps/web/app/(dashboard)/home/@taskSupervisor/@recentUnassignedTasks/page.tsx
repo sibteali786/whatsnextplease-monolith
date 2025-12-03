@@ -25,6 +25,7 @@ import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClass
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { DurationEnum } from '@/types';
 import { useRouter } from 'next/navigation';
+import { SerialNumberBadge } from '@/components/tasks/SerialNumberBadge';
 
 const RecentUnassignedTasksPage = () => {
   const router = useRouter();
@@ -126,6 +127,7 @@ const RecentUnassignedTasksPage = () => {
                 <Table className="border rounded-md">
                   <TableHeader className="bg-muted/50">
                     <TableRow>
+                      <TableHead className="font-medium">Serial Number</TableHead>
                       <TableHead className="font-medium">Task Details</TableHead>
                       <TableHead className="font-medium">Priority</TableHead>
                       <TableHead className="font-medium">Status</TableHead>
@@ -140,6 +142,9 @@ const RecentUnassignedTasksPage = () => {
                         className="hover:bg-muted/30 cursor-pointer transition-colors"
                         onClick={() => handleRowClick(task.id)}
                       >
+                        <TableCell>
+                          <SerialNumberBadge serialNumber={task.serialNumber} size="md" />
+                        </TableCell>
                         <TableCell className="font-medium">{task.description}</TableCell>
                         <TableCell>
                           <Badge

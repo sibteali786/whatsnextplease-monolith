@@ -173,6 +173,7 @@ export default function EditTaskDialog({
   const [metadataLoading, setMetadataLoading] = useState(true);
   const [metadataError, setMetadataError] = useState<string | null>(null);
   const [reload, setReload] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   // Permission checks based on role
   const canAssignTasks = role === Roles.SUPER_USER || role === Roles.TASK_SUPERVISOR;
   const canEditStatus = role !== Roles.CLIENT;
@@ -222,11 +223,6 @@ export default function EditTaskDialog({
 
             if (response.ok) {
               const responseData = await response.json();
-              console.log(
-                `Task count response for ${user.firstName} ${user.lastName}:`,
-                responseData
-              );
-
               // Extract the active task count from the nested structure
               const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
 
@@ -252,14 +248,6 @@ export default function EditTaskDialog({
             };
           }
         })
-      );
-
-      console.log(
-        'Users with task counts:',
-        usersWithCounts.map(u => ({
-          name: `${u.firstName} ${u.lastName}`,
-          taskCount: u.currentTasksCount,
-        }))
       );
 
       return usersWithCounts;
@@ -406,9 +394,21 @@ export default function EditTaskDialog({
       setLoading(false);
     }
   };
-  console.log('task in edit dialog', task);
   useEffect(() => {
-    if (open && task) {
+    if (!open) {
+      // Reset state when dialog closes
+      setUsers([]);
+      setPage(1);
+      setHasMore(true);
+      setSearchQuery('');
+      setIsInitialized(false);
+      hasFetchedInitial.current = false;
+      return;
+    }
+
+    // Dialog opened - initialize once
+    if (open && task && !isInitialized) {
+      // Reset form
       form.reset({
         title: task.title,
         description: task.description,
@@ -425,31 +425,41 @@ export default function EditTaskDialog({
             : '',
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
       });
-      if (task?.assignedTo) {
-        setSearchQuery(task?.assignedTo?.firstName + ' ' + task?.assignedTo?.lastName || '');
-        fetchUsers(1, task?.assignedTo?.firstName + ' ' + task?.assignedTo?.lastName || '');
-      }
 
-      // set files
+      // Set files
       if (task.taskFiles) {
         setFiles(task.taskFiles);
       }
-    }
-    if (open) {
+
+      // Initialize user dropdown
+      if (canAssignTasks) {
+        if (task?.assignedTo) {
+          // Task has an assigned user - ensure they're in the list
+          const assignedUser: UserWithTaskCount = {
+            id: task.assignedTo.id,
+            firstName: task.assignedTo.firstName,
+            lastName: task.assignedTo.lastName,
+            avatarUrl: task.assignedTo.avatarUrl,
+            currentTasksCount: 0,
+          };
+
+          setUsers([assignedUser]);
+          const assignedUserName = `${task.assignedTo.firstName} ${task.assignedTo.lastName}`;
+          setSearchQuery(assignedUserName);
+          fetchUsers(1, assignedUserName);
+        } else {
+          // No assigned user - fetch default list
+          fetchUsers(1, '', { isInitial: true });
+        }
+      }
+
+      // Fetch other data
       fetchSkills();
       fetchTaskMetadata();
+
+      setIsInitialized(true);
     }
-  }, [task, open, form]);
-  useEffect(() => {
-    if (open) {
-      fetchUsers(1, '', { isInitial: true });
-    } else {
-      setUsers([]);
-      setPage(1);
-      setHasMore(true);
-      hasFetchedInitial.current = false;
-    }
-  }, [open]);
+  }, [open, task, isInitialized, canAssignTasks]);
 
   const [, startTransition] = useTransition();
 
@@ -966,6 +976,18 @@ export default function EditTaskDialog({
                                 currentTasksCount: user.currentTasksCount,
                               })),
                             ]}
+                            ensureItemInList={
+                              task?.assignedTo
+                                ? {
+                                    value: task.assignedTo.id,
+                                    label: `${task.assignedTo.firstName} ${task.assignedTo.lastName}`,
+                                    avatarUrl: task.assignedTo.avatarUrl,
+                                    firstName: task.assignedTo.firstName,
+                                    lastName: task.assignedTo.lastName,
+                                    currentTasksCount: 0,
+                                  }
+                                : undefined
+                            }
                             noSelectionValue="none"
                             noSelectionContent={
                               <div className="flex items-center gap-2">
@@ -1163,6 +1185,16 @@ export default function EditTaskDialog({
                             value={field.value || ''} // Pass the current form value
                             onChange={value => field.onChange(value)} // Update form when user selects a client
                             disabled={form.formState.isSubmitting} // Optional: disable during submit
+                            initialClient={
+                              task?.associatedClient && task.associatedClient.id
+                                ? {
+                                    id: task.associatedClient.id,
+                                    companyName: task.associatedClient.companyName || null,
+                                    contactName: task.associatedClient.contactName || null,
+                                    avatarUrl: task.associatedClient.avatarUrl || null,
+                                  }
+                                : undefined
+                            }
                           />
                         </FormControl>
 

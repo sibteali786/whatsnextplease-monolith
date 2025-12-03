@@ -21,6 +21,7 @@ import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { DurationEnum } from '@/types';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { useRouter } from 'next/navigation';
+import { SerialNumberBadge } from '@/components/tasks/SerialNumberBadge';
 const IncomingTasksPage = () => {
   const router = useRouter();
   const [tasks, setTasks] = useState<TaskTable[]>([]);
@@ -105,6 +106,7 @@ const IncomingTasksPage = () => {
         <Table className="border rounded-md">
           <TableHeader className="bg-muted/50">
             <TableRow>
+              <TableHead className="font-medium">Serial Number</TableHead>
               <TableHead className="font-medium">Task Details</TableHead>
               <TableHead className="font-medium">Priority</TableHead>
               <TableHead className="font-medium">Status</TableHead>
@@ -119,6 +121,9 @@ const IncomingTasksPage = () => {
                 className="hover:bg-muted/30 cursor-pointer transition-colors"
                 onClick={() => handleRowClick(task.id)}
               >
+                <TableCell>
+                  <SerialNumberBadge serialNumber={task.serialNumber} size="md" />
+                </TableCell>
                 <TableCell className="font-medium">{task.description}</TableCell>
                 <TableCell>
                   <Badge
