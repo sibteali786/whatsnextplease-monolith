@@ -8,17 +8,8 @@ import { fetchClients } from '@/utils/clientActions';
 
 interface ClientListItem {
   id: string;
-  username: string;
   companyName: string | null;
   contactName: string | null;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  address1: string | null;
-  address2: string | null;
-  city: string | null;
-  state: string | null;
-  zipCode: string | null;
   avatarUrl: string | null;
 }
 
@@ -27,15 +18,32 @@ interface SearchableClientProps {
   onChange?: (value: string) => void;
   disabled?: boolean;
   search?: string;
+  initialClient?: ClientListItem;
 }
 
-export function SearchableClient({ value, onChange, disabled, search }: SearchableClientProps) {
+export function SearchableClient({
+  value,
+  onChange,
+  disabled,
+  search,
+  initialClient: initialClientProp,
+}: SearchableClientProps) {
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [initialClient, setInitialClient] = useState<ClientListItem | null>(null);
   const hasFetchedOnce = useRef(false);
+  // Add debugging
+  console.log('SearchableClient render:', {
+    value,
+    search,
+    initialClientProp,
+    initialClient,
+    clientsLength: clients.length,
+    hasMore,
+  });
   // -----------------------------
   // Fetch clients (cursor-based)
   // -----------------------------
@@ -54,27 +62,85 @@ export function SearchableClient({ value, onChange, disabled, search }: Searchab
       setClients(prev => (isNewSearch ? newClients : [...prev, ...newClients]));
       setHasMore(res?.hasNextPage ?? false);
       setCursor(res?.nextCursor ?? null);
+
+      if (isNewSearch && !initialClient && value && !initialClientProp) {
+        const foundClient = newClients.find(c => c.id === value);
+        if (foundClient) {
+          setInitialClient(foundClient);
+        }
+      }
     } catch (err) {
       console.error('Error fetching clients:', err);
     } finally {
       setLoading(false);
     }
   };
-
+  // -----------------------------
+  // Set initial client from prop
+  // -----------------------------
+  useEffect(() => {
+    if (initialClientProp) {
+      setInitialClient(initialClientProp);
+    }
+  }, [initialClientProp]);
   // -----------------------------
   // Initial fetch
   // -----------------------------
   useEffect(() => {
     if (!hasFetchedOnce.current) {
-      fetchClientsLocally(null, '', true);
+      if (search && value) {
+        fetchClientsLocally(null, search, true);
+      } else {
+        fetchClientsLocally(null, '', true);
+      }
       hasFetchedOnce.current = true;
     }
   }, []);
   useEffect(() => {
-    if (!search) return;
-    setCursor(null);
-    fetchClientsLocally(null, search, true); // new search → replace list
+    if (search) {
+      setSearchQuery(search);
+    }
   }, [search]);
+  const clientItems = React.useMemo(() => {
+    const baseItems = clients.map(client => ({
+      value: client.id,
+      label: `${client.contactName} (${client.companyName})`,
+      avatarUrl: client.avatarUrl,
+      companyName: client.companyName,
+      contactName: client.contactName,
+    }));
+    console.log('clientItems memo:', {
+      value,
+      valueExists: value && value !== 'none',
+      initialClient,
+      baseItemsLength: baseItems.length,
+      exists: baseItems.some(item => item.value === value),
+    });
+
+    // If value is set but not in list, find it and add it
+    if (value && value !== 'none') {
+      const exists = baseItems.some(item => item.value === value);
+      if (!exists && initialClient) {
+        return [
+          {
+            value: initialClient.id,
+            label: `${initialClient.contactName} (${initialClient.companyName})`,
+            avatarUrl: initialClient.avatarUrl,
+            companyName: initialClient.companyName,
+            contactName: initialClient.contactName,
+          },
+          ...baseItems,
+        ];
+      }
+    }
+
+    return baseItems;
+  }, [clients, value, initialClient]);
+  console.log('Final items being passed to SearchableDropdown:', {
+    totalItems: clientItems.length + 1, // +1 for "No Client"
+    value: value || 'none',
+    clientItems: clientItems.slice(0, 3), // First 3 for debugging
+  });
   return (
     <SearchableDropdown<{
       value: string;
@@ -91,13 +157,7 @@ export function SearchableClient({ value, onChange, disabled, search }: Searchab
           companyName: '',
           contactName: '',
         },
-        ...clients.map(client => ({
-          value: client.id,
-          label: client.contactName + ' ' + `(${client.companyName})`,
-          avatarUrl: client.avatarUrl,
-          companyName: client.companyName,
-          contactName: client.contactName,
-        })),
+        ...clientItems,
       ]}
       value={value || 'none'}
       onChange={v => onChange?.(v === 'none' ? '' : v)}
