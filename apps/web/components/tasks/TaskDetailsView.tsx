@@ -183,6 +183,12 @@ export default function TaskDetailsView({
         <Skeleton className="h-64 w-full" />
       ) : (
         <div className="p-6 space-y-6">
+          {/* Header with Serial Number */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <SerialNumberBadge serialNumber={taskDetails?.serialNumber} size="lg" showCopy />
+            </div>
+          </div>
           <div className="flex">
             <h3 className="font-semibold w-1/4">Task Name</h3>
             <p className="w-3/4">{taskDetails?.title}</p>
@@ -204,13 +210,7 @@ export default function TaskDetailsView({
             </Badge>
           </div>
           <Separator />
-          {/* Header with Serial Number */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <SerialNumberBadge serialNumber={taskDetails?.serialNumber} size="lg" showCopy />
-              <h1 className="text-3xl font-bold">{taskDetails?.title}</h1>
-            </div>
-          </div>
+
           <div className="flex">
             <h3 className="font-semibold w-1/4">Due Date</h3>
             <p className="w-3/4">
