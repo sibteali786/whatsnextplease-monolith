@@ -21,6 +21,8 @@ import { useRouter } from 'next/navigation';
 import CommentSection from '../comments/CommentSection';
 import { handleCommentFragment } from '@/utils/commentNavigation';
 import { SerialNumberBadge } from './SerialNumberBadge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import TaskLinks from './TaskLinks';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -314,7 +316,21 @@ export default function TaskDetailsView({
 
           {/* Add Comments Section */}
           <Separator />
-          <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
+          {/* Tabs for Comments and Links */}
+          <Tabs defaultValue="comments" className="mt-6">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="links">Links</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="comments" className="mt-0">
+              <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
+            </TabsContent>
+
+            <TabsContent value="links" className="mt-0">
+              <TaskLinks taskId={taskId} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </div>

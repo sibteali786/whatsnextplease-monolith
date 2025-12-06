@@ -192,13 +192,12 @@ model TaskStatus {
 model TaskCategory {
     id            String         @id @default(uuid())
     categoryName  String
-    prefix        String?         @unique
+    prefix        String?        @unique
     tasks         Task[]
     taskSequence  TaskSequence?
     taskOfferings TaskOffering[]
     createdAt     DateTime       @default(now())
     updatedAt     DateTime       @updatedAt
-
 }
 
 model TaskSequence {
@@ -253,6 +252,7 @@ model Task {
     createdAt          DateTime      @default(now())
     updatedAt          DateTime      @updatedAt
     taskComments       TaskComment[]
+    taskLinks          TaskLink[]
 
     @@index([serialNumber])
 }
@@ -309,11 +309,38 @@ model TaskComment {
     mentionedUserIds String[] // Array of user IDs mentioned in comment
 
     // Metadata
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt DateTime   @default(now())
+    updatedAt DateTime   @updatedAt
+    taskLinks TaskLink[]
 
     @@index([taskId, createdAt])
     @@index([parentCommentId])
+    @@index([taskId])
+}
+
+enum LinkSource {
+    MANUAL
+    COMMENT
+}
+
+model TaskLink {
+    id              String      @id @default(cuid())
+    taskId          String
+    url             String
+    title           String?
+    faviconUrl      String?
+    source          LinkSource  @default(MANUAL)
+    sourceCommentId String?
+    addedById       String
+    addedByType     CreatorType
+
+    task          Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    sourceComment TaskComment? @relation(fields: [taskCommentId], references: [id])
+    createdAt     DateTime     @default(now())
+    updatedAt     DateTime     @updatedAt
+    taskCommentId String?
+
+    @@unique([taskId, url])
     @@index([taskId])
 }
 
