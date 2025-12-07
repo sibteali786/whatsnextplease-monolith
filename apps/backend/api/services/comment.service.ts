@@ -13,6 +13,8 @@ import prisma from '../config/db';
 import { MentionExtractionService, UserInfo } from './mentionExtraction.service';
 import { MentionNotificationTemplates } from '../templates/mentionNotificationTemplates';
 import { NotificationService } from './notification.service';
+import { TaskLinkService } from './taskLink.service';
+import { logger } from '../utils/logger';
 
 export interface CreateCommentRequest {
   taskId: string;
@@ -48,7 +50,8 @@ export class CommentService {
   constructor(
     private readonly commentRepository: CommentRepository = new CommentRepository(),
     private readonly s3Service: S3BucketService = new S3BucketService(),
-    private readonly notificationService: NotificationService = new NotificationService()
+    private readonly notificationService: NotificationService = new NotificationService(),
+    private readonly taskLinkService: TaskLinkService = new TaskLinkService()
   ) {}
 
   /**
@@ -195,7 +198,25 @@ export class CommentService {
       };
       // Create comment with transaction
       const comment = await this.commentRepository.createComment(commentData, fileIds);
-      console.log('Created Comment:', comment, extractedMentions);
+      logger.debug('Created Comment:', { comment, extractedMentions });
+      if (content && content.trim().length > 0) {
+        try {
+          const linkAuthorId = authorUserId || authorClientId;
+          if (!linkAuthorId) {
+            throw new Error('Author ID is required to extract links from comment');
+          }
+          await this.taskLinkService.extractAndCreateLinksFromComment(
+            comment.id,
+            content,
+            taskId,
+            linkAuthorId,
+            authorType
+          );
+        } catch (linkError) {
+          logger.error('Failed to extract/create links from comment:', linkError);
+        }
+      }
+
       if (extractedMentions.length > 0) {
         try {
           await this.sendMentionNotifications(comment, task.title, extractedMentions, authorInfo);

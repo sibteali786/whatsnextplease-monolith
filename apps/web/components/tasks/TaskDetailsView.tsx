@@ -21,6 +21,8 @@ import { useRouter } from 'next/navigation';
 import CommentSection from '../comments/CommentSection';
 import { handleCommentFragment } from '@/utils/commentNavigation';
 import { SerialNumberBadge } from './SerialNumberBadge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import TaskLinks from './TaskLinks';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -183,6 +185,12 @@ export default function TaskDetailsView({
         <Skeleton className="h-64 w-full" />
       ) : (
         <div className="p-6 space-y-6">
+          {/* Header with Serial Number */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <SerialNumberBadge serialNumber={taskDetails?.serialNumber} size="lg" showCopy />
+            </div>
+          </div>
           <div className="flex">
             <h3 className="font-semibold w-1/4">Task Name</h3>
             <p className="w-3/4">{taskDetails?.title}</p>
@@ -204,13 +212,7 @@ export default function TaskDetailsView({
             </Badge>
           </div>
           <Separator />
-          {/* Header with Serial Number */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <SerialNumberBadge serialNumber={taskDetails?.serialNumber} size="lg" showCopy />
-              <h1 className="text-3xl font-bold">{taskDetails?.title}</h1>
-            </div>
-          </div>
+
           <div className="flex">
             <h3 className="font-semibold w-1/4">Due Date</h3>
             <p className="w-3/4">
@@ -314,7 +316,21 @@ export default function TaskDetailsView({
 
           {/* Add Comments Section */}
           <Separator />
-          <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
+          {/* Tabs for Comments and Links */}
+          <Tabs defaultValue="comments" className="mt-6">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="links">Links</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="comments" className="mt-0">
+              <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
+            </TabsContent>
+
+            <TabsContent value="links" className="mt-0">
+              <TaskLinks taskId={taskId} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
     </div>
