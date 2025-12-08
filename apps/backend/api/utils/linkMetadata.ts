@@ -104,13 +104,28 @@ export class LinkMetadataService {
   }
 
   /**
-   * Check if IP is private (SSRF protection)
+   * Check if a hostname resolves to a private IP address (SSRF protection)
+   *
+   * This method prevents Server-Side Request Forgery (SSRF) attacks by blocking requests
+   * to internal/private network resources. It checks if the hostname resolves to:
+   * - Localhost (127.x.x.x)
+   * - Private networks (10.x.x.x, 172.16-31.x.x, 192.168.x.x)
+   * - Link-local addresses (169.254.x.x)
+   *
+   * @param hostname - The hostname to check (e.g., "example.com" or "localhost")
+   * @returns true if the hostname resolves to a private IP or if DNS resolution fails
+   *
+   * Security Note: Returns true (blocks the request) on DNS resolution failure as a
+   * fail-safe mechanism. This prevents potential attacks using DNS timeouts or errors
+   * to bypass security checks.
    */
   private static async isPrivateIP(hostname: string): Promise<boolean> {
     try {
       const addresses = await dns.resolve4(hostname);
       return addresses.some(ip => PRIVATE_IP_RANGES.some(range => range.test(ip)));
     } catch {
+      // Fail-safe: Block the request if we can't resolve the hostname
+      // This prevents attackers from exploiting DNS errors to bypass SSRF protection
       return true;
     }
   }
