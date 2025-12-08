@@ -20,6 +20,11 @@ export async function createComment(data: CreateCommentInput): Promise<{
   comment?: any;
   message?: string;
   error?: string;
+  linkExtraction?: {
+    success: boolean;
+    linksCreated: number;
+    error?: string;
+  };
 }> {
   try {
     const headers = await getAuthHeaders();

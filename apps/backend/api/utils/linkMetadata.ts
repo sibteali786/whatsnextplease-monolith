@@ -25,7 +25,7 @@ export class LinkMetadataService {
    */
   static extractUrls(text: string): string[] {
     const urlRegex =
-      /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+      /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/gi;
     const matches = text.match(urlRegex);
     return matches ? [...new Set(matches)] : [];
   }
@@ -41,6 +41,68 @@ export class LinkMetadataService {
       return false;
     }
   }
+
+  /**
+   * Sanitize title to prevent XSS attacks
+   * - Strip HTML tags
+   * - Decode HTML entities
+   * - Remove null bytes and control characters
+   * - Limit length
+   */
+  private static sanitizeTitle(title: string): string {
+    if (!title) return '';
+
+    // Strip HTML tags
+    let sanitized = title.replace(/<[^>]*>/g, '');
+
+    // Decode HTML entities (handles &lt;, &gt;, &amp;, &quot;, &#39;, etc.)
+    sanitized = this.decodeHtmlEntities(sanitized);
+
+    // Remove null bytes and control characters (except newlines and tabs)
+    // eslint-disable-next-line no-control-regex
+    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+    // Replace newlines and tabs with spaces
+    sanitized = sanitized.replace(/[\n\t\r]/g, ' ');
+
+    // Collapse multiple spaces
+    sanitized = sanitized.replace(/\s+/g, ' ');
+
+    // Limit length and trim
+    return sanitized.substring(0, 200).trim();
+  }
+
+  /**
+   * Decode HTML entities to prevent double-encoding issues
+   */
+  private static decodeHtmlEntities(text: string): string {
+    const entities: Record<string, string> = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&#x27;': "'",
+      '&apos;': "'",
+      '&nbsp;': ' ',
+    };
+
+    let decoded = text;
+
+    // Replace named entities
+    for (const [entity, char] of Object.entries(entities)) {
+      decoded = decoded.replace(new RegExp(entity, 'g'), char);
+    }
+
+    // Replace numeric entities (&#123; and &#xAB;)
+    decoded = decoded.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+    decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    );
+
+    return decoded;
+  }
+
   /**
    * Check if IP is private (SSRF protection)
    */
@@ -57,7 +119,7 @@ export class LinkMetadataService {
    */
   static async fetchMetadata(url: string): Promise<LinkMetadata> {
     // Validate URL
-    if (!this.isValidUrl) {
+    if (!this.isValidUrl(url)) {
       throw new Error('Invalid URL format');
     }
 
@@ -85,14 +147,11 @@ export class LinkMetadataService {
       let title =
         html.querySelector('title')?.text?.trim() ||
         html.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() ||
-        html.querySelector('meta[name="twitter:title]')?.getAttribute('content')?.trim() ||
+        html.querySelector('meta[name="twitter:title"]')?.getAttribute('content')?.trim() ||
         urlObject.hostname;
 
-      // Santitize title: strip HTML tags, limit length, enocded speical chars
-      title = title
-        .replace(/<[^>]*>/g, '')
-        .substring(0, 200)
-        .trim();
+      // Sanitize title: strip HTML tags, decode HTML entities, and remove potentially dangerous characters
+      title = this.sanitizeTitle(title);
 
       // Extract favicon (multiple fallbacks)
       const favicon =
@@ -132,8 +191,8 @@ export class LinkMetadataService {
     // Get URLs from link tags
     const linkUrls = root
       .querySelectorAll('a[href]')
-      .map((el: any) => el.getAttribute('href'))
-      .filter((href: any) => href && this.isValidUrl(href)) as string[];
+      .map(el => el.getAttribute('href'))
+      .filter((href): href is string => !!href && this.isValidUrl(href));
 
     return [...new Set([...textUrls, ...linkUrls])];
   }

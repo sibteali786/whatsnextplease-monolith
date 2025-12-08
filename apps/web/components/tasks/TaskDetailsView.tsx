@@ -41,6 +41,7 @@ export default function TaskDetailsView({
   const [loading, setLoading] = useState(!initialTask);
   const [files, setFiles] = useState<TaskFile[]>(initialTask?.taskFiles || []);
   const [loadingFileIds, setLoadingFileIds] = useState<string[]>([]);
+  const [linksRefreshKey, setLinksRefreshKey] = useState(0);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -151,6 +152,12 @@ export default function TaskDetailsView({
         description: 'Failed to reload task information',
       });
     }
+  };
+
+  const handleCommentDataChange = () => {
+    refreshTaskData();
+    // Refresh links tab as new links might have been extracted from the comment
+    setLinksRefreshKey(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -324,11 +331,11 @@ export default function TaskDetailsView({
             </TabsList>
 
             <TabsContent value="comments" className="mt-0">
-              <CommentSection taskId={taskId} onDataChange={refreshTaskData} />
+              <CommentSection taskId={taskId} onDataChange={handleCommentDataChange} />
             </TabsContent>
 
             <TabsContent value="links" className="mt-0">
-              <TaskLinks taskId={taskId} />
+              <TaskLinks taskId={taskId} key={linksRefreshKey} />
             </TabsContent>
           </Tabs>
         </div>

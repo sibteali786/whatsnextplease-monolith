@@ -162,13 +162,21 @@ export class TaskLinkService {
 
     return {
       success: true,
-      messsage: 'Link deleted successfully',
+      message: 'Link deleted successfully',
     };
   }
 
   /**
    * Extract and create links from comment content
    * Called by comment service after comment creation
+   *
+   * Returns detailed status including:
+   * - success: Whether the extraction process completed
+   * - linksCreated: Number of links successfully created
+   *
+   * Note: Individual link failures don't fail the entire operation.
+   * The service attempts to create all valid links and reports the count.
+   * Failures are logged but don't throw errors to avoid blocking comment creation.
    */
 
   async extractAndCreateLinksFromComment(
@@ -193,21 +201,18 @@ export class TaskLinkService {
 
     for (const url of urlsToProcess) {
       try {
-        // Check if link already exists
-        const exists = await this.taskLinkRepository.linkExists(taskId, url);
-        if (exists) continue;
         // Fetch metadata (non-blocking - if fails, just use basic info)
         let metadata;
         try {
           metadata = await LinkMetadataService.fetchMetadata(url);
-        } catch (error) {
+        } catch {
           const urlObj = new URL(url);
           metadata = {
             title: urlObj.hostname,
             faviconUrl: `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`,
           };
         }
-        // Create link
+        // Create link using upsert (handles deduplication at database level)
         await this.taskLinkRepository.upsertTaskLink({
           taskId,
           url,

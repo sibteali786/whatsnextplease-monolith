@@ -2,12 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, ExternalLink, Loader2 } from 'lucide-react';
+import { Plus, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { taskLinkAPI } from '@/utils/tasks/taskLinkAPI';
 import { TaskLink } from '@/types/tasks';
 import AddLinkForm from './AddLinkForm';
 import LinkCard from './LinkCard';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+// Timing constants
+const TAB_SWITCH_DELAY = 300; // ms to wait for tab switch before scrolling
+const HIGHLIGHT_DURATION = 2000; // ms to highlight the comment
 
 interface TaskLinksProps {
   taskId: string;
@@ -18,6 +32,8 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [linkToDelete, setLinkToDelete] = useState<{ id: string; title: string } | null>(null);
   const { toast } = useToast();
 
   const loadLinks = async () => {
@@ -63,14 +79,23 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
   };
 
   const handleDelete = async (linkId: string) => {
-    if (!confirm('Are you sure you want to delete this link?')) return;
+    const link = links.find(l => l.id === linkId);
+    if (!link) return;
+
+    setLinkToDelete({ id: linkId, title: link.title || link.url });
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!linkToDelete) return;
 
     try {
-      setDeletingId(linkId);
-      const result = await taskLinkAPI.deleteTaskLink(taskId, linkId);
+      setDeletingId(linkToDelete.id);
+      setDeleteDialogOpen(false);
+      const result = await taskLinkAPI.deleteTaskLink(taskId, linkToDelete.id);
 
       if (result.success) {
-        setLinks(prev => prev.filter(link => link.id !== linkId));
+        setLinks(prev => prev.filter(link => link.id !== linkToDelete.id));
         toast({
           title: 'Link Deleted',
           description: 'The link has been removed',
@@ -92,6 +117,7 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
       });
     } finally {
       setDeletingId(null);
+      setLinkToDelete(null);
     }
   };
 
@@ -113,8 +139,8 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
         commentElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
         setTimeout(() => {
           commentElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
-        }, 2000);
-      }, 300);
+        }, HIGHLIGHT_DURATION);
+      }, TAB_SWITCH_DELAY);
     }
   };
 
@@ -177,6 +203,36 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Delete Link
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this link?
+              {linkToDelete && (
+                <span className="block mt-2 font-medium text-foreground">
+                  &quot;{linkToDelete.title}&quot;
+                </span>
+              )}
+              <span className="block mt-2">This action cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Link
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
