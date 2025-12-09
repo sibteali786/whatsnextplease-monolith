@@ -93,10 +93,24 @@ export default function CommentForm({
             fileUploadRef.current.reset();
           }
 
+          // Build toast message with link extraction status
+          let toastDescription = 'Your comment has been added successfully.';
+          let toastVariant: 'success' | 'default' = 'success';
+
+          if (result.linkExtraction) {
+            if (result.linkExtraction.linksCreated > 0) {
+              toastDescription += ` ${result.linkExtraction.linksCreated} link(s) extracted and added to the Links tab.`;
+            } else if (!result.linkExtraction.success && result.linkExtraction.error) {
+              toastDescription +=
+                ' Note: Link extraction failed - some URLs may not appear in the Links tab.';
+              toastVariant = 'default'; // Use default variant to show it's partially successful
+            }
+          }
+
           toast({
             title: 'Comment Added',
-            description: 'Your comment has been added successfully.',
-            variant: 'success',
+            description: toastDescription,
+            variant: toastVariant,
           });
         } else {
           toast({

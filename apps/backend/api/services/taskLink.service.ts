@@ -74,7 +74,7 @@ export class TaskLinkService {
         link,
         message: 'Link added successfully',
       };
-    } catch (error) {
+    } catch {
       // If metadata fetch fails, still create link with basic info
       const urlObj = new URL(url);
       const link = await this.taskLinkRepository.createTaskLink({
@@ -162,13 +162,21 @@ export class TaskLinkService {
 
     return {
       success: true,
-      messsage: 'Link deleted successfully',
+      message: 'Link deleted successfully',
     };
   }
 
   /**
    * Extract and create links from comment content
    * Called by comment service after comment creation
+   *
+   * Returns detailed status including:
+   * - success: Whether the extraction process completed
+   * - linksCreated: Number of links successfully created
+   *
+   * Note: Individual link failures don't fail the entire operation.
+   * The service attempts to create all valid links and reports the count.
+   * Failures are logged but don't throw errors to avoid blocking comment creation.
    */
 
   async extractAndCreateLinksFromComment(
@@ -189,41 +197,56 @@ export class TaskLinkService {
     const MAX_LINKS_PER_COMMENT = 20;
     const urlsToProcess = urls.slice(0, MAX_LINKS_PER_COMMENT);
 
-    let linksCreated = 0;
-
-    for (const url of urlsToProcess) {
-      try {
-        // Check if link already exists
-        const exists = await this.taskLinkRepository.linkExists(taskId, url);
-        if (exists) continue;
-        // Fetch metadata (non-blocking - if fails, just use basic info)
-        let metadata;
+    // Process all links in parallel for better performance
+    const linkResults = await Promise.allSettled(
+      urlsToProcess.map(async url => {
         try {
-          metadata = await LinkMetadataService.fetchMetadata(url);
-        } catch (error) {
-          const urlObj = new URL(url);
-          metadata = {
-            title: urlObj.hostname,
-            faviconUrl: `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`,
-          };
-        }
-        // Create link
-        await this.taskLinkRepository.upsertTaskLink({
-          taskId,
-          url,
-          title: metadata.title ?? undefined,
-          faviconUrl: metadata.faviconUrl ?? undefined,
-          source: LinkSource.COMMENT,
-          sourceCommentId: commentId,
-          addedById: authorId,
-          addedByType: authorType,
-        });
+          // Fetch metadata (non-blocking - if fails, just use basic info)
+          let metadata;
+          try {
+            metadata = await LinkMetadataService.fetchMetadata(url);
+          } catch {
+            const urlObj = new URL(url);
+            metadata = {
+              title: urlObj.hostname,
+              faviconUrl: `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`,
+            };
+          }
+          // Create link using upsert (handles deduplication at database level)
+          await this.taskLinkRepository.upsertTaskLink({
+            taskId,
+            url,
+            title: metadata.title ?? undefined,
+            faviconUrl: metadata.faviconUrl ?? undefined,
+            source: LinkSource.COMMENT,
+            sourceCommentId: commentId,
+            addedById: authorId,
+            addedByType: authorType,
+          });
 
-        linksCreated++;
-      } catch (error) {
-        console.error(`Failed to create link for ${url}:`, error);
-        // Continue processing other links
-      }
+          return { url, success: true };
+        } catch (error) {
+          console.error(`Failed to create link for ${url}:`, error);
+          return { url, success: false, error };
+        }
+      })
+    );
+
+    // Count successful link creations
+    const linksCreated = linkResults.filter(
+      result => result.status === 'fulfilled' && result.value.success
+    ).length;
+
+    // Log any failures for monitoring
+    const failures = linkResults.filter(
+      result =>
+        result.status === 'rejected' || (result.status === 'fulfilled' && !result.value.success)
+    );
+
+    if (failures.length > 0) {
+      console.warn(
+        `Link extraction completed with ${failures.length} failure(s) out of ${urlsToProcess.length} URLs`
+      );
     }
 
     return {

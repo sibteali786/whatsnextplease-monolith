@@ -15,6 +15,7 @@ interface LinkCardProps {
 
 export default function LinkCard({ link, onDelete, onViewComment, isDeleting }: LinkCardProps) {
   const [copied, setCopied] = useState(false);
+  const [faviconError, setFaviconError] = useState(false);
 
   const handleCopyUrl = async () => {
     await navigator.clipboard.writeText(link.url);
@@ -50,26 +51,15 @@ export default function LinkCard({ link, onDelete, onViewComment, isDeleting }: 
     <div className="flex items-start gap-3 p-4 border rounded-lg bg-card hover:bg-accent/50 transition-colors group">
       {/* Favicon */}
       <div className="w-8 h-8 flex-shrink-0 mt-1">
-        {link.faviconUrl ? (
+        {link.faviconUrl && !faviconError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={link.faviconUrl}
             alt=""
             className="w-full h-full rounded object-contain"
-            onError={e => {
+            onError={() => {
               // Fallback to generic icon if favicon fails to load
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = `
-                  <div class="w-full h-full rounded bg-muted flex items-center justify-center">
-                    <svg class="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                    </svg>
-                  </div>
-                `;
-              }
+              setFaviconError(true);
             }}
           />
         ) : (

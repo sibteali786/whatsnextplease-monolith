@@ -335,10 +335,9 @@ model TaskLink {
     addedByType     CreatorType
 
     task          Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
-    sourceComment TaskComment? @relation(fields: [taskCommentId], references: [id])
+    sourceComment TaskComment? @relation(fields: [sourceCommentId], references: [id])
     createdAt     DateTime     @default(now())
     updatedAt     DateTime     @updatedAt
-    taskCommentId String?
 
     @@unique([taskId, url])
     @@index([taskId])

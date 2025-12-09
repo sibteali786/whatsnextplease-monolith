@@ -62,6 +62,11 @@ export class CommentService {
     comment?: CommentWithRelations;
     message?: string;
     error?: string;
+    linkExtraction?: {
+      success: boolean;
+      linksCreated: number;
+      error?: string;
+    };
   }> {
     try {
       const {
@@ -199,21 +204,46 @@ export class CommentService {
       // Create comment with transaction
       const comment = await this.commentRepository.createComment(commentData, fileIds);
       logger.debug('Created Comment:', { comment, extractedMentions });
-      if (content && content.trim().length > 0) {
+
+      // Track link extraction results
+      let linkExtractionResult: { success: boolean; linksCreated: number; error?: string } = {
+        success: true,
+        linksCreated: 0,
+      };
+
+      if (content.trim().length > 0) {
         try {
           const linkAuthorId = authorUserId || authorClientId;
           if (!linkAuthorId) {
             throw new Error('Author ID is required to extract links from comment');
           }
-          await this.taskLinkService.extractAndCreateLinksFromComment(
+          const result = await this.taskLinkService.extractAndCreateLinksFromComment(
             comment.id,
             content,
             taskId,
             linkAuthorId,
             authorType
           );
+          linkExtractionResult = {
+            success: result.success,
+            linksCreated: result.linksCreated,
+          };
+
+          if (result.linksCreated > 0) {
+            logger.info(
+              `Extracted and created ${result.linksCreated} link(s) from comment ${comment.id}`
+            );
+          }
         } catch (linkError) {
+          // Don't fail comment creation if link extraction fails.
+          // Link extraction is a non-critical feature; errors are logged for monitoring and debugging.
+          const errorMessage = linkError instanceof Error ? linkError.message : 'Unknown error';
           logger.error('Failed to extract/create links from comment:', linkError);
+          linkExtractionResult = {
+            success: false,
+            linksCreated: 0,
+            error: errorMessage,
+          };
         }
       }
 
@@ -230,10 +260,19 @@ export class CommentService {
         }
       }
 
+      // Build response message with link extraction status
+      let responseMessage = 'Comment created successfully';
+      if (linkExtractionResult.linksCreated > 0) {
+        responseMessage += ` with ${linkExtractionResult.linksCreated} link(s) extracted`;
+      } else if (!linkExtractionResult.success && linkExtractionResult.error) {
+        responseMessage += ', but link extraction failed';
+      }
+
       return {
         success: true,
         comment,
-        message: 'Comment created successfully',
+        message: responseMessage,
+        linkExtraction: linkExtractionResult,
       };
     } catch (error) {
       return {
