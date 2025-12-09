@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +36,7 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
   const [linkToDelete, setLinkToDelete] = useState<{ id: string; title: string } | null>(null);
   const { toast } = useToast();
 
-  const loadLinks = async () => {
+  const loadLinks = useCallback(async () => {
     try {
       setLoading(true);
       const result = await taskLinkAPI.getTaskLinks(taskId);
@@ -60,13 +60,13 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId, toast]);
 
   useEffect(() => {
     if (taskId) {
       loadLinks();
     }
-  }, [taskId]);
+  }, [taskId, loadLinks]);
 
   const handleLinkAdded = (newLink: TaskLink) => {
     setLinks(prev => [newLink, ...prev]);

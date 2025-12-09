@@ -211,7 +211,7 @@ export class CommentService {
         linksCreated: 0,
       };
 
-      if (content && content.trim().length > 0) {
+      if (content.trim().length > 0) {
         try {
           const linkAuthorId = authorUserId || authorClientId;
           if (!linkAuthorId) {
