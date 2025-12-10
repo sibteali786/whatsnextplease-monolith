@@ -10,7 +10,7 @@ export default function TaskAgentsPage() {
   const [status, setStatus] = useState<string>('all');
   const [agentIds, setAgentIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
-
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   useEffect(() => {
     const fetchAgentIds = async () => {
       const ids = await getTaskAgentIds();
@@ -29,7 +29,7 @@ export default function TaskAgentsPage() {
   }> => {
     try {
       // Pass status and searchTerm to API
-      const response = await getTaskAgents(cursor, pageSize, status, searchTerm);
+      const response = await getTaskAgents(cursor, pageSize, status, debouncedSearchTerm);
       if (response.success) {
         return {
           taskAgents: response.taskAgents,
@@ -49,6 +49,13 @@ export default function TaskAgentsPage() {
   const handleSearch = (term: string) => {
     setSearchTerm(term);
   };
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 700); // debounce delay
+
+    return () => clearTimeout(delay);
+  }, [searchTerm]);
 
   return (
     <div className="container mx-auto py-4">
@@ -71,7 +78,7 @@ export default function TaskAgentsPage() {
           fetchData={fetchData}
           agentIds={agentIds}
           status={status}
-          searchTerm={searchTerm}
+          searchTerm={debouncedSearchTerm}
         />
       </div>
     </div>

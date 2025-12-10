@@ -16,6 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import Search from '@/components/Search';
+import { PlusCircle } from 'lucide-react';
+import { LinkButton } from '@/components/ui/LinkButton';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/Pagination';
 import { useRouter } from 'next/navigation';
@@ -26,7 +30,8 @@ import { CustomTooltip } from '@/components/CustomTooltip';
 interface DataTableProps {
   fetchData: (
     cursor: string | null,
-    pageSize: number
+    pageSize: number,
+    search: string
   ) => Promise<{
     users: User[];
     nextCursor?: string;
@@ -37,6 +42,8 @@ interface DataTableProps {
 
 export function DataTable({ fetchData, userIds }: DataTableProps) {
   const [data, setData] = useState<User[]>([]);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [pageSize, setPageSize] = useState<number>(10);
@@ -56,7 +63,7 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
   const fetchItems = async () => {
     setLoading(true);
     try {
-      const response = await fetchData(cursor, pageSize);
+      const response = await fetchData(cursor, pageSize, debouncedSearch);
       setData(response.users);
       setTotalCount(response.totalCount);
     } catch (error) {
@@ -67,7 +74,7 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
 
   useEffect(() => {
     fetchItems();
-  }, [cursor, pageSize]);
+  }, [cursor, pageSize, debouncedSearch]);
 
   // Create columns with refresh data callback and modal state ref
   const columns = createColumns(fetchItems, isModalOpenRef);
@@ -110,9 +117,22 @@ export function DataTable({ fetchData, userIds }: DataTableProps) {
     });
     router.push(`/users/${user.id}`);
   };
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 700); // debounce delay (ms)
 
+    return () => clearTimeout(delay);
+  }, [search]);
   return (
     <>
+      <div className="flex flex-row justify-between items-center">
+        <Search placeholder="Search here" onSearch={value => setSearch(value)} />
+        <LinkButton className="gap-2" href="users/adduser" prefetch={true}>
+          <PlusCircle />
+          Add User
+        </LinkButton>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

@@ -16,6 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import Search from '@/components/Search';
+import { LinkButton } from '@/components/ui/LinkButton';
+import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/Pagination';
 import { useRouter } from 'next/navigation';
@@ -24,7 +27,8 @@ import { Client, createColumns } from './columns';
 interface DataTableProps {
   fetchData: (
     cursor: string | null,
-    pageSize: number
+    pageSize: number,
+    search?: string
   ) => Promise<{
     clients: Client[] | undefined;
     nextCursor?: string | null;
@@ -35,6 +39,8 @@ interface DataTableProps {
 
 export function DataTable({ fetchData, clientIds }: DataTableProps) {
   const [data, setData] = useState<Client[] | undefined>([]);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [pageSize, setPageSize] = useState<number>(10);
@@ -51,7 +57,7 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
   const fetchClients = async () => {
     setLoading(true);
     try {
-      const response = await fetchData(cursor, pageSize);
+      const response = await fetchData(cursor, pageSize, debouncedSearch);
       setData(response.clients);
       setTotalCount(response.totalCount);
     } catch (error) {
@@ -62,7 +68,7 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
 
   useEffect(() => {
     fetchClients();
-  }, [cursor, pageSize]);
+  }, [cursor, pageSize, debouncedSearch]);
 
   // Calculate total number of pages
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -103,8 +109,23 @@ export function DataTable({ fetchData, clientIds }: DataTableProps) {
 
     router.push(`/clients/${client.id}`);
   };
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 700); // debounce delay (ms)
+
+    return () => clearTimeout(delay);
+  }, [search]);
   return (
     <>
+      <div className="flex flex-row justify-between items-center">
+        <Search placeholder="Search here" onSearch={value => setSearch(value)} />
+
+        <LinkButton href="clients/addclient" prefetch={true} className="gap-2">
+          <PlusCircle />
+          Add Client
+        </LinkButton>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
