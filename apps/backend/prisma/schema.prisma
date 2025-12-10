@@ -255,6 +255,12 @@ model Task {
     taskLinks          TaskLink[]
 
     @@index([serialNumber])
+	// filter performance
+	@@index([statusId, priorityId])
+	@@index([taskCategoryId, assignedToId])
+	@@index([assignedToId, statusId])
+	@@index([dueDate, statusId])
+	@@index([createdAt])
 }
 
 // Enum to distinguish between User and Client as the creator
