@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { COOKIE_NAME } from '@/utils/constant';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 export default function TableFilter({
   role,
   statusFilter,
@@ -27,7 +28,7 @@ export default function TableFilter({
   const [selectedType, setSelectedType] = useState<string>('unassigned');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
-  const [users, setUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; avatarUrl: string }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const assignedToValue = searchParams.get('assignedTo') || 'all';
   const isSpecificUserSelected =
@@ -176,7 +177,19 @@ export default function TableFilter({
                 </div>
                 {users.map(user => (
                   <SelectItem key={user.id} value={user.id} className="pl-4">
-                    {user.name}
+                    <div className="flex flex-row items-start gap-2">
+                      <Avatar className="h-6 w-6 rounded-lg">
+                        <AvatarImage
+                          src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                          alt={user.name ?? 'avatar'}
+                          className="rounded-full"
+                        />
+                        <AvatarFallback className="rounded-full text-xs">
+                          {user.name}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.name}
+                    </div>
                   </SelectItem>
                 ))}
               </>
