@@ -14,17 +14,36 @@ export const taskIdsByType = async (
   duration: DurationEnum,
   userId?: string,
   status?: TaskStatusEnum | TaskStatusEnum[],
-  priority?: TaskPriorityEnum | TaskPriorityEnum[]
+  priority?: TaskPriorityEnum | TaskPriorityEnum[],
+  assignedToFilter?: string,
 ): Promise<GetTaskIdsSchema> => {
   try {
     const queryParams: any = {
       search: searchTerm,
       duration,
-      // Map type to backend query parameters
-      ...(type === 'assigned' && { assignedToId: 'not-null' }),
-      ...(type === 'unassigned' && { assignedToId: null }),
-      ...(type === 'my-tasks' && { assignedToId: userId }),
     };
+	// Determine assignedToId based on both type and explicit filter
+    if (assignedToFilter) {
+      // Explicit assignedTo filter takes precedence over type
+      if (assignedToFilter === 'null') {
+        queryParams.assignedToId = 'null';
+      } else if (assignedToFilter === 'not-null') {
+        queryParams.assignedToId = 'not-null';
+      } else if (assignedToFilter === 'my-tasks') {
+        queryParams.assignedToId = userId;
+      } else if (assignedToFilter !== 'all') {
+        queryParams.assignedToId = assignedToFilter; // Specific user ID
+      }
+    } else {
+      // Fall back to type-based logic
+      if (type === 'assigned') {
+        queryParams.assignedToId = 'not-null';
+      } else if (type === 'unassigned') {
+        queryParams.assignedToId = 'null';
+      } else if (type === 'my-tasks') {
+        queryParams.assignedToId = userId;
+      }
+    }
     // Only add 'status' if it is provided
     if (status && Array.isArray(status)) {
       queryParams.status = status.join(',');
