@@ -167,7 +167,7 @@ export function SearchableGlobalNavigator({ role }: { role?: SearchableRoles }) 
         }
 
         if (selected?._type === 'task-child') {
-          router.push(`/tasks/${selected.value}`);
+          router.push(`/taskOfferings/${selected.value}`);
         }
       }}
       renderOption={item =>
