@@ -47,6 +47,9 @@ export const SkillForm: React.FC<SkillFormProps> = ({ selectedCategory, onCancel
   const onSubmit = async (data: z.infer<typeof skillSchema>) => {
     try {
       setLoading(true);
+
+      const cleanedName = data.name.trim();
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/create`, {
         method: 'POST',
         headers: {
@@ -54,7 +57,7 @@ export const SkillForm: React.FC<SkillFormProps> = ({ selectedCategory, onCancel
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: data.name,
+          name: cleanedName,
           description: data.description,
           skillCategoryId: selectedCategory.id,
         }),

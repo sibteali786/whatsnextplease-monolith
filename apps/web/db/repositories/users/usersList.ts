@@ -15,9 +15,11 @@ export const usersList = async (
 ): Promise<GetUsersSchema> => {
   try {
     // Only include skills in the query if it has values
+    // sanitize skills before sending
+    const trimmedSkills = skills?.map(s => s.trim()).filter(Boolean) ?? [];
     const query =
       skills && skills.length > 0
-        ? `?role=${role}&limit=${limit}&page=${page}&search=${searchQuery}&skills=${skills.join(',')}`
+        ? `?role=${role}&limit=${limit}&page=${page}&search=${searchQuery}&skills=${trimmedSkills.join(',')}`
         : `?role=${role}&limit=${limit}&page=${page}&search=${searchQuery}`;
 
     const response = await fetch(`/api/users/taskAgentList${query}`);

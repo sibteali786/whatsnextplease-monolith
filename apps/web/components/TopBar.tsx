@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { ListChecks, MessageSquareText, Search } from 'lucide-react';
-import { Input } from './ui/input';
+import { ListChecks, MessageSquareText } from 'lucide-react';
+
 import { ModeToggle } from '@/utils/modeToggle';
 import { NavUser } from './common/NavUser';
 import { getCurrentUser, UserState } from '@/utils/user';
@@ -14,6 +14,9 @@ import { LinkButton } from './ui/LinkButton';
 import { usePathname } from 'next/navigation';
 import { Badge } from './ui/badge';
 import { ChatMessageType, ParentChatInfoTypes } from '@/utils/chat/constants';
+import { SearchableGlobalNavigator } from './SearchableGlobalNavigator';
+import { Roles } from '@prisma/client';
+import { globalSearchableItems } from './static';
 
 interface ChatMessage {
   id: string;
@@ -21,7 +24,7 @@ interface ChatMessage {
   sender: string;
   timestamp: number;
 }
-
+type SearchableRoles = keyof typeof globalSearchableItems;
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
   const { unreadCount } = useNotifications();
@@ -201,6 +204,20 @@ const TopBar = () => {
       timestamp: Date.now(),
     });
   }, [sendToChat]);
+  function toSearchableRole(role: Roles): SearchableRoles {
+    switch (role) {
+      case Roles.TASK_AGENT:
+        return 'TASK_AGENT';
+      case Roles.CLIENT:
+        return 'CLIENT';
+      case Roles.TASK_SUPERVISOR:
+        return 'TASK_SUPERVISOR';
+      case Roles.SUPER_USER:
+        return 'SUPER_USER';
+      default:
+        return 'TASK_AGENT'; // fallback or restrict
+    }
+  }
 
   if (!user) return null;
 
@@ -209,16 +226,19 @@ const TopBar = () => {
   const isTaskOfferingsActive = pathname === '/taskOfferings';
 
   return (
-    <header className="h-16 bg-white dark:bg-black border flex items-center px-4 sticky top-[24px] rounded-full left-[50%] z-10">
+    <header className="h-16 bg-white dark:bg-black border flex items-center px-2 sticky top-[24px] rounded-full left-[50%] z-10">
       <div className="flex-grow">
-        <div className="relative ml-auto flex-1 md:grow-0">
+        <div className="flex items-center gap-4 ml-4 md:ml-0 md:w-[250px] lg:w-[400px]">
+          <SearchableGlobalNavigator role={toSearchableRole(user.role?.name ?? 'TASK_AGENT')} />
+        </div>
+        {/*   <div className="relative ml-auto flex-1 md:grow-0">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground ml-2" />
           <Input
             type="search"
             placeholder="Search..."
             className="w-full rounded-full bg-background pl-12 md:w-[200px] lg:w-[336px]"
           />
-        </div>
+        </div> */}
       </div>
       <div className="flex flex-row gap-6 items-center justify-around">
         {/* Task Management */}

@@ -476,7 +476,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
           </div>
         )}
         {/* Client - Only show if the user has permission to assign tasks */}
-        {canAssignTasks ? (
+        {canAssignTasks && (
           <FormField
             control={form.control}
             name="assignedToClientId"
@@ -516,17 +516,6 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </FormItem>
             )}
           />
-        ) : (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <div className="border rounded-md p-4 w-full">
-              <div className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                <span>
-                  This task will be sent to Task Supervisors for assignment after creation.
-                </span>
-              </div>
-            </div>
-          </div>
         )}
         {/* Time for Task */}
         <FormField
