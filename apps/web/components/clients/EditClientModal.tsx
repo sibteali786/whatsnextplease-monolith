@@ -119,7 +119,6 @@ export function EditClientModal({
   useEffect(() => {
     modalStateRef.current = isOpen;
   }, [isOpen, modalStateRef]);
-  console.log('client', client);
   const form = useForm<EditClientFormValues>({
     resolver: zodResolver(editClientSchema),
     defaultValues: {

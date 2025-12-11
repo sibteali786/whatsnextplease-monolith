@@ -9,7 +9,7 @@ import {
 } from '@prisma/client';
 import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 // import { DurationEnum } from '@wnp/types';
-
+import Fuse from 'fuse.js';
 export interface TaskFilters {
   whereCondition?: Prisma.TaskWhereInput;
   dateFilter?: Prisma.TaskWhereInput;
@@ -64,17 +64,18 @@ export class TaskRepository {
       }),
       ...(assignedToId !== undefined && { assignedToId: assignedToId }),
       ...(categoryId && { categoryId }),
-      ...(searchTerm && {
+      /*   ...(searchTerm && {
         OR: [
+          { serialNumber: { contains: searchTerm, mode: 'insensitive' } },
           { title: { contains: searchTerm, mode: 'insensitive' } },
           { description: { contains: searchTerm, mode: 'insensitive' } },
         ],
-      }),
+      }), */
     };
     const tasks = await this.prisma.task.findMany({
       where,
-      take: pageSize + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      /*       take: pageSize + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }), */
       orderBy,
       select: {
         id: true,
@@ -122,16 +123,36 @@ export class TaskRepository {
       },
     });
 
-    const hasNextCursor = tasks.length > pageSize;
+    let filteredTasks = tasks;
+
+    // Apply Fuse.js fuzzy search if searchTerm is provided
+    if (searchTerm) {
+      const fuse = new Fuse(tasks, {
+        keys: ['serialNumber', 'title', 'description'],
+        threshold: 0.3, // Adjust threshold for fuzzy sensitivity
+      });
+      filteredTasks = fuse.search(searchTerm).map(result => result.item);
+    }
+
+    /*   const hasNextCursor = tasks.length > pageSize;
     const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
     if (hasNextCursor) {
       tasks.pop();
-    }
+    } */
+    const startIndex = cursor ? filteredTasks.findIndex(t => t.id === cursor) + 1 : 0;
+    const paginatedTasks = filteredTasks.slice(startIndex, startIndex + pageSize);
+    const hasNextCursor = startIndex + pageSize < filteredTasks.length;
+    const nextCursor = hasNextCursor ? paginatedTasks[paginatedTasks.length - 1].id : null;
     return {
-      tasks,
+      tasks: paginatedTasks,
       hasNextCursor,
       nextCursor,
     };
+    /*     return {
+      tasks,
+      hasNextCursor,
+      nextCursor,
+    }; */
   }
 
   /**
