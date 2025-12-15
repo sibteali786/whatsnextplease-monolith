@@ -50,7 +50,9 @@ const SkillsLayout = ({ children }: { children: ReactNode }) => {
         <h2 className="text-2xl font-bold">Skills</h2>
         {!loading && <AddSkillDialog skills={skills} onSkillAdded={handleSkillAdded} />}
       </div>
-      <div key={refreshKey}>{children}</div>
+      <div key={refreshKey} className="pb-5">
+        {children}
+      </div>
     </>
   );
 };

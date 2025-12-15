@@ -8,6 +8,7 @@ export class SkillCategoryService {
         id: true,
         categoryName: true,
         skills: {
+          orderBy: { name: 'asc' },
           select: {
             id: true,
             name: true,
@@ -15,7 +16,7 @@ export class SkillCategoryService {
           },
         },
       },
-      take: 10,
+      orderBy: { categoryName: 'asc' },
     });
   }
   async createSkillCategory(skillCategory: SkillCategoryCreateDto) {

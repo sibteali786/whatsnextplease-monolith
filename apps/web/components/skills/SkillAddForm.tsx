@@ -33,7 +33,11 @@ type SkillFormProps = {
   onSuccess: () => void;
 };
 
-export const SkillForm: React.FC<SkillFormProps> = ({ selectedCategory, onCancel, onSuccess }) => {
+export const SkillAddForm: React.FC<SkillFormProps> = ({
+  selectedCategory,
+  onCancel,
+  onSuccess,
+}) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 

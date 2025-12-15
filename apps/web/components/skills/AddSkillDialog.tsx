@@ -15,7 +15,7 @@ import { DynamicIcon } from '@/utils/Icon';
 import { SkillCategory } from '@/types';
 import { skillIconMap } from './SkillsList';
 import { Skeleton } from '@/components/ui/skeleton';
-import { SkillForm } from './SkillAddForm';
+import { SkillAddForm } from './SkillAddForm';
 import { DynamicBreadcrumb } from './DynamicBreadcrumb';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
@@ -193,7 +193,7 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
         </DialogHeader>
 
         {selectedCategory ? (
-          <SkillForm
+          <SkillAddForm
             selectedCategory={selectedCategory}
             onCancel={handleCancel}
             onSuccess={taskOffering ? handleSuccessTaskOffering : handleSuccess}
