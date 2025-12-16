@@ -221,11 +221,9 @@ export const SkillEditSchema = z.object({
     .refine(
       value => {
         if (!value) return true;
-        if (value) {
-          return value.length > 3 && value.length < 255;
-        }
+        return value.length > 3 && value.length < 255;
       },
-      { message: 'description is required' }
+      { message: 'description must be between 3 and 255 characters' }
     ),
   skillCategoryId: z.string(),
   skillId: z.string(),

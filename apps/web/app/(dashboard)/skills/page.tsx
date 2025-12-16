@@ -36,7 +36,6 @@ export default function Skills() {
       }
 
       const skillsData = await response.json();
-      console.log('Fetched skills data:', skillsData);
       setData(skillsData);
     } catch (err) {
       console.error('Error fetching skills:', err);

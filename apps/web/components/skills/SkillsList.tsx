@@ -59,21 +59,6 @@ export const SkillsList: React.FC<SkillListProps> = ({ data, onSuccess }) => {
                 skill={skill}
                 onSuccess={onSuccess}
               />
-              /*  <Card
-                key={skill.id}
-                className="rounded-2xl shadow-sm flex justify-center items-center "
-              >
-                <CardHeader className="flex flex-col items-center">
-                  <DynamicIcon
-                    name={skillIconMap[skill.name] || 'Circle'}
-                    className="h-10 w-10 text-purple-600 mb-2"
-                  />
-                  <CardTitle className="text-sm font-medium text-center">{skill.name}</CardTitle>
-                  <CardDescription className="text-xs text-center text-gray-500">
-                    {skill.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card> */
             ))}
           </div>
         </div>

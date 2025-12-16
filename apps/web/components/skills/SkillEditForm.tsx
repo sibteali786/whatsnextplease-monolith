@@ -96,7 +96,7 @@ export const SkillEditForm: React.FC<SkillFormProps> = ({
       if (response.ok && result.success) {
         toast({
           title: 'Skill Updated Successfully',
-          description: `"${data.name}" has been added to ${selectedCategory.categoryName}`,
+          description: `"${data.name}" has been updated in ${selectedCategory.categoryName}`,
           variant: 'success',
           icon: <CheckCircle size={40} />,
         });
@@ -126,7 +126,7 @@ export const SkillEditForm: React.FC<SkillFormProps> = ({
       description: skill?.description || '',
       categoryId: selectedCategory.id,
     });
-  }, [skill]);
+  }, [skill, selectedCategory]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
