@@ -8,6 +8,7 @@ import { COOKIE_NAME } from '@/utils/constant';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type SkillData = {
+  id: string;
   categoryName: string;
   skills: {
     id: string;
@@ -67,7 +68,7 @@ export default function Skills() {
     );
   }
 
-  return <SkillsList data={data} />;
+  return <SkillsList data={data} onSuccess={fetchSkills} />;
 }
 
 function SkillsLoadingSkeleton() {

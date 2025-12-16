@@ -1,4 +1,4 @@
-import { SkillCreateDto } from '@wnp/types';
+import { SkillCreateDto, SkillEditDto } from '@wnp/types';
 import prisma from '../config/db';
 
 export class SkillService {
@@ -42,9 +42,18 @@ export class SkillService {
     });
   }
 
-  //   async updateSkill(skill: Skill) {
-  //     return {};
-  //   }
+  async updateSkill(skill: SkillEditDto) {
+    return await prisma.skill.update({
+      where: {
+        id: skill.skillId,
+      },
+      data: {
+        name: skill.name,
+        description: skill.description ?? '',
+        skillCategoryId: skill.skillCategoryId,
+      },
+    });
+  }
 
   //   async deleteSkill(id: string) {
   //     return {};
