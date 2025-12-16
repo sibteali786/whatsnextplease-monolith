@@ -18,7 +18,7 @@ import { SearchableGlobalNavigator } from './SearchableGlobalNavigator';
 import { Roles } from '@prisma/client';
 import { globalSearchableItems } from './static';
 import { useSidebar } from '@/contexts/SideBarContext';
-import { cn } from '@/lib/utils';
+import { ExtendedMenu } from './navigation/ExtendedMenu';
 
 interface ChatMessage {
   id: string;
@@ -226,37 +226,30 @@ const TopBar = () => {
   const isTaskOfferingsActive = pathname === '/taskOfferings';
 
   return (
-    <header className="h-16 bg-white dark:bg-black border flex items-center px-2 sticky top-[24px] rounded-full left-[50%] z-10">
-      {/* Hamburger Menu - Mobile Only */}
-      {isMobile && (
-        <button
-          onClick={toggleSheet}
-          className={cn(
-            'p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
-            'mr-2 flex-shrink-0'
-          )}
-          aria-label="Open menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      )}
+    <header className="h-16 bg-white dark:bg-black border flex items-center px-2 sm:px-4 sticky top-[24px] rounded-full z-10">
+      {/* Left Section: Hamburger + Search */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Hamburger Menu - Mobile Only (<1024px) */}
+        {isMobile && (
+          <button
+            onClick={toggleSheet}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
 
-      {/* Search Section */}
-      <div className="flex-grow">
-        <div
-          className={cn(
-            'flex items-center gap-4',
-            isMobile ? 'ml-0 w-full' : 'ml-4 md:ml-0 md:w-[250px] lg:w-[400px]'
-          )}
-        >
+        {/* Search - Responsive width with proper constraints */}
+        <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-[300px] lg:max-w-[400px]">
           <SearchableGlobalNavigator role={toSearchableRole(user.role?.name ?? 'TASK_AGENT')} />
         </div>
       </div>
 
-      {/* Right Side Actions */}
-      <div className="flex flex-row gap-6 items-center justify-around">
-        {/* Task Management */}
-        <div className="flex flex-col items-center">
+      {/* Right Section: Actions */}
+      <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 flex-shrink-0">
+        {/* Task Management - Tablet+ only */}
+        <div className="hidden sm:flex flex-col items-center">
           <ActiveVerticalMenu activePath="/taskOfferings" />
           <TooltipProvider>
             <Tooltip>
@@ -282,8 +275,8 @@ const TopBar = () => {
           </TooltipProvider>
         </div>
 
-        {/* Messages with Chat Notification Features */}
-        <div className="flex flex-col items-center">
+        {/* Messages - Tablet+ only */}
+        <div className="hidden sm:flex flex-col items-center">
           <ActiveVerticalMenu activePath="/messages" />
           <TooltipProvider>
             <Tooltip>
@@ -340,17 +333,29 @@ const TopBar = () => {
           </TooltipProvider>
         </div>
 
-        <ModeToggle />
+        {/* More Menu - Mobile & Tablet (hidden on desktop ≥1024px) */}
+        <div className="lg:hidden">
+          <ExtendedMenu
+            unreadNotifications={unreadCount}
+            unreadMessages={messageCount}
+            isMessagesActive={isMessagesActive}
+            isTaskOfferingsActive={isTaskOfferingsActive}
+            onMessageClick={handleChatOpen}
+          />
+        </div>
 
-        <div className="flex flex-col items-center">
+        {/* Theme Toggle - Desktop only (≥1024px) */}
+        <div className="hidden lg:block">
+          <ModeToggle />
+        </div>
+
+        {/* Notifications - Desktop only (≥1024px) */}
+        <div className="hidden lg:flex flex-col items-center">
           <NotificationBell unreadCount={unreadCount} />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <NavUser user={user} />
-        </div>
-
-        <div className="w-10"></div>
+        {/* Profile - Always Visible */}
+        <NavUser user={user} />
       </div>
     </header>
   );
