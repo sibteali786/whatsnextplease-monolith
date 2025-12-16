@@ -213,7 +213,25 @@ export const SkillCreateSchema = z.object({
   skillCategoryId: z.string(),
 });
 
+export const SkillEditSchema = z.object({
+  name: z.string().min(3, 'Skill name must be at least 3 characters long').max(50),
+  description: z
+    .string()
+    .optional()
+    .refine(
+      value => {
+        if (!value) return true;
+        return value.length > 3 && value.length < 255;
+      },
+      { message: 'description must be between 3 and 255 characters' }
+    ),
+  skillCategoryId: z.string(),
+  skillId: z.string(),
+});
+
 export type SkillCreateDto = z.infer<typeof SkillCreateSchema>;
+export type SkillEditDto = z.infer<typeof SkillEditSchema>;
+
 export const SkillCategoryStateSchema = z.object({
   id: z.string(),
   categoryName: z.string(),
