@@ -90,6 +90,7 @@ export const UserTasks = ({
     | 'assigned'
     | 'unassigned'
     | 'my-tasks';
+  const assignedToFilter = searchParams.get('assignedTo') || undefined;
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -119,6 +120,7 @@ export const UserTasks = ({
         status: normalizedStatus,
         priority: normalizedPriority,
         context,
+        assignedToId: assignedToFilter,
       };
       const response = await taskApiClient.getTasksByUserId(userId, params);
       const { taskIds, success } = await taskApiClient.getTaskIds({
@@ -126,6 +128,7 @@ export const UserTasks = ({
         search: searchTerm,
         duration,
         context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+        assignedToId: assignedToFilter,
       });
 
       if (response.success && success) {
@@ -145,7 +148,16 @@ export const UserTasks = ({
 
   useEffect(() => {
     fetchTasks();
-  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter, typeFilter]);
+  }, [
+    cursor,
+    pageSize,
+    searchTerm,
+    duration,
+    statusFilter,
+    priorityFilter,
+    typeFilter,
+    assignedToFilter,
+  ]);
 
   return (
     <div className="flex flex-col gap-4">

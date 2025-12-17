@@ -28,7 +28,64 @@ export class TaskController {
   constructor(private readonly taskService: TaskService = new TaskService()) {}
 
   /**
-   * Get tasks with filtering and pagination
+   * GET /tasks - Get tasks with comprehensive filtering and pagination
+   *
+   * @description Retrieves tasks with role-based access control and multiple filter options.
+   * Supports cursor-based pagination and full-text search.
+   * @access Private (all authenticated users with canViewTasks permission)
+   *
+   * @query {string} [userId] - Filter by user ID (applies role-based filtering)
+   * @query {string} [cursor] - Pagination cursor (task ID from previous page)
+   * @query {number} [pageSize=10] - Number of results per page (1-100)
+   * @query {string} [search] - Full-text search on title and description (case-insensitive)
+   * @query {DurationEnum} [duration=ALL] - Time-based filter:
+   *   - TODAY: Tasks from today
+   *   - THIS_WEEK: Tasks from current week
+   *   - THIS_MONTH: Tasks from current month
+   *   - THIS_YEAR: Tasks from current year
+   *   - ALL: No time filter
+   *
+   * @query {string} [status] - Comma-separated TaskStatusEnum values
+   *   Examples: "NEW", "NEW,IN_PROGRESS", "NEW,IN_PROGRESS,REVIEW"
+   *   Available values: NEW, IN_PROGRESS, COMPLETED, OVERDUE, REVIEW,
+   *                     CONTENT_IN_PROGRESS, TESTING, BLOCKED, ON_HOLD,
+   *                     APPROVED, REJECTED
+   *
+   * @query {string} [priority] - Comma-separated TaskPriorityEnum values
+   *   Examples: "HIGH", "CRITICAL,HIGH", "MEDIUM,LOW"
+   *   Available values: CRITICAL, HIGH, MEDIUM, LOW, HOLD
+   *
+   * @query {string} [assignedToId] - Assignment filter with special values:
+   *   - 'null': Unassigned tasks only
+   *   - 'not-null': Tasks assigned to any user
+   *   - 'my-tasks': Tasks assigned to current user (uses req.user.id)
+   *   - {uuid}: Tasks assigned to specific user ID
+   *   - undefined: No assignment filter (respects role-based access)
+   *
+   * @query {string} [categoryId] - Filter by task category UUID
+   *
+   * @query {USER_CREATED_TASKS_CONTEXT} [context=general] - Filtering context:
+   *   - 'user-profile': Always show tasks assigned to specified userId
+   *   - 'general': Apply role-based filtering (default)
+   *
+   * @example
+   * Get high/critical priority NEW tasks assigned to anyone
+   * GET /tasks?priority=HIGH,CRITICAL&status=NEW&assignedToId=not-null
+   *
+   * @example
+   * Get my unfinished tasks from this week in Web Development category
+   * GET /tasks?assignedToId=my-tasks&status=NEW,IN_PROGRESS&duration=THIS_WEEK&categoryId=abc-123
+   *
+   * @example
+   * Search for "bug" in unassigned tasks
+   * GET /tasks?search=bug&assignedToId=null
+   *
+   * @returns {Object} Response object
+   * @returns {boolean} success - Operation success indicator
+   * @returns {TaskTable[]} tasks - Array of task objects with related data
+   * @returns {boolean} hasNextCursor - Whether more results exist
+   * @returns {string|null} nextCursor - Cursor for next page
+   * @returns {number} totalCount - Total matching tasks (for pagination UI)
    */
   private handleGetTasks = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {

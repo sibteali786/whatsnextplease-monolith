@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MultiSelect } from '../ui/multi-select';
 import { TaskStatusEnum, TaskPriorityEnum, Roles } from '@prisma/client';
-import { transformEnumValue } from '@/utils/utils';
+import { getCookie, transformEnumValue } from '@/utils/utils';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import {
@@ -13,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { COOKIE_NAME } from '@/utils/constant';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 export default function TableFilter({
   role,
   statusFilter,
@@ -26,6 +28,14 @@ export default function TableFilter({
   const [selectedType, setSelectedType] = useState<string>('unassigned');
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; avatarUrl: string }>>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const assignedToValue = searchParams.get('assignedTo') || 'all';
+  const isSpecificUserSelected =
+    assignedToValue !== 'all' &&
+    assignedToValue !== 'my-tasks' &&
+    assignedToValue !== 'null' &&
+    assignedToValue !== 'not-null';
   const updateParams = (key: string, values: string[] | string) => {
     const currentParams = new URLSearchParams(searchParams.toString());
     if (Array.isArray(values)) {
@@ -64,11 +74,50 @@ export default function TableFilter({
     setSelectedStatus(statusParam ? decodeURIComponent(statusParam).split(',') : []);
     setSelectedPriority(priorityParam ? decodeURIComponent(priorityParam).split(',') : []);
   }, [searchParams]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      // Only fetch users for non-client roles
+      if (role === Roles.CLIENT) return;
+
+      setLoadingUsers(true);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskAgents/list`, {
+          headers: {
+            Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.users) {
+            setUsers(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              result.users.map((u: any) => ({
+                id: u.id,
+                name: `${u.firstName} ${u.lastName}`,
+              }))
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, [role]);
   return (
     <div className="flex gap-4">
       {/* Type Filter (assigned, unassigned etc.) */}
 
-      <Select onValueChange={handleTypeChange} value={selectedType}>
+      <Select
+        onValueChange={handleTypeChange}
+        value={selectedType}
+        disabled={isSpecificUserSelected}
+      >
         <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit">
           <SelectValue placeholder="Type" />
         </SelectTrigger>
@@ -88,6 +137,66 @@ export default function TableFilter({
           ))}
         </SelectContent>
       </Select>
+      {/* Show hint when Type filter is disabled */}
+      {isSpecificUserSelected && (
+        <span className="text-xs text-muted-foreground self-center">
+          (Type filter disabled - specific user selected)
+        </span>
+      )}
+      {/* Assigned To Filter - Only for non-clients */}
+      {role !== Roles.CLIENT && (
+        <Select
+          onValueChange={value => {
+            const currentParams = new URLSearchParams(searchParams.toString());
+            if (value === 'all') {
+              currentParams.delete('assignedTo');
+            } else {
+              currentParams.set('assignedTo', value);
+            }
+            router.push(`${pathname}?${currentParams.toString()}`);
+          }}
+          value={searchParams.get('assignedTo') || 'all'}
+        >
+          <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit">
+            <SelectValue placeholder="Assigned To" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tasks</SelectItem>
+            <SelectItem value="my-tasks">My Tasks</SelectItem>
+            <SelectItem value="null">Unassigned</SelectItem>
+            <SelectItem value="not-null">Assigned to Anyone</SelectItem>
+
+            {loadingUsers ? (
+              <SelectItem value="loading" disabled>
+                Loading users...
+              </SelectItem>
+            ) : users.length > 0 ? (
+              <>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
+                  Specific Users
+                </div>
+                {users.map(user => (
+                  <SelectItem key={user.id} value={user.id} className="pl-4">
+                    <div className="flex flex-row items-start gap-2">
+                      <Avatar className="h-6 w-6 rounded-lg">
+                        <AvatarImage
+                          src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                          alt={user.name ?? 'avatar'}
+                          className="rounded-full"
+                        />
+                        <AvatarFallback className="rounded-full text-xs">
+                          {user.name}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </>
+            ) : null}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Status Filter */}
       <MultiSelect

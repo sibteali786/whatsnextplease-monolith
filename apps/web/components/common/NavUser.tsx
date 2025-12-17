@@ -13,6 +13,7 @@ import { signout, UserState } from '@/utils/user';
 import { useSecureAvatar } from '@/hooks/useAvatarFromS3';
 import { useRouter } from 'next/navigation';
 import { LogoutButton } from '../auth/LogOutButton';
+import { useSidebar } from '@/contexts/SideBarContext';
 
 interface NavUserProps {
   user: UserState;
@@ -41,17 +42,22 @@ const SecureAvatar = ({
 
 export const NavUser: React.FC<NavUserProps> = ({ user }) => {
   const router = useRouter();
+  const { isMobile } = useSidebar();
   return (
     <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="flex gap-2 items-center cursor-pointer">
             <SecureAvatar url={user.avatarUrl} alt={user.name ?? 'avatar'} />
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{user.name}</span>
-              <span className="truncate text-xs">{user.email}</span>
-            </div>
-            <ChevronsUpDown className="ml-auto size-4" />
+            {!isMobile && (
+              <>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{user.name}</span>
+                  <span className="truncate text-xs">{user.email}</span>
+                </div>
+                <ChevronsUpDown className="ml-auto size-4" />
+              </>
+            )}
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
