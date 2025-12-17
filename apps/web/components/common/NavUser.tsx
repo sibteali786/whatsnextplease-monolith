@@ -50,13 +50,13 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
           <div className="flex gap-2 items-center cursor-pointer">
             <SecureAvatar url={user.avatarUrl} alt={user.name ?? 'avatar'} />
             {!isMobile && (
-              <div className="flex gap-2 items-center cursor-pointer">
+              <>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-4" />
-              </div>
+              </>
             )}
           </div>
         </DropdownMenuTrigger>

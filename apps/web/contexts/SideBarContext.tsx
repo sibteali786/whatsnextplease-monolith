@@ -9,6 +9,7 @@ interface SidebarContextType {
   setSheetOpen: (open: boolean) => void;
   toggleSheet: () => void;
   isMobile: boolean;
+  isMounted: boolean;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -17,6 +18,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -31,6 +33,8 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    // mark as mounted after initial check to avoid hydration mismatches
+    setIsMounted(true);
     return () => window.removeEventListener('resize', checkMobile);
   }, [isSheetOpen]);
 
@@ -44,6 +48,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         setSheetOpen,
         toggleSheet,
         isMobile,
+        isMounted,
       }}
     >
       {children}
