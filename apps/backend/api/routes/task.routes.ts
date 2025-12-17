@@ -98,6 +98,13 @@ router.patch(
  * @body { creatorType: 'USER' | 'CLIENT' }
  */
 router.post('/draft', authMiddleware, controller.createDraftTask);
+/**
+ * @route POST /tasks/advanced-search
+ * @desc Advanced filter search for tasks
+ * @access Private (all authenticated users)
+ * @body { conditions: [...], logicalOperator: 'AND' | 'OR', cursor?, pageSize?, orderBy? }
+ */
+router.post('/advanced-search', authMiddleware, controller.advancedSearch);
 
 /**
  * @route PUT /tasks/:taskId

@@ -22,6 +22,7 @@ import { UserService } from './user.service';
 import { ClientService } from './client.service';
 import { TaskSerialNumberService } from './taskSerialNumber.service';
 import { logger } from '../utils/logger';
+import { AdvancedFilterQuery, AdvancedFilterValidator } from '../types/advancedFilter.types';
 
 export interface BatchUpdateRequest {
   taskIds: string[];
@@ -1575,6 +1576,45 @@ export class TaskService {
     return {
       success: true,
       tasks,
+    };
+  }
+
+  /**
+   * Advanced filter search for tasks
+   */
+  async advancedSearch(query: AdvancedFilterQuery, userId: string, role: Roles) {
+    // Authorization check
+    if (!canViewTasks(role)) {
+      throw new ForbiddenError(`Role ${role} is not authorized to search tasks.`);
+    }
+
+    // Validate the query
+    const validation = AdvancedFilterValidator.validateQuery(query);
+    if (!validation.valid) {
+      throw new BadRequestError(`Invalid filter query: ${validation.errors.join('; ')}`);
+    }
+
+    // Get role-based where condition
+    const roleBasedWhere = getGeneralTaskFilter(userId, role);
+
+    // Execute advanced search
+    const result = await this.taskRepository.findTasksWithAdvancedFilter(query, roleBasedWhere);
+
+    // Format tasks
+    const formattedTasks = result.tasks.map(task => ({
+      ...task,
+      taskSkills: task.taskSkills.map(ts => ts.skill.name),
+    }));
+
+    return {
+      success: true,
+      tasks: formattedTasks,
+      hasNextCursor: result.hasNextCursor,
+      nextCursor: result.nextCursor,
+      query: {
+        conditions: query.conditions,
+        logicalOperator: query.logicalOperator,
+      },
     };
   }
 }
