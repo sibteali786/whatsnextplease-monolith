@@ -26,8 +26,8 @@ interface TaskQueryParams {
   pageSize?: number;
   search?: string;
   duration?: DurationEnum;
-  status?: TaskStatusEnum;
-  priority?: TaskPriorityEnum;
+  status?: TaskStatusEnum | TaskStatusEnum[];
+  priority?: TaskPriorityEnum | TaskPriorityEnum[];
   assignedToId?: string | null;
   categoryId?: string;
   context?: USER_CREATED_TASKS_CONTEXT;
@@ -49,7 +49,13 @@ class TaskApiClient {
    * Get tasks with filtering and pagination
    */
   async getTasks(params: TaskQueryParams = {}) {
-    const searchParams = new URLSearchParams(params as Record<string, string>);
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        searchParams.append(key, String(value));
+      }
+    });
     const response = await fetch(`${this.baseUrl}/tasks?${searchParams.toString()}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
@@ -311,6 +317,7 @@ class TaskApiClient {
       status?: TaskStatusEnum[];
       priority?: TaskPriorityEnum[];
       context: USER_CREATED_TASKS_CONTEXT;
+	  assignedToId?: string
     }
   ) {
     return this.getTasks({
@@ -319,9 +326,10 @@ class TaskApiClient {
       pageSize: params.pageSize,
       search: params.search,
       duration: params.duration,
-      status: params.status?.[0], // getTasks expects single value, not array
-      priority: params.priority?.[0], // getTasks expects single value, not array
+      status: params.status, // getTasks expects single value, not array
+      priority: params.priority, // getTasks expects single value, not array
       context: params.context,
+	  assignedToId: params.assignedToId,
     });
   }
 }

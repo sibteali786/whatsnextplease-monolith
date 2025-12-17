@@ -15,7 +15,8 @@
     "lint-staged": "lint-staged",
     "format": "prettier --write",
     "lint": "eslint",
-    "studio": "turbo run studio"
+    "studio": "turbo run studio",
+    "db:migrate-all:dev": "turbo run db:migrate:dev -- --"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",

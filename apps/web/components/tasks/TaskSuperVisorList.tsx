@@ -56,6 +56,7 @@ export const TaskSuperVisorList = ({
     | 'assigned'
     | 'unassigned'
     | 'my-tasks';
+  const assignedToFilter = searchParams.get('assignedTo') || undefined;
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term);
     setDuration(duration);
@@ -142,7 +143,8 @@ export const TaskSuperVisorList = ({
         duration,
         userId,
         normalizedStatus,
-        normalizedPriority
+        normalizedPriority,
+        assignedToFilter
       );
       const responseIds = await taskIdsByType(
         typeFilter ?? 'unassigned',
@@ -150,7 +152,8 @@ export const TaskSuperVisorList = ({
         duration,
         userId,
         normalizedStatus,
-        normalizedPriority
+        normalizedPriority,
+        assignedToFilter
       );
 
       if (response && responseIds && response.success && responseIds.success) {
@@ -183,11 +186,12 @@ export const TaskSuperVisorList = ({
     statusFilter,
     priorityFilter,
     typeFilter,
+    assignedToFilter,
   ]);
 
   useEffect(() => {
     fetchTasks();
-  }, [searchTerm, duration, pageSize, cursor, fetchTasks]);
+  }, [searchTerm, duration, pageSize, cursor, fetchTasks, assignedToFilter]);
   useEffect(() => {
     const checkPrerequisites = async () => {
       setCheckingPrerequisites(true);

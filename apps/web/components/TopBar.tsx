@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { ListChecks, MessageSquareText } from 'lucide-react';
+import { ListChecks, MessageSquareText, Menu } from 'lucide-react';
 
 import { ModeToggle } from '@/utils/modeToggle';
 import { NavUser } from './common/NavUser';
@@ -17,6 +17,8 @@ import { ChatMessageType, ParentChatInfoTypes } from '@/utils/chat/constants';
 import { SearchableGlobalNavigator } from './SearchableGlobalNavigator';
 import { Roles } from '@prisma/client';
 import { globalSearchableItems } from './static';
+import { useSidebar } from '@/contexts/SideBarContext';
+import { ExtendedMenu } from './navigation/ExtendedMenu';
 
 interface ChatMessage {
   id: string;
@@ -25,9 +27,11 @@ interface ChatMessage {
   timestamp: number;
 }
 type SearchableRoles = keyof typeof globalSearchableItems;
+
 const TopBar = () => {
   const [user, setUser] = useState<UserState | null>(null);
   const { unreadCount } = useNotifications();
+  const { isMobile, toggleSheet } = useSidebar();
   const pathname = usePathname();
 
   // Chat notification states
@@ -83,7 +87,7 @@ const TopBar = () => {
         configRef.current.chatAppOrigin
       );
     }
-  }, []); // No dependencies - uses refs for dynamic values
+  }, []);
 
   // Stable message handler that doesn't recreate on every render
   const createMessageHandler = useCallback(() => {
@@ -131,7 +135,6 @@ const TopBar = () => {
             setMessageCount(messageData.unreadCount || 1);
             setHasNewMessages(true);
 
-            // Show browser notification if page is hidden
             if (
               document.hidden &&
               'Notification' in window &&
@@ -165,7 +168,7 @@ const TopBar = () => {
         }
       }
     };
-  }, [sendToChat]); // Only depends on sendToChat which is stable
+  }, [sendToChat]);
 
   // Initialize message listener ONCE
   useEffect(() => {
@@ -173,15 +176,12 @@ const TopBar = () => {
       return;
     }
 
-    // Create the handler once and store it
     const messageHandler = createMessageHandler();
     messageHandlerRef.current = messageHandler;
     isInitializedRef.current = true;
 
-    // Add event listener
     window.addEventListener('message', messageHandler);
 
-    // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
@@ -194,7 +194,7 @@ const TopBar = () => {
       isInitializedRef.current = false;
       console.log('Chat notification listener cleaned up');
     };
-  }, []); // Empty dependency array - only run once
+  }, []);
 
   // Handle chat open action
   const handleChatOpen = useCallback(() => {
@@ -204,6 +204,7 @@ const TopBar = () => {
       timestamp: Date.now(),
     });
   }, [sendToChat]);
+
   function toSearchableRole(role: Roles): SearchableRoles {
     switch (role) {
       case Roles.TASK_AGENT:
@@ -215,34 +216,40 @@ const TopBar = () => {
       case Roles.SUPER_USER:
         return 'SUPER_USER';
       default:
-        return 'TASK_AGENT'; // fallback or restrict
+        return 'TASK_AGENT';
     }
   }
 
   if (!user) return null;
 
-  // Check if current path is messages
   const isMessagesActive = pathname === '/messages';
   const isTaskOfferingsActive = pathname === '/taskOfferings';
 
   return (
-    <header className="h-16 bg-white dark:bg-black border flex items-center px-2 sticky top-[24px] rounded-full left-[50%] z-10">
-      <div className="flex-grow">
-        <div className="flex items-center gap-4 ml-4 md:ml-0 md:w-[250px] lg:w-[400px]">
+    <header className="h-16 bg-white dark:bg-black border flex items-center px-2 sm:px-4 sticky top-[24px] rounded-full z-10">
+      {/* Left Section: Hamburger + Search */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Hamburger Menu - Mobile Only (<1024px) */}
+        {isMobile && (
+          <button
+            onClick={toggleSheet}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Search - Responsive width with proper constraints */}
+        <div className="flex-1 min-w-0 max-w-[200px] sm:max-w-[300px] lg:max-w-[400px]">
           <SearchableGlobalNavigator role={toSearchableRole(user.role?.name ?? 'TASK_AGENT')} />
         </div>
-        {/*   <div className="relative ml-auto flex-1 md:grow-0">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground ml-2" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="w-full rounded-full bg-background pl-12 md:w-[200px] lg:w-[336px]"
-          />
-        </div> */}
       </div>
-      <div className="flex flex-row gap-6 items-center justify-around">
-        {/* Task Management */}
-        <div className="flex flex-col items-center">
+
+      {/* Right Section: Actions */}
+      <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 flex-shrink-0">
+        {/* Task Management - Tablet+ only */}
+        <div className="hidden sm:flex flex-col items-center">
           <ActiveVerticalMenu activePath="/taskOfferings" />
           <TooltipProvider>
             <Tooltip>
@@ -268,8 +275,8 @@ const TopBar = () => {
           </TooltipProvider>
         </div>
 
-        {/* Messages with Chat Notification Features */}
-        <div className="flex flex-col items-center">
+        {/* Messages - Tablet+ only */}
+        <div className="hidden sm:flex flex-col items-center">
           <ActiveVerticalMenu activePath="/messages" />
           <TooltipProvider>
             <Tooltip>
@@ -326,17 +333,29 @@ const TopBar = () => {
           </TooltipProvider>
         </div>
 
-        <ModeToggle />
+        {/* More Menu - Mobile & Tablet (hidden on desktop ≥1024px) */}
+        <div className="lg:hidden">
+          <ExtendedMenu
+            unreadNotifications={unreadCount}
+            unreadMessages={messageCount}
+            isMessagesActive={isMessagesActive}
+            isTaskOfferingsActive={isTaskOfferingsActive}
+            onMessageClick={handleChatOpen}
+          />
+        </div>
 
-        <div className="flex flex-col items-center">
+        {/* Theme Toggle - Desktop only (≥1024px) */}
+        <div className="hidden lg:block">
+          <ModeToggle />
+        </div>
+
+        {/* Notifications - Desktop only (≥1024px) */}
+        <div className="hidden lg:flex flex-col items-center">
           <NotificationBell unreadCount={unreadCount} />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <NavUser user={user} />
-        </div>
-
-        <div className="w-10"></div>
+        {/* Profile - Always Visible */}
+        <NavUser user={user} />
       </div>
     </header>
   );

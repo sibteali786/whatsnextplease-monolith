@@ -10,7 +10,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "studio": "prisma studio"
+    "studio": "prisma studio",
+	"db:migrate:dev": "prisma migrate dev",
+	"db:migrate:deploy": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
