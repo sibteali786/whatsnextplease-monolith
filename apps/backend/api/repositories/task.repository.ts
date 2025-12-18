@@ -983,9 +983,10 @@ export class TaskRepository {
       const fieldParts = field.split('.');
 
       switch (operator) {
-        case 'equals':
+        case 'eq':
           return this.buildEqualCondition(fieldParts, value);
-
+        case 'neq':
+          return this.buildEqualCondition(fieldParts, { not: value });
         case 'contains':
           return this.buildContainsCondition(fieldParts, value as string);
 

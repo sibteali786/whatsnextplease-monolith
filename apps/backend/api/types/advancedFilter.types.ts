@@ -4,24 +4,24 @@ import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 export const ALLOWED_FILTER_FIELDS = {
   title: {
     type: 'string',
-    operators: ['contains', 'equals', 'startsWith', 'endsWith'] as const,
+    operators: ['contains', 'eq', 'startsWith', 'endsWith'] as const,
     description: 'Task Title',
   },
   description: {
     type: 'string',
-    operators: ['contains', 'equals'] as const,
+    operators: ['contains', 'eq'] as const,
     description: 'Task Description',
   },
   // Enum Fields
   'status.statusName': {
     type: 'enum',
-    operators: ['equals', 'notEquals', 'in', 'notIn'] as const,
+    operators: ['eq', 'neq', 'in', 'notIn'] as const,
     description: 'Task Status',
     enumValues: Object.values(TaskStatusEnum),
   },
   'priority.priorityName': {
     type: 'enum',
-    operators: ['equals', 'notEquals', 'in', 'notIn'] as const,
+    operators: ['eq', 'neq', 'in', 'notIn'] as const,
     description: 'Task Priority',
     enumValues: Object.values(TaskPriorityEnum),
   },
@@ -29,45 +29,45 @@ export const ALLOWED_FILTER_FIELDS = {
   // UUID Fields
   assignedToId: {
     type: 'uuid',
-    operators: ['equals', 'notEquals', 'isNull', 'isNotNull'] as const,
+    operators: ['eq', 'neq', 'in', 'isNull', 'isNotNull'] as const,
     description: 'Assigned user ID',
   },
   taskCategoryId: {
     type: 'uuid',
-    operators: ['equals', 'in'],
+    operators: ['eq', 'in'],
     description: 'Task Category ID',
   },
   createdByUserId: {
     type: 'uuid',
-    operators: ['equals', 'in', 'isNull'],
+    operators: ['eq', 'in', 'isNull'],
     description: 'Created by user ID',
   },
   createdByClientId: {
     type: 'uuid',
-    operators: ['equals', 'in', 'isNull'],
+    operators: ['eq', 'in', 'isNull'],
     description: 'Created by client ID',
   },
   // Date fields
   dueDate: {
     type: 'date',
-    operators: ['equals', 'gt', 'gte', 'lt', 'lte', 'between', 'isNull'] as const,
+    operators: ['eq', 'gt', 'gte', 'lt', 'lte', 'between', 'isNull'] as const,
     description: 'Task due date',
   },
   createdAt: {
     type: 'date',
-    operators: ['equals', 'gt', 'gte', 'lt', 'lte', 'between'] as const,
+    operators: ['eq', 'gt', 'gte', 'lt', 'lte', 'between'] as const,
     description: 'Task creation date',
   },
   updatedAt: {
     type: 'date',
-    operators: ['equals', 'gt', 'gte', 'lt', 'lte', 'between'] as const,
+    operators: ['eq', 'gt', 'gte', 'lt', 'lte', 'between'] as const,
     description: 'Task update date',
   },
 
   // Number fields
   timeForTask: {
     type: 'number',
-    operators: ['equals', 'gt', 'gte', 'lt', 'lte', 'between'] as const,
+    operators: ['eq', 'gt', 'gte', 'lt', 'lte', 'between'] as const,
     description: 'Estimated time (hours)',
   },
 } as const;
@@ -88,8 +88,8 @@ export const advancedFilterConditionSchema = z
   .object({
     field: z.enum(Object.keys(ALLOWED_FILTER_FIELDS) as [AllowedField, ...AllowedField[]]),
     operator: z.enum([
-      'equals',
-      'notEquals',
+      'eq',
+      'neq',
       'contains',
       'startsWith',
       'endsWith',
