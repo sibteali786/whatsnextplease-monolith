@@ -1,4 +1,4 @@
-import { SkillCategory, SkillCategoryCreateDto } from '@wnp/types';
+import { SkillCategory, SkillCategoryCreateDto, SkillCategoryEditDto } from '@wnp/types';
 import prisma from '../config/db';
 
 export class SkillCategoryService {
@@ -26,8 +26,33 @@ export class SkillCategoryService {
       },
     });
   }
-  async updateSkillCategory() {
-    return {};
+  async editSkillCategory(skillCategory: SkillCategoryEditDto) {
+    const existingCategory = await prisma.skillCategory.findUnique({
+      where: {
+        id: skillCategory.id,
+      },
+    });
+
+    if (!existingCategory) {
+      return {
+        success: false,
+        message: 'Skill category not found',
+      };
+    }
+
+    await prisma.skillCategory.update({
+      where: {
+        id: skillCategory.id,
+      },
+      data: {
+        categoryName: skillCategory.categoryName.trim(),
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Skill category updated successfully',
+    };
   }
   async deleteSkillCategory() {
     return {};
