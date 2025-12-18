@@ -4,7 +4,7 @@ import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 // FRONTEND TYPES (Mirror backend types)
 // ============================================================================
 
-export type FilterFieldType = 'string' | 'uuid' | 'enum' | 'date' | 'number';
+export type FilterFieldType = 'string' | 'uuid' | 'enum' | 'date' | 'number' | 'user-search';
 
 export type FilterOperator =
   | 'eq'
@@ -51,7 +51,7 @@ export const FILTER_FIELDS: Record<string, FilterFieldConfig> = {
     enumValues: Object.values(TaskPriorityEnum),
   },
   assignedToId: {
-    type: 'uuid',
+    type: 'user-search',
     operators: ['eq', 'neq', 'in', 'isNull', 'isNotNull'],
     description: 'Assigned To',
   },

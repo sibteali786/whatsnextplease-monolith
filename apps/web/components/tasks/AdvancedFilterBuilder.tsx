@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Search, Trash2 } from 'lucide-react';
+import { X, Plus, Search, Trash2, UserX } from 'lucide-react';
 import {
   FILTER_FIELDS,
   OPERATOR_LABELS,
@@ -30,6 +30,12 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
+import { SearchableDropdown } from '../ui/searchable-dropdown';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { usersList } from '@/db/repositories/users/usersList';
+import { Roles } from '@prisma/client';
+import { useLoggedInUserState } from '@/store/useUserStore';
+import { useLoggedInClientState } from '@/store/useClientStore';
 
 interface AdvancedFilterBuilderProps {
   onSearch?: () => void; // Callback when search is executed
@@ -59,6 +65,66 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
   const [newDateValue, setNewDateValue] = useState<Date | undefined>(undefined);
   const [newDateRangeStart, setNewDateRangeStart] = useState<Date | undefined>(undefined);
   const [newDateRangeEnd, setNewDateRangeEnd] = useState<Date | undefined>(undefined);
+
+  const [users, setUsers] = useState<
+    {
+      id: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl: string | null;
+      currentTasksCount?: number;
+    }[]
+  >([]);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userPage, setUserPage] = useState(1);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const hasFetchedInitialUsers = useRef(false);
+  const { user } = useLoggedInUserState();
+  const { client } = useLoggedInClientState();
+
+  const fetchUsers = useCallback(
+    async (pageToFetch: number, query?: string, opts?: { isInitial?: boolean }) => {
+      if (loadingUsers) return;
+      if (!hasMoreUsers && pageToFetch > 1) return;
+      if (opts?.isInitial && hasFetchedInitialUsers.current) return;
+
+      if (opts?.isInitial) hasFetchedInitialUsers.current = true;
+
+      setLoadingUsers(true);
+      try {
+        const response = await usersList(
+          user?.role?.name ?? client?.role?.name ?? Roles.TASK_SUPERVISOR,
+          [],
+          5, //limit
+          pageToFetch ?? userPage,
+          query
+        );
+
+        if (response.success) {
+          if (pageToFetch === 1) {
+            setUsers(response.users);
+            setUserPage(2);
+          } else {
+            setUsers(prev => [...prev, ...response.users]);
+            setUserPage(prev => prev + 1);
+          }
+
+          setHasMoreUsers(response.hasMore || false);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    },
+    [loadingUsers, hasMoreUsers, userPage, user, client]
+  );
+
+  // Initial fetch
+  useEffect(() => {
+    fetchUsers(1, '', { isInitial: true });
+  }, []);
 
   // Get current field configuration
   const currentFieldConfig = newField ? FILTER_FIELDS[newField] : null;
@@ -129,7 +195,95 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
     if (!newOperator || !operatorRequiresValue(newOperator as FilterOperator)) {
       return null;
     }
-
+    if (fieldType === 'user-search') {
+      return (
+        <SearchableDropdown<{
+          value: string;
+          label: string;
+          avatarUrl: string | null;
+          firstName: string;
+          lastName: string;
+          currentTasksCount?: number;
+        }>
+          items={[
+            {
+              value: 'null',
+              label: 'No Assignee',
+              avatarUrl: null,
+              firstName: '',
+              lastName: '',
+              currentTasksCount: undefined,
+            },
+            ...users.map(user => ({
+              value: user.id,
+              label: `${user.firstName} ${user.lastName}`,
+              avatarUrl: user.avatarUrl,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              currentTasksCount: user.currentTasksCount,
+            })),
+          ]}
+          value={newValue}
+          onChange={setNewValue}
+          searchQuery={userSearchQuery}
+          placeholder="Search by name..."
+          searchPlaceholder="Search users..."
+          noResultsText="No users found"
+          noSelectionValue="null"
+          noSelectionContent={
+            <div className="flex items-center gap-2">
+              <UserX className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foregrounfeat: enhance advanced filtering with user search capability and update related componentsd">
+                No Assignee
+              </span>
+            </div>
+          }
+          onScrollEnd={() => {
+            if (hasMoreUsers && !loadingUsers) {
+              fetchUsers(userPage, userSearchQuery);
+            }
+          }}
+          onSearch={query => {
+            setUserSearchQuery(query);
+            fetchUsers(1, query);
+          }}
+          renderOption={user =>
+            user.value === 'null' ? (
+              <div className="flex items-center gap-2">
+                <UserX className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">No Assignee</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6 rounded-lg">
+                    <AvatarImage
+                      src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                      alt={user.firstName}
+                      className="rounded-full"
+                    />
+                    <AvatarFallback className="rounded-full text-xs">
+                      {user.firstName.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">
+                    {user.firstName} {user.lastName}
+                  </span>
+                </div>
+                {user.currentTasksCount !== undefined && (
+                  <Badge
+                    variant={user.currentTasksCount > 8 ? 'destructive' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {user.currentTasksCount}
+                  </Badge>
+                )}
+              </div>
+            )
+          }
+        />
+      );
+    }
     // Enum fields (Status, Priority)
     if (fieldType === 'enum' && currentFieldConfig?.enumValues) {
       const isMultiple = operatorRequiresArray(newOperator as FilterOperator);

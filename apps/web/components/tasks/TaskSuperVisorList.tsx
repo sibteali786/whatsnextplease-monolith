@@ -55,7 +55,7 @@ export const TaskSuperVisorList = ({
 
   const [filterMode, setFilterMode] = useState<'normal' | 'advanced'>('normal');
   // Get advanced filter results
-  const { searchResults, conditions, clearFilters, executeSearch } = useAdvancedFilterContext();
+  const { searchResults, conditions, executeSearch } = useAdvancedFilterContext();
   const hasAdvancedFilters = conditions.length > 0;
 
   const statusFilter = searchParams.get('status');
