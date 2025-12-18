@@ -22,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSearchParams } from 'next/navigation';
 import { DynamicBreadcrumb } from '../skills/DynamicBreadcrumb';
 import { AdvancedFilterBuilder } from './AdvancedFilterBuilder';
-import { useAdvancedFilter } from '@/hooks/useAdvancedFilter';
+import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
 
 export const TaskSuperVisorList = ({
   userId,
@@ -55,7 +55,7 @@ export const TaskSuperVisorList = ({
 
   const [filterMode, setFilterMode] = useState<'normal' | 'advanced'>('normal');
   // Get advanced filter results
-  const { searchResults, conditions, clearFilters, executeSearch } = useAdvancedFilter();
+  const { searchResults, conditions, clearFilters, executeSearch } = useAdvancedFilterContext();
   const hasAdvancedFilters = conditions.length > 0;
 
   const statusFilter = searchParams.get('status');
@@ -70,7 +70,6 @@ export const TaskSuperVisorList = ({
   const handleSearch = (term: string, duration: DurationEnum) => {
     // Switch to normal mode and clear advanced filters
     if (filterMode === 'advanced') {
-      clearFilters();
       setFilterMode('normal');
     }
     setSearchTerm(term);

@@ -12,7 +12,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Search, Trash2 } from 'lucide-react';
-import { useAdvancedFilter } from '@/hooks/useAdvancedFilter';
 import {
   FILTER_FIELDS,
   OPERATOR_LABELS,
@@ -30,6 +29,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
 
 interface AdvancedFilterBuilderProps {
   onSearch?: () => void; // Callback when search is executed
@@ -48,7 +48,7 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
     isSearching,
     canSearch,
     getConditionError,
-  } = useAdvancedFilter();
+  } = useAdvancedFilterContext();
 
   // New condition builder state
   const [newField, setNewField] = useState<string>('');
