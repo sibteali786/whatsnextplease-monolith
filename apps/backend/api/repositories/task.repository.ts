@@ -10,6 +10,7 @@ import {
 import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 // import { DurationEnum } from '@wnp/types';
 import Fuse from 'fuse.js';
+import { AdvancedFilterCondition, AdvancedFilterQuery } from '../types/advancedFilter.types';
 export interface TaskFilters {
   whereCondition?: Prisma.TaskWhereInput;
   dateFilter?: Prisma.TaskWhereInput;
@@ -967,5 +968,222 @@ export class TaskRepository {
       select: { id: true },
     });
     return !!task;
+  }
+  /**
+   * Build Prisma where clause from advanced filter conditions
+   */
+  buildAdvancedFilterWhere(
+    conditions: AdvancedFilterCondition[],
+    logicalOperator: 'AND' | 'OR'
+  ): Prisma.TaskWhereInput {
+    const whereConditions = conditions.map(condition => {
+      const { field, operator, value } = condition;
+
+      // Handle nested fields (e.g., "status.statusName")
+      const fieldParts = field.split('.');
+
+      switch (operator) {
+        case 'eq':
+          return this.buildEqualityCondition(fieldParts, value);
+        case 'neq':
+          return this.buildEqualityCondition(fieldParts, { not: value });
+        case 'contains':
+          return this.buildContainsCondition(fieldParts, value as string);
+
+        case 'startsWith':
+          return this.buildStartsWithCondition(fieldParts, value as string);
+
+        case 'endsWith':
+          return this.buildEndsWithCondition(fieldParts, value as string);
+
+        case 'in':
+          return this.buildInCondition(fieldParts, value as string[]);
+
+        case 'notIn':
+          return this.buildNotInCondition(fieldParts, value as string[]);
+
+        case 'gt':
+        case 'gte':
+        case 'lt':
+        case 'lte':
+          return this.buildComparisonCondition(fieldParts, operator, value);
+
+        case 'between':
+          return this.buildBetweenCondition(fieldParts, value as [Date, Date]);
+
+        case 'isNull':
+          return this.buildIsNullCondition(fieldParts, true);
+
+        case 'isNotNull':
+          return this.buildIsNullCondition(fieldParts, false);
+
+        default:
+          throw new Error(`Unsupported operator: ${operator}`);
+      }
+    });
+
+    // Combine with AND/OR
+    if (logicalOperator === 'OR') {
+      return { OR: whereConditions };
+    } else {
+      return { AND: whereConditions };
+    }
+  }
+
+  // Helper methods for building conditions
+  private buildEqualityCondition(fieldParts: string[], value: any): Prisma.TaskWhereInput {
+    if (fieldParts.length === 1) {
+      return { [fieldParts[0]]: value };
+    }
+    // Handle nested fields like "status.statusName"
+    return {
+      [fieldParts[0]]: {
+        [fieldParts[1]]: value,
+      },
+    };
+  }
+
+  private buildContainsCondition(fieldParts: string[], value: string): Prisma.TaskWhereInput {
+    return {
+      [fieldParts[0]]: {
+        contains: value,
+        mode: 'insensitive',
+      },
+    };
+  }
+
+  private buildStartsWithCondition(fieldParts: string[], value: string): Prisma.TaskWhereInput {
+    return {
+      [fieldParts[0]]: {
+        startsWith: value,
+        mode: 'insensitive',
+      },
+    };
+  }
+
+  private buildEndsWithCondition(fieldParts: string[], value: string): Prisma.TaskWhereInput {
+    return {
+      [fieldParts[0]]: {
+        endsWith: value,
+        mode: 'insensitive',
+      },
+    };
+  }
+
+  private buildInCondition(fieldParts: string[], value: string[]): Prisma.TaskWhereInput {
+    if (fieldParts.length === 1) {
+      return { [fieldParts[0]]: { in: value } };
+    }
+    return {
+      [fieldParts[0]]: {
+        [fieldParts[1]]: { in: value },
+      },
+    };
+  }
+
+  private buildNotInCondition(fieldParts: string[], value: string[]): Prisma.TaskWhereInput {
+    if (fieldParts.length === 1) {
+      return { [fieldParts[0]]: { notIn: value } };
+    }
+    return {
+      [fieldParts[0]]: {
+        [fieldParts[1]]: { notIn: value },
+      },
+    };
+  }
+
+  private buildComparisonCondition(
+    fieldParts: string[],
+    operator: 'gt' | 'gte' | 'lt' | 'lte',
+    value: any
+  ): Prisma.TaskWhereInput {
+    return {
+      [fieldParts[0]]: {
+        [operator]: value,
+      },
+    };
+  }
+
+  private buildBetweenCondition(fieldParts: string[], value: [Date, Date]): Prisma.TaskWhereInput {
+    return {
+      [fieldParts[0]]: {
+        gte: value[0],
+        lte: value[1],
+      },
+    };
+  }
+
+  private buildIsNullCondition(fieldParts: string[], isNull: boolean): Prisma.TaskWhereInput {
+    return {
+      [fieldParts[0]]: isNull ? null : { not: null },
+    };
+  }
+
+  /**
+   * Find tasks with advanced filtering
+   */
+  async findTasksWithAdvancedFilter(
+    query: AdvancedFilterQuery,
+    roleBasedWhere?: Prisma.TaskWhereInput
+  ) {
+    const { conditions, logicalOperator, cursor, pageSize, orderBy } = query;
+
+    // Build advanced filter where clause
+    const advancedWhere = this.buildAdvancedFilterWhere(conditions, logicalOperator);
+
+    // Combine with role-based filtering
+    const where: Prisma.TaskWhereInput = roleBasedWhere
+      ? { AND: [roleBasedWhere, advancedWhere] }
+      : advancedWhere;
+
+    // Build order by
+    const order: Prisma.TaskOrderByWithRelationInput = orderBy
+      ? { [orderBy.field]: orderBy.direction }
+      : { createdAt: 'desc' };
+
+    const tasks = await this.prisma.task.findMany({
+      where,
+      take: pageSize + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy: order,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        serialNumber: true,
+        priority: { select: { id: true, priorityName: true } },
+        status: { select: { id: true, statusName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+        assignedTo: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
+        assignedToId: true,
+        associatedClientId: true,
+        dueDate: true,
+        timeForTask: true,
+        overTime: true,
+        taskSkills: {
+          select: { skill: { select: { id: true, name: true } } },
+        },
+        createdByClient: {
+          select: { id: true, companyName: true, contactName: true },
+        },
+        createdByClientId: true,
+        createdByUser: { select: { id: true, firstName: true, lastName: true } },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const hasNextCursor = tasks.length > pageSize;
+    const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
+    if (hasNextCursor) {
+      tasks.pop();
+    }
+
+    return { tasks, hasNextCursor, nextCursor };
   }
 }

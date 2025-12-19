@@ -3,13 +3,14 @@ import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { TaskService, BatchUpdateRequest, BatchDeleteRequest } from '../services/task.service';
 import { asyncHandler } from '../utils/handlers/asyncHandler';
-import { BadRequestError } from '@wnp/types';
+import { BadRequestError, ValidationError } from '@wnp/types';
 import { DurationEnum } from '@wnp/types';
 import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType } from '@prisma/client';
 import z from 'zod';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
 import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
+import { advancedFilterQuerySchema } from '../types/advancedFilter.types';
 
 const getUserTaskCountSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
@@ -833,8 +834,37 @@ export class TaskController {
       next(error);
     }
   };
+  /**
+   * POST /tasks/advanced-search - Advanced filter search
+   */
+  private handleAdvancedSearch = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
 
-  // Expose migrated handlers from frontend
+      // Validate request body with Zod
+      const query = advancedFilterQuerySchema.parse(req.body);
+
+      const result = await this.taskService.advancedSearch(query, req.user.id, req.user.role);
+
+      res.status(200).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        next(new ValidationError('Invalid filter query', { errors: error.errors }));
+      } else {
+        next(error);
+      }
+    }
+  };
+  // Advanced Filters search
+  advancedSearch = asyncHandler(this.handleAdvancedSearch);
+
+  // Expose task mutation handlers (create draft, update, delete, search)
   createDraftTask = asyncHandler(this.handleCreateDraftTask);
   updateTask = asyncHandler(this.handleUpdateTask);
   deleteTask = asyncHandler(this.handleDeleteTask);

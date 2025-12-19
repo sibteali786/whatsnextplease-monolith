@@ -317,7 +317,7 @@ class TaskApiClient {
       status?: TaskStatusEnum[];
       priority?: TaskPriorityEnum[];
       context: USER_CREATED_TASKS_CONTEXT;
-	  assignedToId?: string
+      assignedToId?: string;
     }
   ) {
     return this.getTasks({
@@ -329,8 +329,39 @@ class TaskApiClient {
       status: params.status, // getTasks expects single value, not array
       priority: params.priority, // getTasks expects single value, not array
       context: params.context,
-	  assignedToId: params.assignedToId,
+      assignedToId: params.assignedToId,
     });
+  }
+
+  /**
+   * Advanced filter search
+   */
+  async advancedSearch(query: {
+    conditions: Array<{
+      field: string;
+      operator: string;
+      value?: any;
+    }>;
+    logicalOperator: 'AND' | 'OR';
+    cursor?: string;
+    pageSize?: number;
+    orderBy?: {
+      field: string;
+      direction: 'asc' | 'desc';
+    };
+  }) {
+    const response = await fetch(`${this.baseUrl}/tasks/advanced-search`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(query),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Advanced search failed: ${response.statusText}`);
+    }
+
+    return response.json();
   }
 }
 

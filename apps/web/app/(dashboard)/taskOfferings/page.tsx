@@ -1,5 +1,6 @@
 import { TaskSuperVisorList } from '@/components/tasks/TaskSuperVisorList';
 import { UserTasks } from '@/components/users/UserTasks';
+import { AdvancedFilterProvider } from '@/contexts/AdvancedFilterContext';
 import { DurationEnum, DurationEnumList } from '@/types';
 import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 import { getCurrentUser } from '@/utils/user';
@@ -32,10 +33,12 @@ export default async function TasksPage() {
   // Task Agents, Task Supervisors, and Super Users all use TaskSuperVisorList
   // This gives Task Agents access to the tabbed interface (All, Assigned, Unassigned)
   return (
-    <TaskSuperVisorList
-      role={user?.role?.name ?? Roles.SUPER_USER}
-      userId={user.id}
-      listOfFilter={listToFilterUpon}
-    />
+    <AdvancedFilterProvider>
+      <TaskSuperVisorList
+        role={user?.role?.name ?? Roles.SUPER_USER}
+        userId={user.id}
+        listOfFilter={listToFilterUpon}
+      />
+    </AdvancedFilterProvider>
   );
 }
