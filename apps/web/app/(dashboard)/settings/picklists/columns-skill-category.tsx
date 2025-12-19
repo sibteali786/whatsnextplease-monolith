@@ -33,7 +33,7 @@ export const generateSkillCategoryColumns = (
 
         const skillCategory = row.original;
         const skillCategoryWithoutSkills = { ...skillCategory, skills: [] };
-        console.log('Skills in cell:', skills);
+
         return (
           <div className={`flex ${skills.length > 2 ? 'flex-wrap' : ''} gap-2 items-center`}>
             {skills.map((skill, index) => (

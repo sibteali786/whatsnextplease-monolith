@@ -44,11 +44,11 @@ export class SkillCategoryController {
     const { categoryName, id } = req.body;
     try {
       const parsedInput = SkillCategoryEditSchema.parse({ categoryName, id });
-      const newSkillCategory = await this.skillCategoryService.editSkillCategory({
+      const updatedSkillCategory = await this.skillCategoryService.editSkillCategory({
         categoryName: parsedInput.categoryName,
         id: parsedInput.id,
       });
-      res.status(201).json(newSkillCategory);
+      res.status(200).json(updatedSkillCategory);
     } catch (error) {
       next(error);
     }

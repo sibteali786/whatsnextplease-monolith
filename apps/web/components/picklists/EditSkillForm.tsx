@@ -107,7 +107,7 @@ export const EditSkillForm = ({
       skillCategoryId: skillCategory?.categoryName,
       skillId: skill.id,
     });
-  }, [skill, skillCategory]);
+  }, [form, skill, skillCategory]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -136,7 +136,7 @@ export const EditSkillForm = ({
                   <FormItem>
                     <FormLabel>Skill Category*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Web Development" {...field} />
+                      <Input placeholder="Skill Category" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -149,7 +149,7 @@ export const EditSkillForm = ({
                   <FormItem>
                     <FormLabel>Name*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Web Development" {...field} />
+                      <Input placeholder="Skill Name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

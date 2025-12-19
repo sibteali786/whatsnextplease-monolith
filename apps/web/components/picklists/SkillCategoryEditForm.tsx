@@ -72,12 +72,23 @@ export const SkillCategoryEditForm = ({
         form.reset();
         onSuccess();
       } else {
-        form.setError('root', { message: result.message });
+        //  API ERROR (duplicate name, not found, etc.)
+        toast({
+          variant: 'destructive',
+          title: 'Update Failed',
+          description: result?.message || 'Unable to update skill category',
+          icon: <CircleX size={40} />,
+        });
+
+        // Optional: still set form error if you want inline feedback
+        form.setError('root', {
+          message: result?.message || 'Something went wrong',
+        });
       }
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Failed to update skill',
+        title: 'Failed to update skill category',
         description: error instanceof Error ? error.message : 'Something went wrong',
         icon: <CircleX size={40} />,
       });

@@ -231,6 +231,8 @@ export const SkillEditSchema = z.object({
       { message: 'description must be between 3 and 255 characters' }
     ),
   skillCategoryId: z.string(),
+  skillCategoryName: z.string().optional(),
+
   skillId: z.string(),
 });
 
