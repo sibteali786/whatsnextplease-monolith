@@ -29,10 +29,7 @@ export default function Picklists() {
   const { selectedTaskId, setSelectedTaskId } = useSelectedTaskId();
   const { setSelectedSkillCategory } = useSelectedSkillCategory();
   const columnTaskCategories = generateTaskCategoryColumns(setOpenDetailsDialog, setSelectedTaskId);
-  const columnsSkillCategory = generateSkillCategoryColumns(
-    setOpenAddSkillDialog,
-    setSelectedSkillCategory
-  );
+
   const fetchDetails = async () => {
     setIsLoading(true);
     const token = getCookie(COOKIE_NAME);
@@ -70,7 +67,11 @@ export default function Picklists() {
       setIsLoading(false);
     }
   };
-
+  const columnsSkillCategory = generateSkillCategoryColumns(
+    setOpenAddSkillDialog,
+    setSelectedSkillCategory,
+    fetchDetails
+  );
   useEffect(() => {
     fetchDetails();
   }, []);

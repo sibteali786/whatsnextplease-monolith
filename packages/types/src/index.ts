@@ -169,6 +169,10 @@ export const clientProfileData = UpdateClientProfileSchema.omit({ id: true });
 export const SkillCategoryCreateSchema = z.object({
   categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
 });
+export const SkillCategoryEditSchema = z.object({
+  categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
+  id: z.string(),
+});
 export const TaskCategoryCreateSchema = z.object({
   categoryName: z.string().min(3, 'Category name must be at least 3 characters long').max(50),
 });
@@ -195,6 +199,7 @@ export const TaskCategoriesSchema = z.object({
 });
 export type TaskCategories = z.infer<typeof TaskCategoriesSchema>;
 export type SkillCategoryCreateDto = z.infer<typeof SkillCategoryCreateSchema>;
+export type SkillCategoryEditDto = z.infer<typeof SkillCategoryEditSchema>;
 export type TaskCategoryCreateDto = z.infer<typeof TaskCategoryCreateSchema>;
 export const SkillCreateSchema = z.object({
   name: z.string().min(3, 'Skill name must be at least 3 characters long').max(50),
@@ -226,6 +231,8 @@ export const SkillEditSchema = z.object({
       { message: 'description must be between 3 and 255 characters' }
     ),
   skillCategoryId: z.string(),
+  skillCategoryName: z.string().optional(),
+
   skillId: z.string(),
 });
 

@@ -18,6 +18,7 @@ interface PicklistContainerProps {
   setOpenTaskDialog: (open: boolean) => void;
   openAddSkillDialog: boolean;
   setOpenAddSkillDialog: (open: boolean) => void;
+
   onSuccess: () => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ export const PicklistContainer = ({
   setOpenTaskDialog,
   openAddSkillDialog,
   setOpenAddSkillDialog,
+
   onSuccess,
 }: PicklistContainerProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);

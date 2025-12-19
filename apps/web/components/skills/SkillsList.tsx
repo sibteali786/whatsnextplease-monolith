@@ -1,5 +1,6 @@
 // app/skills/page.tsx
 
+import { SkillCategoryEditForm } from '../picklists/SkillCategoryEditForm';
 import { SkillEditForm } from './SkillEditForm';
 // Icons map for different skill categories
 export const skillIconMap: Record<string, string> = {
@@ -46,7 +47,12 @@ export const SkillsList: React.FC<SkillListProps> = ({ data, onSuccess }) => {
     <>
       {data?.map(category => (
         <div key={category.id} className="mb-8">
-          <h2 className="text-lg font-semibold text-purple-600 mb-4">{category.categoryName}</h2>
+          <SkillCategoryEditForm
+            dropdownItem={false}
+            categoryName={category.categoryName}
+            id={category.id}
+            onSuccess={onSuccess}
+          />
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {category.skills.map(skill => (
               <SkillEditForm
