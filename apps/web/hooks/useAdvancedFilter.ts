@@ -14,7 +14,7 @@ export interface UseAdvancedFilterResult {
   conditions: AdvancedFilterCondition[];
   logicalOperator: 'AND' | 'OR';
 
-  // Filter
+  // Filter manipulation
   addCondition: (condition: AdvancedFilterCondition) => void;
   removeCondition: (index: number) => void;
   updateCondition: (index: number, condition: AdvancedFilterCondition) => void;
@@ -48,15 +48,10 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   // Add condition
-  // Add condition
   const addCondition = useCallback(
     (condition: AdvancedFilterCondition) => {
-      console.log('=== addCondition called ===');
-      console.log('Condition to add:', condition);
-
       const validation = validateCondition(condition);
       if (!validation.valid) {
-        console.log('Validation failed:', validation.error);
         toast({
           title: 'Invalid Condition',
           description: validation.error,
@@ -66,9 +61,6 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
       }
 
       setConditions(prev => {
-        console.log('Previous conditions:', prev);
-        console.log('Previous conditions length:', prev.length);
-
         if (prev.length >= 15) {
           toast({
             title: 'Maximum Conditions Reached',
@@ -79,8 +71,6 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
         }
 
         const newConditions = [...prev, condition];
-        console.log('New conditions after add:', newConditions);
-        console.log('New conditions length:', newConditions.length);
         return newConditions;
       });
     },

@@ -114,7 +114,7 @@ export interface AdvancedFilterQuery {
 // ============================================================================
 
 export const OPERATOR_LABELS: Record<FilterOperator, string> = {
-  eq: 'eq',
+  eq: 'equals',
   neq: 'not equals',
   contains: 'contains',
   startsWith: 'starts with',

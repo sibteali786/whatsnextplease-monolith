@@ -240,10 +240,7 @@ export const TaskSuperVisorList = ({
   }, [searchTerm, duration, pageSize, cursor, assignedToFilter, fetchNormalTasks]);
 
   useEffect(() => {
-    console.log('searchResults changed:', searchResults?.length || 0, 'items');
-
-    if (searchResults && searchResults.length >= 0) {
-      console.log('Updating data from advanced search results');
+    if (Array.isArray(searchResults)) {
       setData(searchResults);
       setTaskIds(searchResults.map(t => t.id));
       setTotalCount(searchResults.length);
@@ -288,26 +285,17 @@ export const TaskSuperVisorList = ({
     checkPrerequisites();
   }, []);
   useEffect(() => {
-    console.log('hasAdvancedFilters changed:', hasAdvancedFilters, 'conditions:', conditions);
-    console.log('Current filterMode:', filterMode);
-
     // Don't switch modes while we have search results
     if (searchResults && searchResults.length > 0) {
-      console.log('Keeping advanced mode - we have search results');
       return;
     }
 
     if (hasAdvancedFilters) {
-      console.log('Switching to advanced mode because we have conditions');
       setFilterMode('advanced');
     } else {
-      console.log('Switching to normal mode because no conditions');
       setFilterMode('normal');
     }
   }, [hasAdvancedFilters, searchResults, conditions]);
-  useEffect(() => {
-    console.log('🔍 Conditions updated in parent:', conditions.length, conditions);
-  }, [conditions]);
 
   const renderTaskTable = () => (
     <UserTasksTable

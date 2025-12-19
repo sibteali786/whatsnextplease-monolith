@@ -864,7 +864,7 @@ export class TaskController {
   // Advanced Filters search
   advancedSearch = asyncHandler(this.handleAdvancedSearch);
 
-  // Expose migrated handlers from frontend
+  // Expose task mutation handlers (create draft, update, delete, search)
   createDraftTask = asyncHandler(this.handleCreateDraftTask);
   updateTask = asyncHandler(this.handleUpdateTask);
   deleteTask = asyncHandler(this.handleDeleteTask);

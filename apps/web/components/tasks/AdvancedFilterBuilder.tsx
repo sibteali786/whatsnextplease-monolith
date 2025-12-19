@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Search, Trash2, UserX } from 'lucide-react';
+import { X, Plus, Search, Trash2, UserX, Check } from 'lucide-react';
 import {
   FILTER_FIELDS,
   OPERATOR_LABELS,
@@ -54,6 +54,7 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
     isSearching,
     canSearch,
     getConditionError,
+    updateCondition,
   } = useAdvancedFilterContext();
 
   // New condition builder state
@@ -83,6 +84,63 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
   const { user } = useLoggedInUserState();
   const { client } = useLoggedInClientState();
 
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const loadConditionForEdit = (index: number) => {
+    const condition = conditions[index];
+    if (!condition) return;
+
+    // Set field and operator
+    setNewField(condition.field);
+    setNewOperator(condition.operator);
+
+    const fieldConfig = FILTER_FIELDS[condition.field];
+    const fieldType = fieldConfig?.type;
+
+    // load the value based on field type
+    if (condition.value !== undefined) {
+      if (fieldType === 'enum') {
+        if (Array.isArray(condition.value)) {
+          setNewEnumValues(condition.value as string[]);
+        } else {
+          setNewEnumValue(condition.value as string);
+        }
+      } else if (fieldType === 'date') {
+        if (Array.isArray(condition.value)) {
+          const [start, end] = condition.value;
+          setNewDateRangeStart(start instanceof Date ? start : new Date(start));
+          setNewDateRangeEnd(end instanceof Date ? end : new Date(end));
+        } else {
+          setNewDateValue(
+            condition.value instanceof Date
+              ? condition.value
+              : condition.value
+                ? new Date(condition.value)
+                : undefined
+          );
+        }
+      } else if (fieldType === 'user-search') {
+        setNewValue(condition.value as string);
+      } else {
+        // String, UUID, Number
+        if (Array.isArray(condition.value)) {
+          setNewValue((condition.value as string[]).join(', '));
+        } else {
+          setNewValue(condition.value as string);
+        }
+      }
+    }
+
+    setEditingIndex(index);
+    setIsEditMode(true);
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setIsEditMode(false);
+    resetForm();
+  };
   const fetchUsers = useCallback(
     async (pageToFetch: number, query?: string, opts?: { isInitial?: boolean }) => {
       if (loadingUsers) return;
@@ -179,7 +237,15 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
       }
     }
 
-    addCondition(condition);
+    // Update existing condition if in edit mode
+
+    if (isEditMode && editingIndex !== null) {
+      updateCondition(editingIndex, condition);
+      setIsEditMode(false);
+      setEditingIndex(null);
+    } else {
+      addCondition(condition);
+    }
     resetForm();
   };
 
@@ -233,9 +299,7 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
           noSelectionContent={
             <div className="flex items-center gap-2">
               <UserX className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foregrounfeat: enhance advanced filtering with user search capability and update related componentsd">
-                No Assignee
-              </span>
+              <span className="text-muted-foreground">No Assignee</span>
             </div>
           }
           onScrollEnd={() => {
@@ -502,17 +566,33 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
               <div className="flex flex-wrap gap-1">
                 {conditions.map((condition, index) => {
                   const error = getConditionError(index);
+                  const isBeingEdited = isEditMode && editingIndex === index;
+
                   return (
                     <Badge
                       key={index}
-                      variant={error ? 'destructive' : 'secondary'}
-                      className="text-xs"
+                      variant={error ? 'destructive' : isBeingEdited ? 'default' : 'secondary'}
+                      className={cn(
+                        'text-xs cursor-pointer transition-all',
+                        isBeingEdited && 'ring-2 ring-primary ring-offset-2'
+                      )}
+                      onClick={() => {
+                        if (!isBeingEdited) {
+                          loadConditionForEdit(index);
+                        }
+                      }}
                     >
                       {index === 0 ? 'WHERE' : logicalOperator}{' '}
                       {formatConditionForDisplay(condition)}
                       <X
-                        className="h-3 w-3 ml-1 cursor-pointer"
-                        onClick={() => removeCondition(index)}
+                        className="h-3 w-3 ml-1 cursor-pointer hover:text-destructive"
+                        onClick={e => {
+                          e.stopPropagation(); // Prevent triggering edit mode
+                          removeCondition(index);
+                          if (isBeingEdited) {
+                            cancelEdit();
+                          }
+                        }}
                       />
                     </Badge>
                   );
@@ -584,15 +664,33 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
 
             {/* Action Buttons */}
             <div className="flex gap-2">
-              <Button
-                onClick={handleAddCondition}
-                disabled={!canAddCondition()}
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </Button>
+              {isEditMode ? (
+                <>
+                  <Button
+                    onClick={handleAddCondition}
+                    disabled={!canAddCondition()}
+                    variant="default"
+                    size="sm"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Update
+                  </Button>
+                  <Button onClick={cancelEdit} variant="outline" size="sm">
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={handleAddCondition}
+                  disabled={!canAddCondition()}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              )}
 
               <Button onClick={handleSearch} disabled={!canSearch || isSearching} size="sm">
                 <Search className="h-4 w-4 mr-1" />
@@ -614,7 +712,140 @@ export function AdvancedFilterBuilder({ onSearch, compact = false }: AdvancedFil
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* ... rest of the original full view code ... */}
+        {/* Existing Conditions */}
+        {conditions.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium">Active Filters ({conditions.length}/15)</h4>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={logicalOperator}
+                  onValueChange={v => setLogicalOperator(v as 'AND' | 'OR')}
+                >
+                  <SelectTrigger className="w-24 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AND">AND</SelectItem>
+                    <SelectItem value="OR">OR</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              {conditions.map((condition, index) => {
+                const error = getConditionError(index);
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-muted rounded-md"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {index === 0 ? 'WHERE' : logicalOperator}
+                      </span>
+                      <Badge variant={error ? 'destructive' : 'secondary'}>
+                        {formatConditionForDisplay(condition)}
+                      </Badge>
+                      {error && <span className="text-xs text-destructive">{error}</span>}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => removeCondition(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* New Condition Builder */}
+        <div className="space-y-3 border-t pt-4">
+          <h4 className="text-sm font-medium">Add Filter Condition</h4>
+
+          <div className="space-y-2">
+            {/* Field Selection */}
+            <Select
+              value={newField}
+              onValueChange={value => {
+                setNewField(value);
+                setNewOperator('');
+                resetForm();
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select field" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(FILTER_FIELDS).map(([key, config]) => (
+                  <SelectItem key={key} value={key}>
+                    {config.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Operator Selection */}
+            {newField && (
+              <Select
+                value={newOperator}
+                onValueChange={v => {
+                  setNewOperator(v as FilterOperator);
+                  // Reset value inputs when operator changes
+                  setNewValue('');
+                  setNewEnumValue('');
+                  setNewEnumValues([]);
+                  setNewDateValue(undefined);
+                  setNewDateRangeStart(undefined);
+                  setNewDateRangeEnd(undefined);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select operator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableOperators(newField).map(op => (
+                    <SelectItem key={op} value={op}>
+                      {OPERATOR_LABELS[op]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Value Input */}
+            {newField && newOperator && renderValueInput()}
+          </div>
+
+          <Button
+            onClick={handleAddCondition}
+            disabled={!canAddCondition()}
+            className="w-full"
+            variant="outline"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Condition
+          </Button>
+        </div>
+
+        {/* Search Button */}
+        <Button onClick={executeSearch} disabled={!canSearch || isSearching} className="w-full">
+          <Search className="h-4 w-4 mr-2" />
+          {isSearching
+            ? 'Searching...'
+            : `Search (${conditions.length} filter${conditions.length !== 1 ? 's' : ''})`}
+        </Button>
       </CardContent>
     </Card>
   );

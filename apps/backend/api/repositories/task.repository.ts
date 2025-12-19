@@ -984,9 +984,9 @@ export class TaskRepository {
 
       switch (operator) {
         case 'eq':
-          return this.buildEqualCondition(fieldParts, value);
+          return this.buildEqualityCondition(fieldParts, value);
         case 'neq':
-          return this.buildEqualCondition(fieldParts, { not: value });
+          return this.buildEqualityCondition(fieldParts, { not: value });
         case 'contains':
           return this.buildContainsCondition(fieldParts, value as string);
 
@@ -1031,7 +1031,7 @@ export class TaskRepository {
   }
 
   // Helper methods for building conditions
-  private buildEqualCondition(fieldParts: string[], value: any): Prisma.TaskWhereInput {
+  private buildEqualityCondition(fieldParts: string[], value: any): Prisma.TaskWhereInput {
     if (fieldParts.length === 1) {
       return { [fieldParts[0]]: value };
     }
