@@ -20,6 +20,7 @@ import { LinkButton } from './ui/LinkButton';
 import { LogoutButton } from './auth/LogOutButton';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/contexts/SideBarContext';
+import { useTheme } from 'next-themes';
 
 // Define role-based permissions for sidebar links
 const ROLE_PERMISSIONS: Record<
@@ -59,6 +60,7 @@ const ROLE_PERMISSIONS: Record<
 const Sidebar = ({ role }: { role: Roles }) => {
   const { isCollapsed, setIsCollapsed, isMobile, setSheetOpen } = useSidebar();
   const pathname = usePathname();
+  const { theme } = useTheme();
   const allowedLinks = ROLE_PERMISSIONS[role] || []; // Get allowed links for the user's role
   const handleNavigation = () => {
     // Close drawer on mobile when navigating
@@ -91,7 +93,13 @@ const Sidebar = ({ role }: { role: Roles }) => {
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {isCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              {isCollapsed ? (
+                <Menu className="w-5 h-5" />
+              ) : (
+                <ChevronLeft
+                  className={`w-7 h-7 rounded-[6px] p-1 ${theme === 'dark' ? 'bg-primary' : 'bg-[#F3EFFB]'}`}
+                />
+              )}
             </button>
           )}
         </div>

@@ -13,6 +13,8 @@ import { SkillType } from '@/types';
 interface Skill {
   id: string;
   name: string;
+
+  description?: string;
   skillCategory: {
     categoryName: string;
   };
@@ -40,10 +42,11 @@ export function UserSkillsSection({ userId }: UserSkillsSectionProps) {
         acc[categoryName].push({
           label: skill.name,
           value: skill.name,
+          description: skill.description, // 👈 tooltip text
         });
         return acc;
       },
-      {} as Record<string, { label: string; value: string }[]>
+      {} as Record<string, { label: string; value: string; description?: string }[]>
     );
 
     return Object.entries(grouped).map(([category, items]) => ({
@@ -172,6 +175,7 @@ export function UserSkillsSection({ userId }: UserSkillsSectionProps) {
           options={groupSkillsByCategory(allSkills)}
           onValueChange={setSelectedSkills}
           defaultValue={selectedSkills}
+          enableOptionTooltip
           placeholder="Select your skills"
           maxCount={10}
         />

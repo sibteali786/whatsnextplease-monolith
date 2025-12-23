@@ -315,7 +315,12 @@ export default function EditTaskDialog({
   };
 
   const groupSkillsByCategory = (
-    skills: { id: string; name: string; skillCategory: { categoryName: string } }[]
+    skills: {
+      id: string;
+      name: string;
+      description?: string;
+      skillCategory: { categoryName: string };
+    }[]
   ) => {
     const grouped = skills.reduce(
       (acc, skill) => {
@@ -326,10 +331,11 @@ export default function EditTaskDialog({
         acc[categoryName].push({
           label: skill.name,
           value: skill.name,
+          description: skill.description, // 👈 tooltip text
         });
         return acc;
       },
-      {} as Record<string, { label: string; value: string }[]>
+      {} as Record<string, { label: string; value: string; description?: string }[]>
     );
 
     return Object.entries(grouped).map(([category, items]) => ({
@@ -743,6 +749,7 @@ export default function EditTaskDialog({
                     setUsers([]);
                     setHasMore(true); */
                         }}
+                        enableOptionTooltip
                         defaultValue={field.value || []}
                         placeholder="Select Skills"
                         maxCount={5}

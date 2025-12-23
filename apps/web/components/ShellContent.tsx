@@ -17,8 +17,8 @@ export function ShellContent({ children, role }: { children: ReactNode; role: Ro
       {!isMobile && (
         <aside
           className={cn(
-            'h-full border-r border-default-50 transition-all duration-300',
-            isCollapsed ? 'w-20 min-w-20 max-w-20' : 'w-[280px] min-w-[280px] max-w-[280px]'
+            'h-full border-default-50 transition-all duration-300',
+            isCollapsed ? 'w-20 min-w-20 max-w-20' : 'max-w-[280px]'
           )}
         >
           <Sidebar role={role} />
