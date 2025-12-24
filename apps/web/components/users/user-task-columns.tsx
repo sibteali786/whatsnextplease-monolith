@@ -190,7 +190,8 @@ export const generateUserTaskColumns = (
         ]
       : []),
     {
-      accessorKey: 'priority',
+      id: 'priority',
+      accessorFn: row => row.priority?.priorityName ?? '',
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -201,7 +202,7 @@ export const generateUserTaskColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const priority: { priorityName: TaskPriorityEnum } = row.getValue('priority');
+        const priority = row.original.priority;
         const task = row.original;
 
         if (!canEditPriority) {
@@ -266,7 +267,8 @@ export const generateUserTaskColumns = (
       },
     },
     {
-      accessorKey: 'status',
+      id: 'status',
+      accessorFn: row => row.status?.statusName ?? '',
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -277,7 +279,7 @@ export const generateUserTaskColumns = (
         </Button>
       ),
       cell: ({ row }) => {
-        const status: { statusName: TaskStatusEnum } = row.getValue('status');
+        const status = row.original.status;
         const task = row.original;
 
         if (!canEditStatus) {
