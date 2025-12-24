@@ -13,7 +13,6 @@ import { SkillType } from '@/types';
 interface Skill {
   id: string;
   name: string;
-
   description?: string;
   skillCategory: {
     categoryName: string;
