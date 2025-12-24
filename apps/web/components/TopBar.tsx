@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { ListChecks, MessageSquareText, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 import { ModeToggle } from '@/utils/modeToggle';
 import { NavUser } from './common/NavUser';
@@ -19,6 +19,8 @@ import { Roles } from '@prisma/client';
 import { globalSearchableItems } from './static';
 import { useSidebar } from '@/contexts/SideBarContext';
 import { ExtendedMenu } from './navigation/ExtendedMenu';
+import { ChecklistIcon } from './assets/Checklist';
+import { Message } from './assets/Message';
 
 interface ChatMessage {
   id: string;
@@ -259,7 +261,7 @@ const TopBar = () => {
                   prefetch={true}
                   variant={isTaskOfferingsActive ? 'default' : 'ghost'}
                 >
-                  <ListChecks
+                  <ChecklistIcon
                     size={24}
                     className={
                       isTaskOfferingsActive ? 'text-primary-foreground' : 'text-textPrimary'
@@ -288,11 +290,10 @@ const TopBar = () => {
                   className="relative"
                   onClick={handleChatOpen}
                 >
-                  <MessageSquareText
+                  <Message
                     size={24}
                     className={isMessagesActive ? 'text-primary-foreground' : 'text-textPrimary'}
                   />
-
                   {/* Notification Badge */}
                   {hasNewMessages && messageCount > 0 && (
                     <Badge

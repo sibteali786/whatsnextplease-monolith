@@ -89,7 +89,12 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   const selectedAssigneeId = form.watch('assignedToId');
 
   const groupSkillsByCategory = (
-    skills: { id: string; name: string; skillCategory?: { categoryName: string } }[]
+    skills: {
+      id: string;
+      name: string;
+      description?: string;
+      skillCategory?: { categoryName: string };
+    }[]
   ) => {
     const grouped = skills.reduce(
       (acc, skill) => {
@@ -100,10 +105,11 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         acc[categoryName].push({
           label: skill.name,
           value: skill.name,
+          description: skill.description, // 👈 tooltip text
         });
         return acc;
       },
-      {} as Record<string, { label: string; value: string }[]>
+      {} as Record<string, { label: string; value: string; description?: string }[]>
     );
 
     return Object.entries(grouped).map(([category, items]) => ({
@@ -182,6 +188,7 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                     field.onChange(value); // still update the form value
                     fetchUsers(1);
                   }}
+                  enableOptionTooltip
                   defaultValue={field.value || []}
                   value={field.value}
                   placeholder="Select Skills"

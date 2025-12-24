@@ -91,7 +91,11 @@ const Sidebar = ({ role }: { role: Roles }) => {
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              {isCollapsed ? <Menu className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              {isCollapsed ? (
+                <Menu className="w-5 h-5" />
+              ) : (
+                <ChevronLeft className="w-7 h-7 rounded-[6px] p-1 bg-purple-100 dark:bg-primary" />
+              )}
             </button>
           )}
         </div>
