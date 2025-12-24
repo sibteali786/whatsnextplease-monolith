@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import * as Tooltip from '@radix-ui/react-tooltip';
+
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Command,
@@ -42,6 +44,16 @@ const multiSelectVariants = cva(
   }
 );
 
+type MultiSelectOption = {
+  /** The text to display for the option. */
+  label: string;
+  /** The unique value associated with the option. */
+  value: string;
+  /** Optional icon component to display alongside the option. */
+  icon?: React.ComponentType<{ className?: string }>;
+  description?: string;
+};
+
 /**
  * Props for MultiSelect component
  */
@@ -54,23 +66,12 @@ interface MultiSelectProps
    * Can also be grouped options with a category/group structure.
    */
   options:
-    | {
-        /** The text to display for the option. */
-        label: string;
-        /** The unique value associated with the option. */
-        value: string;
-        /** Optional icon component to display alongside the option. */
-        icon?: React.ComponentType<{ className?: string }>;
-      }[]
+    | MultiSelectOption[]
     | {
         /** The category/group name */
         category: string;
         /** The options within this category */
-        items: {
-          label: string;
-          value: string;
-          icon?: React.ComponentType<{ className?: string }>;
-        }[];
+        items: MultiSelectOption[];
       }[];
 
   /**
@@ -78,7 +79,7 @@ interface MultiSelectProps
    * Receives an array of the new selected values.
    */
   onValueChange: (value: string[]) => void;
-
+  enableOptionTooltip?: boolean;
   /** The default selected values when the component mounts. */
   defaultValue?: string[];
   value?: string[];
@@ -138,7 +139,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
       modalPopover = false,
       asChild = false,
       className,
-
+      enableOptionTooltip = false,
       onAddSkill,
       taskOffering = false,
       role,
@@ -224,6 +225,12 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
             <CommandGroup heading={group.category}>
               {group.items.map(option => {
                 const isSelected = selectedValues.includes(option.value);
+                const content = (
+                  <span className="flex items-center gap-2">
+                    {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
+                    {option.label}
+                  </span>
+                );
                 return (
                   <CommandItem
                     key={option.value}
@@ -240,8 +247,25 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
                     >
                       <CheckIcon className="h-4 w-4" />
                     </div>
-                    {option.icon && <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />}
-                    <span>{option.label}</span>
+                    {enableOptionTooltip && option.description ? (
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <div className="w-full">{content}</div>
+                        </Tooltip.Trigger>
+                        <Tooltip.Content
+                          sideOffset={15}
+                          side="right"
+                          className={cn(
+                            'max-w-xs xs:max-w-[150px] rounded-md px-3 py-2 shadow-md text-[12px]',
+                            'bg-primary text-white'
+                          )}
+                        >
+                          {option.description}
+                        </Tooltip.Content>
+                      </Tooltip.Root>
+                    ) : (
+                      content
+                    )}
                   </CommandItem>
                 );
               })}
@@ -395,7 +419,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
                 )}
               </CommandGroup>
               <CommandSeparator />
-              {renderOptions()}
+              <Tooltip.Provider delayDuration={300}>{renderOptions()}</Tooltip.Provider>
               <CommandSeparator />
               <CommandGroup>
                 <div className="flex items-center justify-between">
