@@ -10,6 +10,18 @@ import { Roles } from '@prisma/client';
 import { CircleX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
+import { ChartConfig } from '@/components/ui/chart';
+
+const chartConfig = {
+  unassignedTasks: {
+    label: 'Unassigned',
+    color: 'hsl(var(--chart-1))',
+  },
+  assignedTasks: {
+    label: 'Assigned',
+    color: 'hsl(var(--chart-2))',
+  },
+} satisfies ChartConfig;
 
 export type TasksCountType = {
   UnassignedTasks: number;
@@ -20,7 +32,18 @@ const TaskSummaryPage = () => {
   const [tasks, setTasks] = useState<TasksCountType>();
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
+  const desktopData = [
+    {
+      type: 'unassignedTasks',
+      desktop: tasks?.UnassignedTasks ?? 0,
+      fill: 'var(--color-unassignedTasks)',
+    },
+    {
+      type: 'assignedTasks',
+      desktop: tasks?.AssignedTasks ?? 0,
+      fill: 'var(--color-assignedTasks)',
+    },
+  ];
   useEffect(() => {
     const fetchTasksCount = async () => {
       try {
@@ -86,21 +109,23 @@ const TaskSummaryPage = () => {
               <CountLabel
                 lineHeight={'normal'}
                 label={'Unassigned Tasks'}
-                count={tasks.UnassignedTasks ?? 0}
+                count={tasks?.UnassignedTasks ?? 0}
                 align="start"
                 isList={true}
                 listOpacity={70}
                 countSize="text-7xl"
+                squareColor={chartConfig.unassignedTasks.color}
               />
               <CountLabel
                 lineHeight={'normal'}
                 label={'Assigned Tasks'}
-                count={tasks.AssignedTasks ?? 0}
+                count={tasks?.AssignedTasks ?? 0}
                 align="start"
                 isList={true}
                 listOpacity={80}
                 countSize="text-5xl"
                 labelSize="lg"
+                squareColor={chartConfig.assignedTasks.color}
               />
             </div>
           </div>
@@ -112,7 +137,7 @@ const TaskSummaryPage = () => {
             </p>
           </div>
         )}
-        <TaskAgentChart />
+        <TaskAgentChart chartConfig={chartConfig} desktopData={desktopData} />
       </Card>
     </div>
   );

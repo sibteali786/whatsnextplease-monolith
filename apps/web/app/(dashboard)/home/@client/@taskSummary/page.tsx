@@ -9,7 +9,25 @@ import { taskApiClient } from '@/utils/taskApi';
 import { Roles, TaskStatusEnum } from '@prisma/client';
 import { CircleX, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
+import { ChartConfig } from '@/components/ui/chart';
+const chartConfig = {
+  progress: {
+    label: 'In-Progress',
+    color: 'hsl(var(--chart-1))',
+  },
+  completed: {
+    label: 'Completed',
+    color: 'hsl(var(--chart-2))',
+  },
+  overdue: {
+    label: 'Overdue',
+    color: 'hsl(var(--chart-3))',
+  },
+  new: {
+    label: 'New',
+    color: 'hsl(var(--chart-4))',
+  },
+} satisfies ChartConfig;
 interface TaskStatusCounts {
   IN_PROGRESS?: number;
   COMPLETED?: number;
@@ -31,6 +49,29 @@ const TaskSummaryPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const desktopData = [
+    {
+      type: 'progress',
+      desktop: tasksWithStatus?.IN_PROGRESS ?? 0,
+      fill: 'var(--color-progress)',
+    },
+    {
+      type: 'completed',
+      desktop: tasksWithStatus?.COMPLETED ?? 0,
+      fill: 'var(--color-completed)',
+    },
+    {
+      type: 'overdue',
+      desktop: tasksWithStatus?.OVERDUE ?? 0,
+
+      fill: 'var(--color-overdue)',
+    },
+    {
+      type: 'new',
+      desktop: tasksWithStatus?.NEW ?? 0,
+      fill: 'var(--color-new)',
+    },
+  ];
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -134,6 +175,7 @@ const TaskSummaryPage = () => {
               isList={true}
               listOpacity={70}
               countSize="text-7xl"
+              squareColor={chartConfig.progress.color}
             />
             <CountLabel
               lineHeight={'normal'}
@@ -144,6 +186,7 @@ const TaskSummaryPage = () => {
               listOpacity={80}
               countSize="text-5xl"
               labelSize="lg"
+              squareColor={chartConfig.completed.color}
             />
             <CountLabel
               lineHeight={'normal'}
@@ -152,9 +195,9 @@ const TaskSummaryPage = () => {
               align="start"
               isList={true}
               listOpacity={80}
-              countSize="text-3xl"
+              countSize="text-4xl"
               labelSize="lg"
-              countColor="red-500"
+              squareColor={chartConfig.overdue.color}
             />
             <CountLabel
               lineHeight={'normal'}
@@ -165,10 +208,11 @@ const TaskSummaryPage = () => {
               listOpacity={30}
               countSize="text-3xl"
               labelSize="lg"
+              squareColor={chartConfig.new.color}
             />
           </div>
         </div>
-        <TaskAgentChart />
+        <TaskAgentChart chartConfig={chartConfig} desktopData={desktopData} />
       </Card>
     </div>
   );
