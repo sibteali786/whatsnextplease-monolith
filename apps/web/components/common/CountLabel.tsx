@@ -1,4 +1,4 @@
-import { Square } from "lucide-react";
+import { Square } from 'lucide-react';
 
 interface CountLabelProps {
   count: number;
@@ -10,17 +10,19 @@ interface CountLabelProps {
   align?: string;
   labelSize?: string;
   countColor?: string;
+  squareColor?: string;
 }
 export const CountLabel: React.FC<CountLabelProps> = ({
   count,
   label,
   isList = false,
-  lineHeight = "normal",
+  lineHeight = 'normal',
   listOpacity,
-  countSize = "2xl",
-  align = "end",
-  labelSize = "2xl",
-  countColor = "primary",
+  countSize = '2xl',
+  align = 'end',
+  labelSize = '2xl',
+  countColor = 'primary',
+  squareColor = 'primary',
 }) => {
   return (
     <>
@@ -30,12 +32,11 @@ export const CountLabel: React.FC<CountLabelProps> = ({
             className={`text-primary fill-primary opacity-${listOpacity} relative top-[0.6rem]`}
             width={10}
             height={10}
+            style={{ color: squareColor, fill: squareColor }}
           />
           <div className={`flex flex-col items-${align}`}>
             <h2 className={`text-${labelSize} font-semibold `}>{label}</h2>
-            <div
-              className={`${countSize} font-extrabold text-${countColor} leading-${lineHeight}`}
-            >
+            <div className={`${countSize} font-extrabold text-${countColor} leading-${lineHeight}`}>
               {count > 9 || count == 0 ? count : `0${count}`}
             </div>
           </div>
@@ -43,9 +44,7 @@ export const CountLabel: React.FC<CountLabelProps> = ({
       ) : (
         <div className={`flex flex-col items-${align}`}>
           <h2 className={`text-${labelSize} font-semibold `}>{label}</h2>
-          <div
-            className={`${countSize} text-${countColor} font-extrabold leading-${lineHeight}`}
-          >
+          <div className={`${countSize} text-${countColor} font-extrabold leading-${lineHeight}`}>
             {count > 9 || count === 0 ? count : `0${count}`}
           </div>
         </div>

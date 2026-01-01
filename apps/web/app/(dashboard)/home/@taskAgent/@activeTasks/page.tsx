@@ -5,6 +5,25 @@ import { CountLabel } from '@/components/common/CountLabel';
 import { TaskAgentChart } from '@/components/tasks/ChartTasks';
 import { Roles } from '@prisma/client';
 import { getTasksCountByStatus } from '@/db/repositories/tasks/getTasksCountByStatus';
+import { ChartConfig } from '@/components/ui/chart';
+const chartConfig = {
+  progress: {
+    label: 'In-Progress',
+    color: 'hsl(var(--chart-1))',
+  },
+  completed: {
+    label: 'Completed',
+    color: 'hsl(var(--chart-2))',
+  },
+  overdue: {
+    label: 'Overdue',
+    color: 'hsl(var(--chart-3))',
+  },
+  new: {
+    label: 'New',
+    color: 'hsl(var(--chart-4))',
+  },
+} satisfies ChartConfig;
 
 const ActiveTasks = async () => {
   const user = await getCurrentUser();
@@ -12,6 +31,31 @@ const ActiveTasks = async () => {
     return null;
   }
   const { tasksWithStatus, success } = await getTasksCountByStatus(user.id, Roles.TASK_AGENT);
+
+  const desktopData = [
+    {
+      type: 'progress',
+      desktop: tasksWithStatus?.IN_PROGRESS ?? 0,
+      fill: 'var(--color-progress)',
+    },
+    {
+      type: 'completed',
+      desktop: tasksWithStatus?.COMPLETED ?? 0,
+      fill: 'var(--color-completed)',
+    },
+    {
+      type: 'overdue',
+      desktop: tasksWithStatus?.OVERDUE ?? 0,
+
+      fill: 'var(--color-overdue)',
+    },
+    {
+      type: 'new',
+      desktop: tasksWithStatus?.NEW ?? 0,
+      fill: 'var(--color-new)',
+    },
+  ];
+
   return (
     <div className="col-span-2">
       <Card className="p-6 rounded-2xl shadow-m flex">
@@ -25,6 +69,7 @@ const ActiveTasks = async () => {
               isList={true}
               listOpacity={70}
               countSize="text-7xl"
+              squareColor={chartConfig.progress.color}
             />
             <CountLabel
               lineHeight={'normal'}
@@ -35,6 +80,7 @@ const ActiveTasks = async () => {
               listOpacity={80}
               countSize="text-5xl"
               labelSize="lg"
+              squareColor={chartConfig.completed.color}
             />
             <CountLabel
               lineHeight={'normal'}
@@ -43,8 +89,9 @@ const ActiveTasks = async () => {
               align="start"
               isList={true}
               listOpacity={30}
-              countSize="text-5xl"
+              countSize="text-4xl"
               labelSize="lg"
+              squareColor={chartConfig.overdue.color}
             />
             <CountLabel
               lineHeight={'normal'}
@@ -55,6 +102,7 @@ const ActiveTasks = async () => {
               listOpacity={30}
               countSize="text-3xl"
               labelSize="lg"
+              squareColor={chartConfig.new.color}
             />
           </div>
         ) : (
@@ -63,7 +111,7 @@ const ActiveTasks = async () => {
             <p className="text-destructive text-lg text-center">Something is wrong at backend </p>
           </div>
         )}
-        <TaskAgentChart />
+        <TaskAgentChart chartConfig={chartConfig} desktopData={desktopData} />
       </Card>
     </div>
   );
