@@ -163,56 +163,61 @@ export default function TableFilter({
             {role !== Roles.CLIENT && !userId && <SelectItem value="my-tasks">My Tasks</SelectItem>}
             <SelectItem value="null">Unassigned</SelectItem>
             <SelectItem value="not-null">Assigned</SelectItem>
-            <>
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
-                Specific Users
-              </div>
-              <div className="relative w-[200px]">
-                <Input
-                  value={searchQuery}
-                  placeholder="Search users"
-                  className="pl-10 border-6 border-b-2 rounded-none 
-             focus:outline-none focus:ring-0 focus:border-b-2 focus:border-gray-300 focus-visible:ring-0 "
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={e => {
-                    e.stopPropagation();
-                  }}
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4" />
-              </div>
-            </>
-            {loadingUsers ? (
-              <SelectItem value="loading" disabled>
-                Loading users...
-              </SelectItem>
-            ) : filteredUsers.length > 0 ? (
+            {role !== Roles.CLIENT && role !== Roles.TASK_AGENT && (
               <>
-                {filteredUsers.map(user => (
-                  <SelectItem key={user.id} value={user.id} className="pl-4">
-                    <div className="flex flex-row items-start gap-2">
-                      <Avatar className="h-6 w-6 rounded-lg">
-                        <AvatarImage
-                          src={user.avatarUrl || 'https://github.com/shadcn.png'}
-                          alt={user.name ?? 'avatar'}
-                          className="rounded-full"
-                        />
-                        <AvatarFallback className="rounded-full text-xs">
-                          {user.name}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </>
-            ) : (
-              <SelectItem value="no-results" disabled>
-                <div className="flex items-center gap-2">
-                  <UserRoundX className="h-4 w-4" />
-                  No users found
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
+                  Specific Users
                 </div>
-              </SelectItem>
+                <div className="relative w-[200px]">
+                  <Input
+                    value={searchQuery}
+                    placeholder="Search users"
+                    className="pl-10 border-6 border-b-2 rounded-none 
+             focus:outline-none focus:ring-0 focus:border-b-2 focus:border-gray-300 focus-visible:ring-0 "
+                    onChange={e => setSearchQuery(e.target.value)}
+                    onKeyDown={e => {
+                      e.stopPropagation();
+                    }}
+                  />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4" />
+                </div>
+              </>
             )}
+
+            {role !== Roles.CLIENT &&
+              role !== Roles.TASK_AGENT &&
+              (loadingUsers ? (
+                <SelectItem value="loading" disabled>
+                  Loading users...
+                </SelectItem>
+              ) : filteredUsers.length > 0 ? (
+                <>
+                  {filteredUsers.map(user => (
+                    <SelectItem key={user.id} value={user.id} className="pl-4">
+                      <div className="flex flex-row items-start gap-2">
+                        <Avatar className="h-6 w-6 rounded-lg">
+                          <AvatarImage
+                            src={user.avatarUrl || 'https://github.com/shadcn.png'}
+                            alt={user.name ?? 'avatar'}
+                            className="rounded-full"
+                          />
+                          <AvatarFallback className="rounded-full text-xs">
+                            {user.name}
+                          </AvatarFallback>
+                        </Avatar>
+                        {user.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </>
+              ) : (
+                <SelectItem value="no-results" disabled>
+                  <div className="flex items-center gap-2">
+                    <UserRoundX className="h-4 w-4" />
+                    No users found
+                  </div>
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       }
