@@ -63,11 +63,11 @@ export function SearchableGlobalNavigator({ role }: { role?: SearchableRoles }) 
 
       try {
         const response = await tasksByType(
-          'all',
           reset ? null : cursor, // cursor for pagination
           5, // page size
           query, // search term
-          DurationEnum.ALL
+          DurationEnum.ALL,
+          'all'
         );
 
         if (response.success) {

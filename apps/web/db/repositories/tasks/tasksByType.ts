@@ -9,7 +9,6 @@ import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 type GetTaskSchema = z.infer<typeof getTasksOutputSchema>;
 
 export const tasksByType = async (
-  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
   cursor: string | null,
   pageSize: number,
   searchTerm: string,
@@ -17,7 +16,7 @@ export const tasksByType = async (
   userId?: string,
   status?: TaskStatusEnum | TaskStatusEnum[],
   priority?: TaskPriorityEnum | TaskPriorityEnum[],
-  assignedToFilter?: string,
+  assignedToFilter?: string
 ): Promise<GetTaskSchema> => {
   try {
     const queryParams: any = {
@@ -27,29 +26,27 @@ export const tasksByType = async (
       duration,
     };
 
-	if (assignedToFilter) {
-      // Explicit assignedTo filter takes precedence over type
-      if (assignedToFilter === 'null') {
-        queryParams.assignedToId = 'null';
-      } else if (assignedToFilter === 'not-null') {
-        queryParams.assignedToId = 'not-null';
-      } else if (assignedToFilter === 'my-tasks') {
-        queryParams.assignedToId = userId;
-      } else if (assignedToFilter !== 'all') {
-        queryParams.assignedToId = assignedToFilter; // Specific user ID
-      }
-      // If 'all', don't add assignedToId
-    } else {
-      // Fall back to type-based logic (backward compatibility)
-      if (type === 'assigned') {
+    // Explicit assignedTo filter takes precedence over type
+    if (assignedToFilter === 'null') {
+      queryParams.assignedToId = 'null';
+    } else if (assignedToFilter === 'not-null') {
+      queryParams.assignedToId = 'not-null';
+    } else if (assignedToFilter === 'my-tasks') {
+      queryParams.assignedToId = userId;
+    } else if (assignedToFilter !== 'all') {
+      queryParams.assignedToId = assignedToFilter; // Specific user ID
+    }
+    // If 'all', don't add assignedToId
+
+    // Fall back to type-based logic (backward compatibility)
+    /*      if (type === 'assigned') {
         queryParams.assignedToId = 'not-null';
       } else if (type === 'unassigned') {
         queryParams.assignedToId = 'null';
       } else if (type === 'my-tasks') {
         queryParams.assignedToId = userId;
       }
-      // If type === 'all', don't add assignedToId
-    }
+     */
 
     // Only add 'status' if it is provided
     if (status && Array.isArray(status)) {

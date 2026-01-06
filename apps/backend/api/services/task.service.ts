@@ -418,6 +418,7 @@ export class TaskService {
     }
 
     const whereCondition = userId && role ? getTaskFilterCondition(userId, role) : {};
+
     const statistics = await this.taskRepository.getTaskStatistics(whereCondition);
 
     return {
@@ -882,9 +883,10 @@ export class TaskService {
         Roles.TERRITORY_MANAGER,
       ] as Roles[]
     ).includes(currentUser?.role?.name as Roles);
-
+    const normalizedAssignedToId =
+      assignedToId && assignedToId.trim() !== '' ? assignedToId : undefined;
     const isAssignmentChanging =
-      assignedToId !== undefined && assignedToId !== originalTask.assignedToId;
+      normalizedAssignedToId !== undefined && normalizedAssignedToId !== originalTask.assignedToId;
     const isClientAssignmentChanging =
       assignedToClientId !== undefined && assignedToClientId !== originalTask.associatedClientId;
 

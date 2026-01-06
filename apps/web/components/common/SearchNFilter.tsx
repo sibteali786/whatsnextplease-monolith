@@ -20,11 +20,13 @@ export const SearchNFilter = ({
   onSearch,
   role,
   statusFilter,
+  userId,
 }: {
   filterList?: DurationEnumList;
   onSearch: (term: string, duration: DurationEnum) => void; // Updated to include duration
   role?: Roles;
   statusFilter?: TaskStatusEnum[];
+  userId?: string;
 }) => {
   const [term, setTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL); // New state for duration
@@ -76,7 +78,7 @@ export const SearchNFilter = ({
           </SelectContent>
         </Select>
       )}
-      <TableFilter role={role} statusFilter={statusFilter} />
+      <TableFilter role={role} statusFilter={statusFilter} userId={userId} />
     </div>
   );
 };

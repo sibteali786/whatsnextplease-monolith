@@ -145,7 +145,6 @@ export const TaskSuperVisorList = ({
         : [];
 
       const response = await tasksByType(
-        typeFilter ?? 'unassigned',
         cursor,
         pageSize,
         searchTerm,
@@ -156,7 +155,6 @@ export const TaskSuperVisorList = ({
         assignedToFilter
       );
       const responseIds = await taskIdsByType(
-        typeFilter ?? 'unassigned',
         searchTerm,
         duration,
         userId,

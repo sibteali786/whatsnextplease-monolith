@@ -34,18 +34,16 @@ class TaskApiServerClient {
     };
   }
 
-  async getTasksByUserId(
-    userId: string,
-    params: {
-      cursor?: string;
-      pageSize?: number;
-      search?: string;
-      duration?: DurationEnum;
-      status?: TaskStatusEnum[];
-      priority?: TaskPriorityEnum[];
-      context: USER_CREATED_TASKS_CONTEXT;
-    }
-  ) {
+  async getTasksByUserId(params: {
+    userId?: string;
+    cursor?: string;
+    pageSize?: number;
+    search?: string;
+    duration?: DurationEnum;
+    status?: TaskStatusEnum[];
+    priority?: TaskPriorityEnum[];
+    context: USER_CREATED_TASKS_CONTEXT;
+  }) {
     const searchParams = new URLSearchParams();
 
     Object.entries(params).forEach(([key, value]) => {

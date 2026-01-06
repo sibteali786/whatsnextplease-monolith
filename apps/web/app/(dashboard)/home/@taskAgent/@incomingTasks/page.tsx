@@ -36,7 +36,16 @@ const IncomingTasksPage = () => {
       try {
         const user = await getCurrentUser();
         if (user?.role?.name === Roles.TASK_AGENT) {
-          const response = await tasksByType('my-tasks', null, 5, '', DurationEnum.ALL, user.id);
+          const response = await tasksByType(
+            null,
+            5,
+            '',
+            DurationEnum.ALL,
+            user.id,
+            undefined,
+            undefined,
+            'my-tasks'
+          );
 
           if (response.success) {
             setTasks(response.tasks || []);
