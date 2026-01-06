@@ -19,6 +19,7 @@ import { passwordResetRoutes } from './routes/passwordReset.routes';
 import { chatRoutes } from './routes/chat.routes';
 import { serialNumberRoutes } from './routes/serialNumber.routes';
 import { taskLinkRoutes } from './routes/taskLink.routes';
+import { testAuthRoutes } from './routes/test-auth-routes';
 
 export async function createServer() {
   const app = express();
@@ -82,6 +83,7 @@ export async function createServer() {
   app.use('/task-sequences', serialNumberRoutes);
   app.use('/taskLinks', taskLinkRoutes);
   app.use('/chat', chatRoutes);
+  app.use('/api/test-auth', testAuthRoutes);
   app.use('/', commentRoutes);
   // Health check route
   app.get('/ping', (req, res) => {

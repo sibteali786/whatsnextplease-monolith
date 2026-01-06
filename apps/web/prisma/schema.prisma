@@ -43,7 +43,8 @@ model User {
     lastName             String
     username             String                   @unique
     email                String                   @unique
-    passwordHash         String
+    passwordHash         String? // make optional since we are moving into cognito sub
+    cognitoSub           String?                  @unique
     country              String?
     phone                String?
     address              String?
@@ -93,7 +94,8 @@ model Client {
     email                String                   @unique
     username             String                   @unique
     bio                  String?
-    passwordHash         String
+    passwordHash         String? // Make optional for Cognito users
+    cognitoSub           String?                  @unique
     country              String?                  @default("US")
     companyName          String
     contactName          String?
@@ -255,12 +257,12 @@ model Task {
     taskLinks          TaskLink[]
 
     @@index([serialNumber])
-	// filter performance
-	@@index([statusId, priorityId])
-	@@index([taskCategoryId, assignedToId])
-	@@index([assignedToId, statusId])
-	@@index([dueDate, statusId])
-	@@index([createdAt])
+    // filter performance
+    @@index([statusId, priorityId])
+    @@index([taskCategoryId, assignedToId])
+    @@index([assignedToId, statusId])
+    @@index([dueDate, statusId])
+    @@index([createdAt])
 }
 
 // Enum to distinguish between User and Client as the creator

@@ -41,6 +41,20 @@ const envSchema = z.object({
     .default(
       "['http://localhost:3000','http://localhost:5000','https://api.whatnextplease.com','https://api-staging.whatnextplease.com','https://whatnextplease.com','https://app.whatnextplease.com']"
     ),
+
+  // Add Authentication Configuration
+  AUTH_PROVIDER: z.enum(['cognito', 'keycloak']).default('keycloak'),
+
+  // Cognito (optional for local, required for staging/prod)
+  COGNITO_USER_POOL_ID: z.string().optional(),
+  COGNITO_CLIENT_ID: z.string().optional(),
+  AWS_REGION: z.string().default('us-east-1'),
+  COGNITO_DOMAIN: z.string().optional(),
+
+  // Keycloak (optional for staging/prod, required for local)
+  KEYCLOAK_URL: z.string().url().optional(),
+  KEYCLOAK_REALM: z.string().optional(),
+  KEYCLOAK_CLIENT_ID: z.string().optional(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;

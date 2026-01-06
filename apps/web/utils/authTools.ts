@@ -138,6 +138,15 @@ export const signin = async ({ username, password }: { username: string; passwor
     });
     if (matchUser) {
       // If a user is found, validate their password
+	  if (!matchUser.passwordHash) {
+      return {
+        error: {
+          type: 'InvalidPassword',
+          message: 'Incorrect password provided',
+        },
+        token: null,
+      };
+    }
       const isValid = await comparePwd(password, matchUser.passwordHash);
       if (!isValid) {
         return {
@@ -187,6 +196,15 @@ export const signin = async ({ username, password }: { username: string; passwor
     }
 
     // Validate client password
+    if (!matchClient.passwordHash) {
+      return {
+        error: {
+          type: 'InvalidPassword',
+          message: 'Incorrect password provided',
+        },
+        token: null,
+      };
+    }
     const isValid = await comparePwd(password, matchClient.passwordHash);
     if (!isValid) {
       return {
