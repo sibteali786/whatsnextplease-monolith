@@ -19,12 +19,12 @@
     "db:migrate-all:dev": "turbo run db:migrate:dev -- --"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.6.1",
-    "@commitlint/config-conventional": "^19.6.0",
-    "husky": "^9.1.6",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.2.5",
-    "turbo": "^2.3.3",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.7.4",
+    "turbo": "^2.7.3",
     "typescript": "5.5.4"
   },
   "packageManager": "pnpm@9.0.0",
@@ -32,7 +32,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "lint-staged": {
     "apps/web/**/*.{js,jsx,ts,tsx}": [

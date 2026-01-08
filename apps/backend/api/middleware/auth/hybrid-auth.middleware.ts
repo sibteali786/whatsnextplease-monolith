@@ -1,7 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest, UserJwtPayload } from './types';
 import { logger } from '../../utils/logger';
-import { getAuthService } from '@hillcountrycoder/auth-client';
+import { getAuthService } from '@HillCountryCoder/auth-client';
 import jwt from 'jsonwebtoken';
 import { Roles } from '@prisma/client';
 import prisma from '../../config/db';
@@ -43,8 +43,9 @@ export const verifyTokenHybrid = async (
 
         let dbEntity: any = null;
         let userRole: Roles | null = null;
-
+        console.log('Cognito user groups:', cognitoUser.groups);
         if (isInternalUser) {
+          console.log('Identified as internal user');
           dbEntity = await prisma.user.findUnique({
             where: { cognitoSub: cognitoUser.sub },
             include: { role: true },
@@ -57,6 +58,7 @@ export const verifyTokenHybrid = async (
           });
           userRole = Roles.CLIENT;
         }
+        console.log('Database entity found:', dbEntity);
 
         if (dbEntity) {
           req.user = {
@@ -72,15 +74,20 @@ export const verifyTokenHybrid = async (
           return next();
         }
       }
+      if (cognitoResult.error) {
+        throw new Error(cognitoResult.error);
+      }
     } catch (cognitoError) {
+      console.log('Cognito validation error:', cognitoError);
       // Cognito validation failed, continue to legacy JWT
       logger.debug('Cognito validation failed, trying legacy JWT');
     }
 
     // STRATEGY 2: Fallback to legacy JWT authentication
     try {
+      console.log('Trying legacy JWT authentication', token, SECRET);
       const decodedUser = jwt.verify(token, SECRET) as UserJwtPayload;
-
+      console.log('Legacy JWT decoded user:', decodedUser);
       // Verify user still exists in database
       if (decodedUser?.role !== Roles.CLIENT) {
         const user = await prisma.user.findUnique({
@@ -116,12 +123,14 @@ export const verifyTokenHybrid = async (
           return next();
         }
       }
+      console.log('User not found in database for legacy JWT:', decodedUser);
 
       // User not found in either table
       logger.warn(`User ${decodedUser.id} not found in database`);
       res.status(404).json({ message: 'User not found' });
       return;
     } catch (jwtError) {
+      console.log('Legacy JWT validation error:', jwtError);
       logger.warn('Legacy JWT validation failed');
     }
 

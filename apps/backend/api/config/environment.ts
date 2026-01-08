@@ -55,6 +55,8 @@ const envSchema = z.object({
   KEYCLOAK_URL: z.string().url().optional(),
   KEYCLOAK_REALM: z.string().optional(),
   KEYCLOAK_CLIENT_ID: z.string().optional(),
+  KEYCLOAK_ADMIN_USERNAME: z.string().optional(),
+  KEYCLOAK_ADMIN_PASSWORD: z.string().optional(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;
