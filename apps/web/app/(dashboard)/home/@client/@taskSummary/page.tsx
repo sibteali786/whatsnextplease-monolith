@@ -88,7 +88,6 @@ const TaskSummaryPage = () => {
 
         // Get task statistics using the new API client
         const response = await taskApiClient.getTaskStatistics(currentUser.id);
-        console.log('Task statistics response:', response);
         // In your useEffect, replace the transformation logic with this:
         if (response.success && response.statistics) {
           const statusCounts: TaskStatusCounts = {};
@@ -112,7 +111,6 @@ const TaskSummaryPage = () => {
             );
           }
 
-          console.log('Processed status counts:', statusCounts);
           setTasksWithStatus(statusCounts);
         } else {
           setError(response.message || 'Failed to fetch task statistics');

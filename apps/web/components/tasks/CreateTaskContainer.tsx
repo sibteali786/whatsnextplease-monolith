@@ -155,10 +155,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
             if (response.ok) {
               const responseData = await response.json();
-              console.log(
-                `Task count response for ${user.firstName} ${user.lastName}:`,
-                responseData
-              );
 
               // Extract the active task count from the nested structure
               const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
@@ -185,15 +181,6 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
             };
           }
         })
-      );
-
-      // Log the final result for debugging
-      console.log(
-        'Users with task counts:',
-        usersWithCounts.map(u => ({
-          name: `${u.firstName} ${u.lastName}`,
-          taskCount: u.currentTasksCount,
-        }))
       );
 
       return usersWithCounts;

@@ -123,7 +123,6 @@ export const TaskSuperVisorList = ({
   };
 
   const fetchNormalTasks = useCallback(async () => {
-    console.log('fetchTasks called with hasAdvancedFilters:', hasAdvancedFilters);
     setLoading(true);
     setError(null);
     try {
