@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireRole, verifyToken } from '../middleware/auth';
+import { requireRole, verifyTokenHybrid } from '../middleware/auth';
 import multer from 'multer';
 import { ClientController } from '../controller/client.controller';
 import { Roles } from '@prisma/client';
@@ -16,17 +16,17 @@ const upload = multer({
 
 router.patch(
   '/profilePicture',
-  verifyToken,
+  verifyTokenHybrid,
   upload.single('file'),
   controller.updateProfilePicture
 );
-router.get('/profile', verifyToken, controller.getClientProfile);
-router.patch('/profile', verifyToken, controller.updateProfile);
+router.get('/profile', verifyTokenHybrid, controller.getClientProfile);
+router.patch('/profile', verifyTokenHybrid, controller.updateProfile);
 router.delete(
   '/:id',
-  verifyToken,
+  verifyTokenHybrid,
   requireRole([Roles.SUPER_USER, Roles.TASK_SUPERVISOR]),
   controller.deleteClient
 );
-router.patch('/:id', verifyToken, controller.updateClientById);
+router.patch('/:id', verifyTokenHybrid, controller.updateClientById);
 export const clientRoutes = router;

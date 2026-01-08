@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { SkillCategoryController } from '../controller/skillCategory.controller';
-import { verifyToken } from '../middleware/auth';
+import { verifyTokenHybrid } from '../middleware/auth';
 
 const router = Router();
 const controller = new SkillCategoryController();
 
-router.get('/all', verifyToken, controller.getAllSkillCategories);
-router.post('/create', verifyToken, controller.createSkillCategory);
-router.put('/edit', verifyToken, controller.editSkillCategory);
-router.get('/search', verifyToken, controller.searchSkillCategories);
+router.get('/all', verifyTokenHybrid, controller.getAllSkillCategories);
+router.post('/create', verifyTokenHybrid, controller.createSkillCategory);
+router.put('/edit', verifyTokenHybrid, controller.editSkillCategory);
+router.get('/search', verifyTokenHybrid, controller.searchSkillCategories);
 export const skillCategoryRoutes = router;

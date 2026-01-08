@@ -43,7 +43,6 @@ export const verifyTokenHybrid = async (
 
         let dbEntity: any = null;
         let userRole: Roles | null = null;
-        console.log('Cognito user groups:', cognitoUser.groups);
         if (isInternalUser) {
           console.log('Identified as internal user');
           dbEntity = await prisma.user.findUnique({
