@@ -60,7 +60,9 @@ export const getGeneralTaskFilter = (currentUserId: string, currentUserRole: Rol
 
   // Clients see tasks they created
   if (currentUserRole === Roles.CLIENT) {
-    return { createdByClientId: currentUserId };
+    return {
+      OR: [{ createdByClientId: currentUserId }, { associatedClientId: currentUserId }],
+    };
   }
 
   // Super Users can see all tasks

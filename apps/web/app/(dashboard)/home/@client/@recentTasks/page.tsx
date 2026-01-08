@@ -26,7 +26,8 @@ const RecentTasksPage = async () => {
   if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
-  const { tasks }: TaskByUserIdResponse = await taskApiServer.getTasksByUserId(user.id, {
+  const { tasks }: TaskByUserIdResponse = await taskApiServer.getTasksByUserId({
+    userId: user.id,
     pageSize: 5,
     search: '',
     duration: DurationEnum.ALL,

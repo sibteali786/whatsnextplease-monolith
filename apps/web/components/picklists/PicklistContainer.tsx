@@ -120,7 +120,6 @@ export const PicklistContainer = ({
       });
       const createdSkill: Skill | ErrorResponse = await response.json();
       if ('code' in createdSkill) {
-        console.log('Skill Created', createdSkill);
         throw new Error(createdSkill.message);
       }
       if (createdSkill) {

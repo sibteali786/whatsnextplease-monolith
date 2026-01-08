@@ -75,11 +75,10 @@ export const getAllClientIds = async () => {
 };
 
 export const getTaskIdsByClientId = async (
-  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
   searchTerm = '',
   duration: DurationEnum = DurationEnum.ALL,
-
-  clientId: string
+  clientId: string,
+  assignedToFilter?: string
 ) => {
   try {
     if (typeof clientId !== 'string' || clientId.trim().length === 0) {
@@ -92,8 +91,14 @@ export const getTaskIdsByClientId = async (
     // Get the appropriate filter condition based on role
     const whereCondition = getTaskFilterCondition(clientId, Roles.CLIENT);
     const dateFilter = getDateFilter(duration);
-    const assignedToId =
-      type === 'assigned' ? { not: null } : type === 'unassigned' ? null : undefined;
+
+    let assignedToFilterCondition: any = undefined;
+
+    if (assignedToFilter === 'null') {
+      assignedToFilterCondition = { assignedToId: null };
+    } else if (assignedToFilter === 'not-null') {
+      assignedToFilterCondition = { assignedToId: { not: null } };
+    }
     const searchFilter = searchTerm
       ? {
           OR: [
@@ -116,10 +121,10 @@ export const getTaskIdsByClientId = async (
     }
 
     // C. Assigned filter
-    if (assignedToId !== undefined) {
-      AND.push({ assignedToId });
-    }
 
+    if (assignedToFilterCondition) {
+      AND.push(assignedToFilterCondition);
+    }
     // D. Search
     if (searchFilter?.OR) {
       AND.push({ OR: searchFilter.OR });

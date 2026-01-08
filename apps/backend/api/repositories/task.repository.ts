@@ -364,12 +364,16 @@ export class TaskRepository {
 
         this.prisma.task.count({
           where: {
-            ...whereCondition,
-            OR: [
-              { status: { statusName: 'OVERDUE' } },
+            AND: [
+              whereCondition,
               {
-                dueDate: { lt: new Date() },
-                status: { statusName: { notIn: ['COMPLETED', 'REJECTED'] } },
+                OR: [
+                  { status: { statusName: 'OVERDUE' } },
+                  {
+                    dueDate: { lt: new Date() },
+                    status: { statusName: { notIn: ['COMPLETED', 'REJECTED'] } },
+                  },
+                ],
               },
             ],
           },

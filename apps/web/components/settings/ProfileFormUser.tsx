@@ -220,11 +220,9 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
   const onSubmit = async (data: UserProfileFormValues) => {
     try {
       if (!originalUser) return;
-      console.log(data);
       const trimmedData = trimWhitespace(data);
       // Track what's actually changed
       const changesInOriginalUser: Partial<z.infer<typeof profileData>> = {};
-      console.log(trimmedData);
       // Compare personal info
       if (trimmedData?.personalInfo) {
         if (trimmedData.personalInfo.bio !== originalUser.bio) {
