@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Column, ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown, Check, Link, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import { InlineDropdown } from '../common/InlineDropdown';
 import { updateTaskField } from '@/utils/tasks/taskInlineUpdates';
 import { TaskNotificationService } from '@/utils/notifications/taskNotifications';
 import { SerialNumberBadge } from '../tasks/SerialNumberBadge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 type TaskAssignees = {
   firstName: string;
@@ -36,7 +37,9 @@ export const generateUserTaskColumns = (
   deleteTask?: (taskId: string) => void,
   onTaskUpdate?: () => Promise<void>,
   taskCategories?: { id: string; categoryName: string }[],
-  role?: Roles
+  role?: Roles,
+  copiedTaskId?: string | null,
+  setCopiedTaskId?: React.Dispatch<React.SetStateAction<string | null>>
 ): ColumnDef<TaskTable>[] => {
   const canEditStatus = role !== Roles.CLIENT;
   const canEditPriority =
@@ -476,42 +479,75 @@ export const generateUserTaskColumns = (
         const task = row.original;
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={e => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(task.id);
-                }}
-              >
-                Copy Task ID
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={e => {
-                  e.stopPropagation(); // Prevents the row click event
-                  return onEditTask && onEditTask(task);
-                }}
-              >
-                Edit Task
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={async e => {
-                  e.stopPropagation();
-                  return deleteTask && deleteTask(task.id);
-                }}
-              >
-                Delete Task
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={e => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(task.id);
+                  }}
+                >
+                  Copy Task ID
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={e => {
+                    e.stopPropagation(); // Prevents the row click event
+                    return onEditTask && onEditTask(task);
+                  }}
+                >
+                  Edit Task
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async e => {
+                    e.stopPropagation();
+                    return deleteTask && deleteTask(task.id);
+                  }}
+                >
+                  Delete Task
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={e => {
+                      e.stopPropagation();
+
+                      const taskUrl = `${window.location.origin}/taskOfferings/${task.id}`;
+                      navigator.clipboard.writeText(taskUrl);
+
+                      setCopiedTaskId?.(task.id);
+                      setTimeout(() => setCopiedTaskId?.(null), 1200);
+                    }}
+                  >
+                    <span className="sr-only">Copy task link</span>
+
+                    {copiedTaskId === task.id ? (
+                      <Check className="h-4 w-4 text-green-500 animate-scale-in" />
+                    ) : (
+                      <Link className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+
+                <TooltipContent>
+                  <p>{copiedTaskId === task.id ? 'Copied!' : 'Copy Task Link'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         );
       },
     },

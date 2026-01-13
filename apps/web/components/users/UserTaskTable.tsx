@@ -85,6 +85,8 @@ export function UserTasksTable({
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
   const [users, setUsers] = useState<UserDropdownMenuContent[]>([]);
   const { setSelectedTask, selectedTask } = useSelectedTask();
+  const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
+
   const { toast } = useToast();
 
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
@@ -257,7 +259,9 @@ export function UserTasksTable({
       if (onTaskUpdate) await onTaskUpdate();
     },
     taskCategories,
-    role
+    role,
+    copiedTaskId,
+    setCopiedTaskId
   );
 
   const table = useReactTable({
