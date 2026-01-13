@@ -1,10 +1,10 @@
 'use server';
-import { signin, signup } from '@/utils/authTools';
 import { COOKIE_NAME } from '@/utils/constant';
 import { registerSchema, signInSchema } from '@/utils/validationSchemas';
 import { Roles } from '@prisma/client';
 import { cookies } from 'next/headers';
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export const registerUser = async (formData: FormData) => {
   try {
     // Extract role first to determine dynamic fields
@@ -32,48 +32,107 @@ export const registerUser = async (formData: FormData) => {
     const validatedData = registerSchema.parse(data);
 
     // Perform the signup operation
-    const { token, error, message, user, emailBlocked } = await signup(validatedData);
+    const response = await fetch(`${BACKEND_URL}/auth/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(validatedData),
+    });
 
-    if (error) {
-      console.error(error);
-      return { success: false, message: error.message };
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      console.error('Signup error:', result);
+      return {
+        success: false,
+        message: result.message || 'Failed to create account',
+      };
     }
 
-    // Set authentication token
-    cookies().set(COOKIE_NAME, token);
+    // Set authentication token in cookie
+    if (result.token) {
+      cookies().set(COOKIE_NAME, result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 12, // 12 hours
+      });
+    }
 
-    return { success: true, message, user, emailBlocked };
+    return {
+      success: true,
+      message: result.message || 'Account created successfully',
+      user: result.user,
+      client: result.client,
+      emailBlocked: result.emailBlocked,
+    };
   } catch (e) {
-    console.error(e);
+    console.error('Signup error:', e);
     return {
       success: false,
-      message: 'An unexpected error occurred while signing you up',
+      message: e instanceof Error ? e.message : 'An unexpected error occurred while signing you up',
     };
   }
 };
 
 export const signinUser = async (formData: FormData) => {
-  const data = signInSchema.parse({
-    username: formData.get('username'),
-    password: formData.get('password'),
-  });
-
   try {
-    const { token, user, client, error, message } = await signin(data);
-    if (error) {
-      console.error(error);
-      return { success: false, message: error.message };
+    const data = signInSchema.parse({
+      username: formData.get('username'),
+      password: formData.get('password'),
+    });
+
+    // Call backend signin endpoint
+    const response = await fetch(`${BACKEND_URL}/auth/signin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      console.error('Signin error:', result);
+      return {
+        success: false,
+        message: result.message || 'Invalid username or password',
+      };
     }
-    cookies().set(COOKIE_NAME, token);
-    if (user) {
-      return { success: true, message, user };
+
+    // Set authentication token in cookie
+    if (result.token) {
+      cookies().set(COOKIE_NAME, result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 12, // 12 hours
+      });
     }
-    return { success: true, message, client };
+
+    // Check if user was migrated
+    let message = result.message || 'Logged in successfully';
+    if (result.migrated) {
+      message = 'Welcome back! Your account has been upgraded to our new system.';
+    } else if (result.usedLegacy) {
+      message = 'Logged in successfully (compatibility mode)';
+    }
+
+    return {
+      success: true,
+      message,
+      user: result.user,
+      client: result.client,
+      migrated: result.migrated || false,
+      usedLegacy: result.usedLegacy || false,
+    };
   } catch (e) {
-    console.error(e);
+    console.error('Signin error:', e);
     return {
       success: false,
-      message: 'An unexpected error occurred while signing you in',
+      message: e instanceof Error ? e.message : 'An unexpected error occurred while signing you in',
     };
   }
 };

@@ -279,6 +279,38 @@ export class AuthController {
       }
     }
   );
+
+  /**
+   * GET /auth/me
+   * Get current user or client info
+   */
+  me = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Missing authorization header' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const result = await authService.getCurrentEntityFromToken(token);
+
+      if (!result.success) {
+        return res.status(401).json({
+          success: false,
+          message: result.error || 'Invalid or expired token',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        user: result.user,
+        client: result.client,
+      });
+    } catch (error) {
+      logger.error('Current user error:', error);
+      next(error);
+    }
+  });
 }
 
 export const authController = new AuthController();

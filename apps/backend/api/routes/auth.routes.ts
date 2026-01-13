@@ -22,6 +22,9 @@ router.post('/resend-verification-by-email', authController.resendVerificationBy
 // POST /auth/send-verification-email (public) - Internal endpoint for sending verification
 router.post('/send-verification-email', authController.sendVerificationEmail);
 
+// GET /auth/me - Get current user (supports legacy JWT and IDP tokens)
+router.get('/me', authController.me);
+
 // ============================================
 // PROTECTED ROUTES (Authentication required)
 // ============================================

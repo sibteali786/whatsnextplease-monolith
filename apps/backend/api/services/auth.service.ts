@@ -404,6 +404,70 @@ export class AuthService {
   }
 
   /**
+   * Get current user or client entity from token
+   * Handles both legacy JWT and IDP tokens
+   */
+  async getCurrentEntityFromToken(token: string): Promise<{
+    success: boolean;
+    user?: any;
+    client?: any;
+    error?: string;
+  }> {
+    try {
+      let payload: any;
+      let entity: any = null;
+      let entityType: 'user' | 'client' | null = null;
+
+      // Try legacy JWT verification first
+      try {
+        payload = jwt.verify(token, process.env.SECRET!) as { id: string; username: string };
+        entity =
+          (await prisma.user.findUnique({
+            where: { id: payload.id, username: payload.username },
+            include: { role: true },
+          })) ||
+          (await prisma.client.findUnique({
+            where: { id: payload.id, username: payload.username },
+            include: { role: true },
+          }));
+        entityType = entity ? (entity.firstName !== undefined ? 'user' : 'client') : null;
+      } catch {
+        // Fallback: IDP token (decode only)
+        const decoded = jwt.decode(token) as any;
+        if (!decoded) return { success: false, error: 'Invalid token' };
+
+        const sub = decoded.sub || decoded['cognito:username'];
+        if (!sub) return { success: false, error: 'Invalid token payload' };
+
+        entity =
+          (await prisma.user.findUnique({
+            where: { cognitoSub: sub },
+            include: { role: true },
+          })) ||
+          (await prisma.client.findUnique({
+            where: { cognitoSub: sub },
+            include: { role: true },
+          }));
+        entityType = entity ? (entity.firstName !== undefined ? 'user' : 'client') : null;
+      }
+
+      if (!entity || !entityType) {
+        return { success: false, error: 'Invalid or expired token' };
+      }
+
+      const sanitized = this.sanitizeEntity(entity);
+      return {
+        success: true,
+        user: entityType === 'user' ? sanitized : undefined,
+        client: entityType === 'client' ? sanitized : undefined,
+      };
+    } catch (error) {
+      logger.error('getCurrentEntityFromToken error:', error);
+      return { success: false, error: 'Failed to get current user' };
+    }
+  }
+
+  /**
    * Remove sensitive fields from entity
    */
   private sanitizeEntity(entity: any) {
