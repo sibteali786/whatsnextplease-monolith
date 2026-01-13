@@ -28,7 +28,6 @@ export const verifyTokenHybrid = async (
     }
 
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
     if (!token || token === 'undefined') {
       logger.warn('Unauthorized Request - Invalid token format');
       return res.status(401).json({ message: 'No token provided' });
@@ -47,7 +46,6 @@ export const verifyTokenHybrid = async (
 
         let dbEntity: any = null;
         let userRole: Roles | null = null;
-
         if (isInternalUser) {
           dbEntity = await prisma.user.findUnique({
             where: { cognitoSub: cognitoUser.sub },
