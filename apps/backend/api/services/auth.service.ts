@@ -411,3 +411,5 @@ export class AuthService {
     return sanitized;
   }
 }
+
+export const authService = new AuthService();

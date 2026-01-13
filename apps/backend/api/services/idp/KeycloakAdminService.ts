@@ -33,7 +33,7 @@ export class KeycloakAdminService implements IIdpAdminService {
 
     const params = new URLSearchParams({
       grant_type: 'password',
-      client_Id: 'admin-cli',
+      client_id: 'admin-cli',
       username: this.adminUsername,
       password: this.adminPassword,
     });
@@ -43,7 +43,7 @@ export class KeycloakAdminService implements IIdpAdminService {
         `${this.keycloakUrl}/realms/master/protocol/openid-connect/token`,
         {
           method: 'POST',
-          headers: { 'Cotent-Type': 'application/x-www-form-urlencoded' },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: params.toString(),
         }
       );
@@ -58,7 +58,7 @@ export class KeycloakAdminService implements IIdpAdminService {
 
       return this.accessToken as string;
     } catch (error) {
-      logger.error('Failed to get admin token:', error);
+      logger.error(`Error getting Keycloak admin token: ${error}`);
       throw error;
     }
   }
@@ -92,7 +92,7 @@ export class KeycloakAdminService implements IIdpAdminService {
 
       if (!createUserResponse.ok) {
         const error = await createUserResponse.text();
-        logger.error('Failed to create Keycloak user:', error);
+        logger.error(`Failed to create Keycloak user: ${error}`);
         return { success: false, error: `Failed to create user: ${error}` };
       }
 
@@ -111,11 +111,11 @@ export class KeycloakAdminService implements IIdpAdminService {
 
       logger.info(`Created Keycloak user: ${request.username} (${userId})`);
       return {
-        success: false,
+        success: true,
         sub: userId,
       };
     } catch (error) {
-      logger.error('Keycloak createUser error:', error);
+      logger.error(`Keycloak createUser error: ${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

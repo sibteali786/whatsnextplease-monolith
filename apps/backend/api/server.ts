@@ -84,7 +84,7 @@ export async function createServer() {
   app.use('/taskLinks', taskLinkRoutes);
   app.use('/chat', chatRoutes);
   app.use('/', commentRoutes);
-  app.use('/api/auth', migrationRoutes);
+  app.use('/auth', migrationRoutes);
   // Health check route
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });
