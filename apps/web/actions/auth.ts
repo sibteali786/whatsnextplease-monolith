@@ -53,7 +53,7 @@ export const registerUser = async (formData: FormData) => {
     // Set authentication token in cookie
     if (result.token) {
       cookies().set(COOKIE_NAME, result.token, {
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 12, // 12 hours
@@ -105,7 +105,7 @@ export const signinUser = async (formData: FormData) => {
     // Set authentication token in cookie
     if (result.token) {
       cookies().set(COOKIE_NAME, result.token, {
-        httpOnly: true,
+        httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 12, // 12 hours
