@@ -35,7 +35,11 @@ export class TokenExchangeService {
         error: `Unknown AUTH_PROVIDER: ${provider}`,
       };
     } catch (error) {
-      logger.error('Token exchange error:', error);
+      // Add detailed error logging
+      logger.error(
+        `Keycloak token exchange failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Token exchange failed',
@@ -77,10 +81,21 @@ export class TokenExchangeService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error('Keycloak token error:', errorText);
+        let errorDetails = errorText;
+
+        // Try to parse JSON error response
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorDetails = JSON.stringify(errorJson, null, 2);
+        } catch {
+          // Not JSON, use raw text
+        }
+
+        logger.debug(`Keycloak token error:, ${response.status} - ${errorDetails}`);
+
         return {
           success: false,
-          error: 'Failed to obtain Keycloak token',
+          error: `Keycloak error (${response.status}): ${errorDetails}`,
         };
       }
 
@@ -93,7 +108,9 @@ export class TokenExchangeService {
         tokens,
       };
     } catch (error) {
-      logger.error('Keycloak token exchange failed:', error);
+      logger.debug(
+        `Keycloak token exchange failed: ${error instanceof Error ? error.message : String(error)}`
+      );
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Keycloak token exchange failed',

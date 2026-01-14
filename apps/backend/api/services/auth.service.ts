@@ -167,7 +167,7 @@ export class AuthService {
         username: entity.username,
         email: entity.email,
         firstName: entityType === 'user' ? entity.firstName : entity.contactName,
-        lastName: entityType === 'user' ? entity.lastName : '',
+        lastName: entityType === 'user' ? entity.lastName : entity.companyName,
         password,
         groups: idpGroups,
       });
@@ -215,7 +215,7 @@ export class AuthService {
         token: tokenResult.tokens!.access_token,
       };
     } catch (error) {
-      logger.error('Migration error:', error);
+      logger.error(`Migration error:${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Migration failed',
@@ -296,8 +296,8 @@ export class AuthService {
       const idpResult = await idpAdmin.createUser({
         username,
         email,
-        firstName: role === Roles.CLIENT ? contactName || companyName : firstName,
-        lastName: role === Roles.CLIENT ? '' : lastName,
+        firstName: role === Roles.CLIENT ? contactName || username : firstName,
+        lastName: role === Roles.CLIENT ? companyName : lastName,
         password,
         groups: idpGroups,
       });
