@@ -303,7 +303,6 @@ export class AuthService {
       });
 
       if (!idpResult.success) {
-        logger.error('IDP user creation failed:', idpResult.error);
         return {
           success: false,
           error: `Failed to create account: ${idpResult.error}`,

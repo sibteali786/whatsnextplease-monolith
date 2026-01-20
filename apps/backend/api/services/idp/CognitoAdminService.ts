@@ -51,7 +51,6 @@ export class CognitoAdminService implements IIdpAdminService {
       if (!sub) {
         return { success: false, error: 'Failed to get user sub' };
       }
-
       // 2. Set permanent password if provided
       if (request.password) {
         const passwordCommand = new AdminSetUserPasswordCommand({
@@ -74,7 +73,7 @@ export class CognitoAdminService implements IIdpAdminService {
         sub,
       };
     } catch (error) {
-      logger.error('Cognito createUser error:', error);
+      logger.error(`Cognito createUser error: ${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
