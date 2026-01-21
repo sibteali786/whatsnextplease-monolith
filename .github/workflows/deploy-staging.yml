@@ -152,6 +152,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=development
+          secrets: |
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up temporary files

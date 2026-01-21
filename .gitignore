@@ -40,3 +40,4 @@ apps/*/.env.*
 packages/*/.env
 packages/*/.env.*
 !packages/*/.env.example
+github_token.txt
