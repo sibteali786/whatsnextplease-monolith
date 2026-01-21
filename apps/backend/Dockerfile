@@ -1,9 +1,17 @@
 # Build Stage
 FROM node:20-alpine AS builder
+
+# Accept GitHub token as build argument
+ARG GITHUB_TOKEN
+
 # Install necessary build tools
 RUN apk add --no-cache libc6-compat python3 make g++ openssl openssl-dev
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /app
+
+# Create .npmrc with GitHub token for private package access
+RUN echo "@HillCountryCoder:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
 
 # Copy root package files for monorepo
 COPY pnpm-lock.yaml pnpm-workspace.yaml turbo.json package.json ./
@@ -16,6 +24,9 @@ COPY apps/backend/package.json ./apps/backend/
 
 # Install dependencies (include dev dependencies for build)
 RUN pnpm install --frozen-lockfile
+
+# Remove .npmrc after install for security
+RUN rm -f .npmrc
 
 # Copy source code for packages we need
 COPY packages/types/ ./packages/types/
@@ -41,10 +52,17 @@ RUN pnpm tsc
 
 # Production Stage
 FROM node:20-alpine AS runner
+
+# Accept GitHub token as build argument (needed for production dependencies)
+ARG GITHUB_TOKEN
 # Install build tools and runtime dependencies
 RUN apk add --no-cache curl openssl openssl-dev python3 make g++
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 WORKDIR /app
+
+# Create .npmrc with GitHub token for production dependencies
+RUN echo "@HillCountryCoder:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
 
 # Copy necessary files from builder
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
@@ -66,6 +84,8 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts && \
     cd apps/backend/node_modules/bcrypt && pnpm rebuild && cd ../.. && \
     pnpm prisma generate
 
+# Remove .npmrc after install for security
+RUN rm -f .npmrc
 # Add health check endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1

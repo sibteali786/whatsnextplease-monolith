@@ -151,21 +151,21 @@ export class WnpBackendStack extends cdk.Stack {
     // 🆕 SES SETUP - ADD THIS NEW SECTION HERE
     // ========================================
 
-    // 1. Create Email Identity for whatnextplease.com
+    // 1. Create Email Identity for whatsnextplease.com
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let emailIdentity: ses.IEmailIdentity;
 
     if (!isProduction) {
       // Development: Create the email identity
       new ses.EmailIdentity(this, 'WnpEmailIdentity', {
-        identity: ses.Identity.domain('whatnextplease.com'),
-        mailFromDomain: 'mail.whatnextplease.com',
+        identity: ses.Identity.domain('whatsnextplease.com'),
+        mailFromDomain: 'mail.whatsnextplease.com',
         dkimSigning: true,
         dkimIdentity: ses.DkimIdentity.easyDkim(ses.EasyDkimSigningKeyLength.RSA_2048_BIT),
       });
     } else {
       // Production: Reference the existing identity from development
-      ses.EmailIdentity.fromEmailIdentityName(this, 'WnpEmailIdentity', 'whatnextplease.com');
+      ses.EmailIdentity.fromEmailIdentityName(this, 'WnpEmailIdentity', 'whatsnextplease.com');
     }
 
     // Configuration Set: Create separately for each environment
@@ -269,6 +269,17 @@ export class WnpBackendStack extends cdk.Stack {
       'TenantId',
       `tenant-id-${props.stage}`
     );
+    const cognitoUserPoolIdSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'CognitoUserPoolIdSecret',
+      `cognito-user-pool-id-${props.stage}`
+    );
+
+    const cognitoClientIdSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'CognitoClientIdSecret',
+      `cognito-client-id-${props.stage}`
+    );
 
     // ========================================
     // FARGATE SERVICE SETUP
@@ -307,7 +318,7 @@ export class WnpBackendStack extends cdk.Stack {
         ],
         resources: [
           // Restrict to your specific domain identity
-          `arn:aws:ses:${this.region}:${this.account}:identity/whatnextplease.com`,
+          `arn:aws:ses:${this.region}:${this.account}:identity/whatsnextplease.com`,
           // Allow using the configuration set
           `arn:aws:ses:${this.region}:${this.account}:configuration-set/${configurationSet.configurationSetName}`,
         ],
@@ -315,7 +326,7 @@ export class WnpBackendStack extends cdk.Stack {
           // Additional security: only allow sending from verified addresses
           StringLike: {
             'ses:FromAddress': [
-              '*@whatnextplease.com', // Any email from your domain
+              '*@whatsnextplease.com', // Any email from your domain
             ],
             ...(isProduction
               ? {}
@@ -326,12 +337,32 @@ export class WnpBackendStack extends cdk.Stack {
         },
       });
 
+      const cognitoPolicy = new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminDeleteUser',
+          'cognito-idp:AdminGetUser',
+          'cognito-idp:AdminInitiateAuth',
+          'cognito-idp:AdminSetUserPassword',
+          'cognito-idp:AdminAddUserToGroup',
+          'cognito-idp:AdminRemoveUserFromGroup',
+          'cognito-idp:ListUsers',
+          'cognito-idp:ListUsersInGroup',
+        ],
+        resources: [
+          // Reference the User Pool from SharedAuthStack
+          // TODO: Production Aws cognito is not yet setup
+          `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/${cognitoUserPoolIdSecret.secretValue.unsafeUnwrap()}`,
+        ],
+      });
+
       // 🆕 Apply both policies to the task role
       // WHY TASK ROLE: The task role is used by your application code running in the container
       // WHY NOT EXECUTION ROLE: Execution role is only for ECS to pull images and write logs
       taskDefinition.taskRole.addToPrincipalPolicy(s3FullAccessPolicy);
       taskDefinition.taskRole.addToPrincipalPolicy(sesPolicy);
-
+      taskDefinition.taskRole.addToPrincipalPolicy(cognitoPolicy);
       // ========================================
       // 🆕 CONTAINER DEFINITION - UPDATED WITH SES ENV VARS
       // ========================================
@@ -348,15 +379,17 @@ export class WnpBackendStack extends cdk.Stack {
 
           // 🆕 SES Configuration - ADD THESE NEW VARIABLES
           SES_REGION: 'us-east-1', // SES is regional, ensure it matches your setup
-          SES_FROM_EMAIL: 'noreply@whatnextplease.com', // Default sender email
-          SES_REPLY_TO_EMAIL: 'support@whatnextplease.com', // Optional reply-to
+          SES_FROM_EMAIL: 'noreply@whatsnextplease.com', // Default sender email
+          SES_REPLY_TO_EMAIL: 'support@whatsnextplease.com', // Optional reply-to
           SES_CONFIGURATION_SET: configurationSet.configurationSetName,
-          SES_VERIFIED_DOMAIN: 'whatnextplease.com',
+          SES_VERIFIED_DOMAIN: 'whatsnextplease.com',
 
           EMAIL_WHITELIST: isProduction
             ? ''
             : '*@hillcountrycoders.com,sbaqar@hillcountrycoders.com',
+
           // Logging
+
           LOG_LEVEL: isProduction ? 'info' : 'debug',
         },
         secrets: {
@@ -367,6 +400,8 @@ export class WnpBackendStack extends cdk.Stack {
           CHAT_SHARED_SECRET: ecs.Secret.fromSecretsManager(chatSharedSecret),
           CHAT_APP_REGISTRATION_TOKEN: ecs.Secret.fromSecretsManager(chatAppRegistrationToken),
           TENANT_ID: ecs.Secret.fromSecretsManager(tenantId),
+          COGNITO_USER_POOL_ID: ecs.Secret.fromSecretsManager(cognitoUserPoolIdSecret),
+          COGNITO_CLIENT_ID: ecs.Secret.fromSecretsManager(cognitoClientIdSecret),
         },
         logging: ecs.LogDrivers.awsLogs({
           streamPrefix: 'wnp-backend',
@@ -510,7 +545,7 @@ export class WnpBackendStack extends cdk.Stack {
     // 🆕 OUTPUTS - SES - ADD THESE NEW OUTPUTS
     // ========================================
     new cdk.CfnOutput(this, 'SESVerifiedDomain', {
-      value: 'whatnextplease.com',
+      value: 'whatsnextplease.com',
       description: 'SES Verified Domain',
       exportName: `SESVerifiedDomain-${props.stage}`,
     });
@@ -522,13 +557,13 @@ export class WnpBackendStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'SESFromEmail', {
-      value: 'noreply@whatnextplease.com',
+      value: 'noreply@whatsnextplease.com',
       description: 'Default SES From Email Address',
       exportName: `SESFromEmail-${props.stage}`,
     });
 
     new cdk.CfnOutput(this, 'SESMailFromDomain', {
-      value: 'mail.whatnextplease.com',
+      value: 'mail.whatsnextplease.com',
       description:
         'MAIL FROM domain - Configure MX record: 10 feedback-smtp.us-east-1.amazonses.com',
       exportName: `SESMailFromDomain-${props.stage}`,
