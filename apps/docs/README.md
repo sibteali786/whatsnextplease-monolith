@@ -15,15 +15,7 @@ This documentation covers the authentication system migration from legacy JWT to
 ### Implementation Details
 
 - [Auto-Migration System](./authentication/04-MIGRATION-GUIDE.md)
-- [Token Validation](./authentication/05-TOKEN-VALIDATION.md)
-- [API Reference](./api/AUTH-API-REFERENCE.md)
-
-### Deployment & Operations
-
-- [Production Deployment](./deployment/PRODUCTION-DEPLOYMENT.md)
-- [Rollback Procedures](./deployment/ROLLBACK-PLAN.md)
-- [Monitoring & Logging](./deployment/MONITORING.md)
-- [Troubleshooting](./authentication/06-TROUBLESHOOTING.md)
+- [Deployment Guide](./authentication/05-DEPLOYMENT-GUIDE.md)
 
 ## Quick Start
 
