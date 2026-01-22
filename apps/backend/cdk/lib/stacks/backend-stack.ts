@@ -384,6 +384,10 @@ export class WnpBackendStack extends cdk.Stack {
           SES_CONFIGURATION_SET: configurationSet.configurationSetName,
           SES_VERIFIED_DOMAIN: 'whatsnextplease.com',
 
+          AUTH_PROVIDER: 'cognito',
+          COGNITO_DOMAIN:
+            props.stage === Stage.PRODUCTION ? 'hcc-wnp-auth-production' : 'hcc-wnp-auth-staging',
+          WEB_PUSH_EMAIL: 'sibteali786@gmail.com',
           EMAIL_WHITELIST: isProduction
             ? ''
             : '*@hillcountrycoders.com,sbaqar@hillcountrycoders.com',
@@ -451,7 +455,7 @@ export class WnpBackendStack extends cdk.Stack {
       const certificate = acm.Certificate.fromCertificateArn(
         this,
         'ApiCertificate',
-        'arn:aws:acm:us-east-1:519076116465:certificate/4f07baf8-6438-47e8-bc56-8a74285946d9'
+        'arn:aws:acm:us-east-1:519076116465:certificate/eb69a2f1-5105-4881-9955-8e731c8ad6f9'
       );
 
       this.networkLoadBalancer = new elbv2.NetworkLoadBalancer(this, 'WnpBackendNLB', {

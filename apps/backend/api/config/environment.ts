@@ -39,7 +39,7 @@ const envSchema = z.object({
   ALLOWED_ORIGINS: z
     .string()
     .default(
-      "['http://localhost:3000','http://localhost:5000','https://api.whatnextplease.com','https://api-staging.whatnextplease.com','https://whatnextplease.com','https://app.whatnextplease.com']"
+      "['http://localhost:3000','http://localhost:5000','https://api.whatsnextplease.com','https://api-staging.whatsnextplease.com','https://app.whatsnextplease.com','https://app-staging.whatsnextplease.com']"
     ),
 
   // Add Authentication Configuration
