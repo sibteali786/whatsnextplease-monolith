@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { UserController } from '../controller/user.controller';
-import { requireRole, verifyToken } from '../middleware/auth';
+import { requireRole, verifyTokenHybrid } from '../middleware/auth';
 import multer from 'multer';
 import { Roles } from '@prisma/client';
 const router = Router();
@@ -11,23 +11,23 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
 });
-const permissionMiddleware = [verifyToken, requireRole([Roles.SUPER_USER])];
+const permissionMiddleware = [verifyTokenHybrid, requireRole([Roles.SUPER_USER])];
 
 router.patch(
   '/profilePicture',
-  verifyToken,
+  verifyTokenHybrid,
   upload.single('file'),
   controller.updateProfilePicture
 );
-router.get('/profile', verifyToken, controller.getUserProfile);
-router.patch('/profile', verifyToken, controller.updateProfile);
+router.get('/profile', verifyTokenHybrid, controller.getUserProfile);
+router.patch('/profile', verifyTokenHybrid, controller.updateProfile);
 
 /**
  * GET /users/search
  * Search users for mentions functionality
  * Accessible by all authenticated users
  */
-router.get('/search', verifyToken, controller.searchUsersForMentions);
+router.get('/search', verifyTokenHybrid, controller.searchUsersForMentions);
 /**
  * GET /users/available-roles
  * Get available roles for dropdown (excludes CLIENT)
@@ -42,15 +42,15 @@ router.get('/available-roles', permissionMiddleware, controller.getAvailableRole
 router.get('/permissions/roles', permissionMiddleware, controller.getUsersWithRolesHandler);
 router.delete(
   '/:id',
-  verifyToken,
+  verifyTokenHybrid,
   requireRole([Roles.SUPER_USER, Roles.TASK_SUPERVISOR]),
   controller.deleteUser
 );
-router.get('/me', verifyToken, controller.getCurrentUser);
+router.get('/me', verifyTokenHybrid, controller.getCurrentUser);
 
 router.patch('/:id', permissionMiddleware, controller.updateUserById);
 
-router.get('/skills/:userId', verifyToken, controller.getUserSkills);
+router.get('/skills/:userId', verifyTokenHybrid, controller.getUserSkills);
 /**
  * PUT /users/:userId/role
  * Update user role

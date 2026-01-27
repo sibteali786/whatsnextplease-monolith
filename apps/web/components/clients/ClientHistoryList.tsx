@@ -29,11 +29,8 @@ export default function ClientHistoryList({ clientId, role }: { clientId: string
   }));
   const statusFilter = searchParams.get('status');
   const priorityFilter = searchParams.get('priority');
-  const typeFilter: 'all' | 'assigned' | 'unassigned' | 'my-tasks' = searchParams.get('type') as
-    | 'all'
-    | 'assigned'
-    | 'unassigned'
-    | 'my-tasks';
+  const assignedToFilter = searchParams.get('assignedTo') || undefined;
+
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -60,21 +57,20 @@ export default function ClientHistoryList({ clientId, role }: { clientId: string
             .filter(priority => priority !== null)
         : [];
       const response = await getTasksByClientId(
-        typeFilter ?? 'unassigned',
-
         searchTerm,
         duration,
         clientId,
         cursor,
         pageSize,
         normalizedStatus,
-        normalizedPriority
+        normalizedPriority,
+        assignedToFilter
       );
       const { taskIds } = await getTaskIdsByClientId(
-        typeFilter ?? 'unassigned',
         searchTerm,
         duration,
-        clientId
+        clientId,
+        assignedToFilter
       );
 
       if (response.success && response.tasks) {
@@ -93,7 +89,7 @@ export default function ClientHistoryList({ clientId, role }: { clientId: string
 
   useEffect(() => {
     fetchTasks();
-  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter, typeFilter]);
+  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter, assignedToFilter]);
   const handleSearch = (term: string, duration: DurationEnum) => {
     setSearchTerm(term); // Update the search term when user searches
     setDuration(duration);

@@ -32,7 +32,7 @@ const RecentUnassignedTasksPage = () => {
   const [tasks, setTasks] = useState<TaskTable[] | null>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'unassigned' | 'my-tasks'>('unassigned');
+  const [activeTab, setActiveTab] = useState<'null' | 'my-tasks'>('null');
   const handleRowClick = (taskID: string) => {
     router.push(`/taskOfferings/${taskID}`);
   };
@@ -43,7 +43,17 @@ const RecentUnassignedTasksPage = () => {
         const user = await getCurrentUser();
         if (user?.role?.name === Roles.TASK_SUPERVISOR) {
           // UPDATED: Use backend API instead of Next.js API route
-          const response = await tasksByType(activeTab, null, 5, '', DurationEnum.ALL, user?.id);
+
+          const response = await tasksByType(
+            null, // cursor
+            5, // pageSize
+            '', // searchTerm
+            DurationEnum.ALL,
+            user?.id,
+            undefined, // status filter (optional)
+            undefined, // priority filter (optional)
+            activeTab // assignedToFilter
+          );
 
           if (response && response.success) {
             setTasks(response.tasks);
@@ -63,10 +73,10 @@ const RecentUnassignedTasksPage = () => {
 
   return (
     <Tabs
-      defaultValue={'unassigned'}
+      defaultValue={'null'}
       className="w-full"
       onValueChange={value => {
-        setActiveTab(value as 'unassigned' | 'my-tasks');
+        setActiveTab(value as 'null' | 'my-tasks');
       }}
     >
       <Card className="shadow-sm">
@@ -76,7 +86,7 @@ const RecentUnassignedTasksPage = () => {
             Tasks
           </CardTitle>
           <TabsList className="flex gap-4 bg-transparent items-start justify-start">
-            <TabsTrigger value="unassigned" className="text-sm">
+            <TabsTrigger value="null" className="text-sm">
               Unassigned Tasks
             </TabsTrigger>
 
@@ -87,7 +97,7 @@ const RecentUnassignedTasksPage = () => {
         </CardHeader>
 
         <CardContent>
-          {['unassigned', 'my-tasks'].map((ele, index) => (
+          {['null', 'my-tasks'].map((ele, index) => (
             <TabsContent value={ele} key={index}>
               {isLoading ? (
                 <div className="flex justify-center items-center h-[200px]">
@@ -106,16 +116,16 @@ const RecentUnassignedTasksPage = () => {
                 />
               ) : tasks?.length === 0 ? (
                 <CallToAction
-                  title={activeTab === 'unassigned' ? 'No unassigned tasks' : 'No Tasks Found'}
+                  title={activeTab === 'null' ? 'No unassigned tasks' : 'No Tasks Found'}
                   link="/taskOfferings"
                   description={
-                    activeTab === 'unassigned'
+                    activeTab === 'null'
                       ? 'There are currently no unassigned tasks in the system'
                       : 'There are no tasks assigned to you at the moment.'
                   }
                   action="Create New Task"
                   helperText={
-                    activeTab === 'unassigned'
+                    activeTab === 'null'
                       ? 'You can create a new task or wait for users to submit tasks'
                       : ''
                   }

@@ -3,8 +3,128 @@ import { emailVerificationService } from '../services/emailVerification.service'
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Roles } from '@prisma/client';
+import { authService } from '../services/auth.service';
+import { logger } from '../utils/logger';
 
 export class AuthController {
+  /**
+   * POST /auth/signin
+   * Login with auto-migration
+   */
+  signin = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { username, password } = req.body;
+
+      // Validate input
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Username and password are required',
+        });
+      }
+
+      // Call auth service
+      const result = await authService.signin({ username, password });
+
+      if (!result.success) {
+        return res.status(401).json({
+          success: false,
+          message: result.error || 'Invalid credentials',
+        });
+      }
+
+      // Log migration status
+      if (result.migrated) {
+        logger.info(`✅ User ${username} migrated during signin`);
+      } else if (result.usedLegacy) {
+        logger.warn(`⚠️ User ${username} using legacy JWT (IDP unavailable)`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: result.message || 'Logged in successfully',
+        token: result.token,
+        user: result.user,
+        client: result.client,
+        migrated: result.migrated || false,
+        usedLegacy: result.usedLegacy || false,
+      });
+    } catch (error) {
+      logger.error('Signin controller error:', error);
+      next(error);
+    }
+  });
+  /**
+   * POST /auth/signup
+   * Register new user (creates in IDP first, then database)
+   */
+  signup = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, password, username, firstName, lastName, companyName, contactName, role } =
+        req.body;
+      // Validate required fields
+      if (!email || !password || !username || !role) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, password, username, and role are required',
+        });
+      }
+
+      // Validate role
+      if (!Object.values(Roles).includes(role as Roles)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid role provided',
+        });
+      }
+
+      // Validate role-specific fields
+      if (role === Roles.CLIENT && !companyName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Company name is required for clients',
+        });
+      }
+
+      if (role !== Roles.CLIENT && (!firstName || !lastName)) {
+        return res.status(400).json({
+          success: false,
+          message: 'First name and last name are required',
+        });
+      }
+
+      // Call auth service
+
+      const result = await authService.signup({
+        email,
+        password,
+        username,
+        firstName,
+        lastName,
+        companyName,
+        contactName,
+        role: role as Roles,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          message: result.error || 'Signup failed',
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: result.message || 'Account created successfully',
+        token: result.token,
+        user: result.user,
+        client: result.client,
+      });
+    } catch (error) {
+      logger.error('Signup controller error:', error);
+      next(error);
+    }
+  });
   /**
    * POST /auth/send-verification-email
    * Internal endpoint to send verification email after signup
@@ -36,6 +156,7 @@ export class AuthController {
           email,
           name,
         });
+
       if (success && !blocked) {
         return res.status(200).json({
           success: success,
@@ -86,7 +207,7 @@ export class AuthController {
   });
 
   /**
-   * ✅ NEW: POST /auth/resend-verification (Authenticated)
+   * POST /auth/resend-verification (Authenticated)
    * Resend verification email for logged-in user
    */
   resendVerificationEmail = asyncHandler(
@@ -158,6 +279,38 @@ export class AuthController {
       }
     }
   );
+
+  /**
+   * GET /auth/me
+   * Get current user or client info
+   */
+  me = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ success: false, message: 'Missing authorization header' });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const result = await authService.getCurrentEntityFromToken(token);
+
+      if (!result.success) {
+        return res.status(401).json({
+          success: false,
+          message: result.error || 'Invalid or expired token',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        user: result.user,
+        client: result.client,
+      });
+    } catch (error) {
+      logger.error('Current user error:', error);
+      next(error);
+    }
+  });
 }
 
 export const authController = new AuthController();

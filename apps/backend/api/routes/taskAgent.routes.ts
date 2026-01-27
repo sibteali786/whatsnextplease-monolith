@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { TaskAgentController } from '../controller/taskAgent.controller';
-import { verifyToken, requireRole } from '../middleware/auth';
+import { verifyTokenHybrid, requireRole } from '../middleware/auth';
 import { Roles } from '@prisma/client';
 
 const router = Router();
@@ -9,7 +9,7 @@ const controller = new TaskAgentController();
 // Route middleware
 // These routes should be accessible by admin roles (SUPER_USER, TASK_SUPERVISOR, etc.)
 const authMiddleware = [
-  verifyToken,
+  verifyTokenHybrid,
   requireRole([
     Roles.SUPER_USER,
     Roles.TASK_SUPERVISOR,

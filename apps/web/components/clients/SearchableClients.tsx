@@ -35,15 +35,7 @@ export function SearchableClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [initialClient, setInitialClient] = useState<ClientListItem | null>(null);
   const hasFetchedOnce = useRef(false);
-  // Add debugging
-  console.log('SearchableClient render:', {
-    value,
-    search,
-    initialClientProp,
-    initialClient,
-    clientsLength: clients.length,
-    hasMore,
-  });
+
   // -----------------------------
   // Fetch clients (cursor-based)
   // -----------------------------
@@ -109,13 +101,6 @@ export function SearchableClient({
       companyName: client.companyName,
       contactName: client.contactName,
     }));
-    console.log('clientItems memo:', {
-      value,
-      valueExists: value && value !== 'none',
-      initialClient,
-      baseItemsLength: baseItems.length,
-      exists: baseItems.some(item => item.value === value),
-    });
 
     // If value is set but not in list, find it and add it
     if (value && value !== 'none') {
@@ -136,11 +121,7 @@ export function SearchableClient({
 
     return baseItems;
   }, [clients, value, initialClient]);
-  console.log('Final items being passed to SearchableDropdown:', {
-    totalItems: clientItems.length + 1, // +1 for "No Client"
-    value: value || 'none',
-    clientItems: clientItems.slice(0, 3), // First 3 for debugging
-  });
+
   return (
     <SearchableDropdown<{
       value: string;

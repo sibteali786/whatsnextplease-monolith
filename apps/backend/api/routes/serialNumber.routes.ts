@@ -5,7 +5,7 @@ import {
   validateSerialNumber,
 } from '../controller/serialNumber.controller';
 import { rateLimit } from 'express-rate-limit';
-import { verifyToken } from '../middleware/auth';
+import { verifyTokenHybrid } from '../middleware/auth';
 
 const router = Router();
 
@@ -24,7 +24,7 @@ export const serialNumberRateLimiter = rateLimit({
  * @access  Private (authenticated users only)
  * @query   categoryId - The task category ID
  */
-router.get('/suggest-prefix', serialNumberRateLimiter, verifyToken, suggestPrefix);
+router.get('/suggest-prefix', serialNumberRateLimiter, verifyTokenHybrid, suggestPrefix);
 
 /**
  * @route   GET /api/task-sequences/check-prefix
@@ -32,7 +32,7 @@ router.get('/suggest-prefix', serialNumberRateLimiter, verifyToken, suggestPrefi
  * @access  Private (authenticated users only)
  * @query   prefix - The prefix to check (e.g., "WD")
  */
-router.get('/check-prefix', serialNumberRateLimiter, verifyToken, checkPrefixUniqueness);
+router.get('/check-prefix', serialNumberRateLimiter, verifyTokenHybrid, checkPrefixUniqueness);
 
 /**
  * @route   POST /api/task-sequences/validate
@@ -40,6 +40,6 @@ router.get('/check-prefix', serialNumberRateLimiter, verifyToken, checkPrefixUni
  * @access  Private (authenticated users only)
  * @body    { serialNumber: string }
  */
-router.post('/validate', serialNumberRateLimiter, verifyToken, validateSerialNumber);
+router.post('/validate', serialNumberRateLimiter, verifyTokenHybrid, validateSerialNumber);
 
 export const serialNumberRoutes = router;

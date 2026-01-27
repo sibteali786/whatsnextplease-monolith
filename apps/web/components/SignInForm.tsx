@@ -98,9 +98,16 @@ const SignInForm = () => {
           setClient(response.client);
         }
 
+        let toastMessage = 'Login successful, redirecting to dashboard...';
+        if (response.migrated) {
+          toastMessage = 'Welcome back! Your account has been upgraded. Redirecting...';
+        } else if (response.usedLegacy) {
+          toastMessage = 'Login successful (compatibility mode), redirecting...';
+        }
+
         toast({
           title: 'Success!',
-          description: 'Login successful, redirecting to dashboard...',
+          description: toastMessage,
           variant: 'success',
         });
 

@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { CommentController } from '../controller/comment.controller';
-import { verifyToken } from '../middleware/auth';
+import { verifyTokenHybrid } from '../middleware/auth';
 
 const router = Router();
 const controller = new CommentController();
 
 // Middleware for all routes
-const authMiddleware = [verifyToken];
+const authMiddleware = [verifyTokenHybrid];
 
 // Middleware for admin operations (delete any comment, etc.)
 // const adminMiddleware = [
-//   verifyToken,
+//   verifyTokenHybrid,
 //   requireRole([
 //     Roles.SUPER_USER,
 //     Roles.TASK_SUPERVISOR,

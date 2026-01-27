@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { TaskLinkController } from '../controller/taskLink.controller';
-import { verifyToken } from '../middleware/auth';
+import { verifyTokenHybrid } from '../middleware/auth';
 
 const router = Router();
 const controller = new TaskLinkController();
 
 // middleware for all routes
-const authMiddleware = [verifyToken];
+const authMiddleware = [verifyTokenHybrid];
 
 /**
  * @route GET /tasks/:taskId/links

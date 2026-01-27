@@ -1,14 +1,11 @@
 // app/actions/getActiveClients.ts
-"use server";
-import prisma from "@/db/db";
-import { handleError } from "@/utils/errorHandler";
-import logger from "@/utils/logger";
-import {
-  ActiveClientsResponse,
-  ActiveClientsResponseSchema,
-} from "@/utils/validationSchemas";
-import { TaskStatusEnum } from "@prisma/client"; // Import the TaskStatusEnum
-import { z } from "zod";
+'use server';
+import prisma from '@/db/db';
+import { handleError } from '@/utils/errorHandler';
+import logger from '@/utils/logger';
+import { ActiveClientsResponse, ActiveClientsResponseSchema } from '@/utils/validationSchemas';
+import { TaskStatusEnum } from '@prisma/client'; // Import the TaskStatusEnum
+import { z } from 'zod';
 
 // Use the enum directly for task status filtering
 const ACTIVE_TASK_STATUSES: TaskStatusEnum[] = [
@@ -19,28 +16,42 @@ const ACTIVE_TASK_STATUSES: TaskStatusEnum[] = [
 const GetActiveClientsParamsSchema = z.object({
   limit: z.number().int().min(1).max(100).default(3),
 });
-export const getActiveClients = async (
-  limit: number = 3,
-): Promise<ActiveClientsResponse> => {
+export const getActiveClients = async (limit: number = 3): Promise<ActiveClientsResponse> => {
   try {
     GetActiveClientsParamsSchema.parse({ limit });
     // Fetch clients with active task count and contact details
     const clients = await prisma.client.findMany({
       where: {
-        tasksCreated: {
-          some: {
-            status: {
-              statusName: {
-                in: ACTIVE_TASK_STATUSES,
+        OR: [
+          {
+            tasksCreated: {
+              some: {
+                status: {
+                  statusName: {
+                    in: ACTIVE_TASK_STATUSES,
+                  },
+                },
               },
             },
           },
-        },
+          {
+            tasksAssociated: {
+              some: {
+                status: {
+                  statusName: {
+                    in: ACTIVE_TASK_STATUSES,
+                  },
+                },
+              },
+            },
+          },
+        ],
       },
       select: {
         id: true,
         companyName: true,
         contactName: true,
+
         tasksCreated: {
           where: {
             status: {
@@ -53,16 +64,30 @@ export const getActiveClients = async (
             id: true,
           },
         },
+
+        tasksAssociated: {
+          where: {
+            status: {
+              statusName: {
+                in: ACTIVE_TASK_STATUSES,
+              },
+            },
+          },
+          select: {
+            id: true,
+          },
+        },
       },
-      take: limit, // Limit the number of results
+      take: limit,
       orderBy: {
-        createdAt: "desc",
+        createdAt: 'desc',
       },
     });
-    const clientsData = clients.map((client) => ({
+
+    const clientsData = clients.map(client => ({
       id: client.id,
       companyName: client.companyName,
-      contactName: client.contactName || "N/A",
+      contactName: client.contactName || 'N/A',
       activeTaskCount: client.tasksCreated.length,
     }));
     const responseData = {
@@ -72,7 +97,7 @@ export const getActiveClients = async (
     // Validate the response data against the schema
     return ActiveClientsResponseSchema.parse(responseData);
   } catch (error) {
-    logger.error({ error }, "Error in getActiveClients");
-    return handleError(error, "getActiveClients") as ActiveClientsResponse;
+    logger.error({ error }, 'Error in getActiveClients');
+    return handleError(error, 'getActiveClients') as ActiveClientsResponse;
   }
 };

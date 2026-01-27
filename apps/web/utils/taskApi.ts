@@ -1,6 +1,4 @@
 // utils/taskApi.ts
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 import { DurationEnum } from '@/types';
 import { USER_CREATED_TASKS_CONTEXT } from './commonUtils/taskPermissions';
@@ -38,9 +36,9 @@ class TaskApiClient {
   private getAuthHeaders: () => Record<string, string>;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    // Use Next.js API proxy instead of direct backend calls
+    this.baseUrl = '/api/proxy';
     this.getAuthHeaders = () => ({
-      Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
       'Content-Type': 'application/json',
     });
   }
@@ -56,6 +54,7 @@ class TaskApiClient {
         searchParams.append(key, String(value));
       }
     });
+    
     const response = await fetch(`${this.baseUrl}/tasks?${searchParams.toString()}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),

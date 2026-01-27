@@ -45,6 +45,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@HillCountryCoder:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
       - name: Run backend migrations
         working-directory: ./apps/backend
         run: npx prisma migrate deploy
@@ -143,6 +148,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up temporary files
         if: always()

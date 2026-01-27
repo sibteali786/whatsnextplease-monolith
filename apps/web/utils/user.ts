@@ -21,17 +21,18 @@ export interface UserState {
 export const getCurrentUser = cache(async () => {
   const token = cookies().get(COOKIE_NAME);
   if (!token) redirect('/signin');
-  const user: UserState | undefined = await getUserFromToken(token);
-  if (!user) {
-    redirect('/signin');
-  }
-  return user;
+
+  const entity = await getUserFromToken(token);
+  if (!entity) redirect('/signin');
+
+  // Ensure minimal shape for downstream usage
+  return entity;
 });
 
 export const signout = async () => {
   const cookieStore = cookies();
 
-  [COOKIE_NAME, 'refreshToken', 'token', 'pardy-token'].forEach(name => {
+  [COOKIE_NAME, 'refreshToken', 'token', COOKIE_NAME].forEach(name => {
     cookieStore.delete({ name });
   });
 

@@ -14,7 +14,8 @@ apps/*/node_modules
 package-lock.json
 yarn.lock# local env files
 .env
-.env*.local# vercel
+.env*.local
+/.npmrc.example# vercel
 .vercel# typescript
 *.tsbuildinfo
 next-env.d.ts# intellij
@@ -40,3 +41,5 @@ apps/*/.env.*
 packages/*/.env
 packages/*/.env.*
 !packages/*/.env.example
+github_token.txt
+*.npmrc*

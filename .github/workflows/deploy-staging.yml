@@ -44,6 +44,11 @@ jobs:
         with:
           version: 8
 
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@HillCountryCoder:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
       - name: Install dependencies
         run: pnpm install
 
@@ -147,6 +152,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=development
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Clean up temporary files
         if: always()

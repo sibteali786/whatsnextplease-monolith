@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { FileController } from '../controller/file.controller';
-import { verifyToken, requireRole } from '../middleware/auth';
+import { verifyTokenHybrid, requireRole } from '../middleware/auth';
 import { Roles } from '@prisma/client';
 
 const router = Router();
 const controller = new FileController();
 
 // Authentication middleware - all file operations require authentication
-const authMiddleware = [verifyToken];
+const authMiddleware = [verifyTokenHybrid];
 
 // Routes for file operations
 
@@ -36,7 +36,7 @@ router.get('/:id', authMiddleware, controller.getFileDetails);
 
 // Routes that require higher permissions (file management for other users)
 const adminMiddleware = [
-  verifyToken,
+  verifyTokenHybrid,
   requireRole([
     Roles.SUPER_USER,
     Roles.TASK_SUPERVISOR,

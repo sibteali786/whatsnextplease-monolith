@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth';
+import { verifyTokenHybrid } from '../middleware/auth';
 import { EntityController } from '../controller/entity.controller';
 
 const router = Router();
 const controller = new EntityController();
 
-router.get('/:type/:id', verifyToken, controller.getEntityProfile);
+router.get('/:type/:id', verifyTokenHybrid, controller.getEntityProfile);
 
-router.delete('/:type/:id', verifyToken, controller.deleteEntity);
+router.delete('/:type/:id', verifyTokenHybrid, controller.deleteEntity);
 
 export const entityRoutes = router;

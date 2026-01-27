@@ -33,7 +33,6 @@ export const UserTasks = ({
   context: USER_CREATED_TASKS_CONTEXT;
 }) => {
   const searchParams = useSearchParams();
-
   const [searchTerm, setSearchTerm] = useState('');
   const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
   const handleSearch = (term: string, duration: DurationEnum) => {
@@ -85,11 +84,7 @@ export const UserTasks = ({
   const [error, setError] = useState<string | null>(null);
   const statusFilter = searchParams.get('status');
   const priorityFilter = searchParams.get('priority');
-  const typeFilter: 'all' | 'assigned' | 'unassigned' | 'my-tasks' = searchParams.get('type') as
-    | 'all'
-    | 'assigned'
-    | 'unassigned'
-    | 'my-tasks';
+
   const assignedToFilter = searchParams.get('assignedTo') || undefined;
   const fetchTasks = async () => {
     setLoading(true);
@@ -112,6 +107,7 @@ export const UserTasks = ({
             )
             .filter(priority => priority !== null)
         : [];
+
       const params = {
         cursor: cursor ?? undefined,
         pageSize,
@@ -148,16 +144,7 @@ export const UserTasks = ({
 
   useEffect(() => {
     fetchTasks();
-  }, [
-    cursor,
-    pageSize,
-    searchTerm,
-    duration,
-    statusFilter,
-    priorityFilter,
-    typeFilter,
-    assignedToFilter,
-  ]);
+  }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter, assignedToFilter]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -173,7 +160,12 @@ export const UserTasks = ({
         </Button>
         <CreateTaskContainer open={open} setOpen={setOpen} fetchTasks={fetchTasks} />
       </div>
-      <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} role={role} />
+      <SearchNFilter
+        onSearch={handleSearch}
+        filterList={listOfFilter}
+        role={role}
+        userId={userId}
+      />
 
       {loading ? (
         <div className="flex justify-center items-center min-h-[300px]">

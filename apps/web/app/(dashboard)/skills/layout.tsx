@@ -40,7 +40,6 @@ const SkillsLayout = ({ children }: { children: ReactNode }) => {
     fetchSkills();
   }, []);
   const handleSkillAdded = useCallback(() => {
-    console.log('Skill added, refreshing skills list');
     setRefreshKey(prev => prev + 1); // This will force re-render of children
     fetchSkills();
   }, []);

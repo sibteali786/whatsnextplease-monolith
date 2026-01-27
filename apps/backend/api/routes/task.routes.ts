@@ -1,7 +1,7 @@
 // apps/backend/api/routes/task.routes.ts
 import { Router } from 'express';
 import { TaskController } from '../controller/task.controller';
-import { verifyToken, requireRole } from '../middleware/auth';
+import { verifyTokenHybrid, requireRole } from '../middleware/auth';
 import { Roles } from '@prisma/client';
 import { serialNumberRateLimiter } from './serialNumber.routes';
 import { getTaskBySerialNumber } from '../controller/serialNumber.controller';
@@ -9,11 +9,11 @@ import { getTaskBySerialNumber } from '../controller/serialNumber.controller';
 const router = Router();
 const controller = new TaskController();
 // Middleware for all routes
-const authMiddleware = [verifyToken];
+const authMiddleware = [verifyTokenHybrid];
 
 // Middleware for admin operations
 const adminMiddleware = [
-  verifyToken,
+  verifyTokenHybrid,
   requireRole([
     Roles.SUPER_USER,
     Roles.TASK_SUPERVISOR,
@@ -165,6 +165,11 @@ router.delete('/batch/delete', adminMiddleware, controller.batchDeleteTasks);
  * @access  Private (authenticated users only)
  * @params  serialNumber - The task serial number (e.g., "WD-00042")
  */
-router.get('/by-serial/:serialNumber', serialNumberRateLimiter, verifyToken, getTaskBySerialNumber);
+router.get(
+  '/by-serial/:serialNumber',
+  serialNumberRateLimiter,
+  verifyTokenHybrid,
+  getTaskBySerialNumber
+);
 
 export const taskRoutes = router;

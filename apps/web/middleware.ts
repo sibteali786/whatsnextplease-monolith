@@ -17,6 +17,45 @@ const decodeJWT = (token: string) => {
   }
 };
 
+/**
+ * Extract role from token payload
+ * Handles both legacy JWT and IDP tokens (Keycloak/Cognito)
+ */
+const extractRole = (payload: any): Roles | null => {
+  // Legacy JWT format: { id, username, role: "SUPER_USER" }
+  if (payload.role && typeof payload.role === 'string') {
+    return payload.role as Roles;
+  }
+
+  // Keycloak format: { realm_access: { roles: ["WnpInternalUsers", "..."] } }
+  // Cognito format: { "cognito:groups": ["WnpInternalUsers"] }
+  const groups: string[] =
+    payload.realm_access?.roles ||
+    payload['cognito:groups'] ||
+    payload.groups ||
+    [];
+
+  // Map IDP groups to roles
+  if (groups.includes('WnpExternalClients')) {
+    return Roles.CLIENT;
+  }
+
+  // For internal users, we need to check the database
+  // But for now, default to TASK_AGENT for WnpInternalUsers
+  if (groups.includes('WnpInternalUsers')) {
+    // TODO: We can't determine exact role from IDP token alone
+    // Options:
+    // 1. Default to TASK_AGENT (safest, least permissions)
+    // 2. Make an API call to backend to get user role
+    // 3. Store role in custom claims in IDP
+
+    // For now, let's allow access and let protected routes handle specifics
+    return Roles.TASK_AGENT; // Default to least privileged internal role
+  }
+
+  return null;
+};
+
 export function middleware(request: NextRequest) {
   const isEmbeddedContext =
     request.nextUrl.searchParams.has('modal') ||
@@ -28,6 +67,7 @@ export function middleware(request: NextRequest) {
   if (isEmbeddedContext) {
     return NextResponse.next();
   }
+
   // Check if the required cookie is missing
   const token = request.cookies.get(COOKIE_NAME);
   if (!token) {
@@ -45,26 +85,35 @@ export function middleware(request: NextRequest) {
   // Decode the JWT to get the user role
   const payload = decodeJWT(token.value);
 
-  if (!payload || !payload.role) {
+  if (!payload) {
+    console.error('Failed to decode token');
     return NextResponse.redirect(new URL('/signin', request.url));
   }
-  const pathname = request.nextUrl.pathname;
-  // Default to empty array if role is not defined
-  const userRoleString = payload.role as keyof typeof Roles;
-  // Assuming payload.role is guaranteed to be one of the enum's string values
-  const userRole = Roles[userRoleString]; // Now userRole is Roles.SUPER_USER, etc.
 
-  // Lookup permissions by enum
+  // Extract role (works with both legacy and IDP tokens)
+  const userRole = extractRole(payload);
+
+  if (!userRole) {
+    console.error('Could not extract role from token:', payload);
+    return NextResponse.redirect(new URL('/signin', request.url));
+  }
+
+  const pathname = request.nextUrl.pathname;
+
+  // Lookup permissions by role
   const allowedRoutes = ROLE_PERMISSIONS[userRole] || [];
+
   if (!ROLE_PERMISSIONS[userRole]) {
     console.warn(`Role ${userRole} has no defined permissions.`);
   }
+
   const isRouteAllowed = allowedRoutes.some(route => {
     const routeRegex = new RegExp(`^${route.replace(/:\w+/g, '\\w+').replace('/*', '.*')}$`);
     return routeRegex.test(pathname);
   });
 
   if (!isRouteAllowed) {
+    console.warn(`User with role ${userRole} tried to access unauthorized route: ${pathname}`);
     return NextResponse.redirect(new URL('/home', request.url));
   }
 
@@ -73,12 +122,12 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/clients/:path*', // Protect all paths under /clients
-    '/clients', // Protect the /clients root path
-    '/settings/:path*', // Example for other paths, you can add more
-    '/settings', // Protect the /settings root path
-    '/skills/:path*', // Protect skills
-    '/skills', // Protect the /skills root path
+    '/clients/:path*',
+    '/clients',
+    '/settings/:path*',
+    '/settings',
+    '/skills/:path*',
+    '/skills',
     '/',
   ],
 };

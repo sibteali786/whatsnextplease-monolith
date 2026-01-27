@@ -16,14 +16,14 @@ import { getUserProfileTaskFilter } from '@/utils/commonUtils/taskPermissions';
 import { getDateFilter } from '@/utils/dateFilter';
 
 export const getTasksByClientId = async (
-  type: 'all' | 'assigned' | 'unassigned' | 'my-tasks',
   searchTerm = '',
   duration: DurationEnum = DurationEnum.ALL,
   clientId: string,
   cursor: string | null,
   pageSize: number = 10,
   status?: TaskStatusEnum | TaskStatusEnum[],
-  priority?: TaskPriorityEnum | TaskPriorityEnum[]
+  priority?: TaskPriorityEnum | TaskPriorityEnum[],
+  assignedToFilter?: string
 ): Promise<GetTasksByClientIdResponse> => {
   try {
     // Validate input parameters
@@ -58,9 +58,13 @@ export const getTasksByClientId = async (
             },
           }
         : {};
+    let assignedToFilterCondition: any = undefined;
 
-    const assignedToId =
-      type === 'assigned' ? { not: null } : type === 'unassigned' ? null : undefined;
+    if (assignedToFilter === 'null') {
+      assignedToFilterCondition = { assignedToId: null };
+    } else if (assignedToFilter === 'not-null') {
+      assignedToFilterCondition = { assignedToId: { not: null } };
+    }
 
     const searchFilter = searchTerm
       ? {
@@ -96,10 +100,9 @@ export const getTasksByClientId = async (
     }
 
     // E. Assigned/unassigned filter
-    if (assignedToId !== undefined) {
-      AND.push({ assignedToId });
+    if (assignedToFilterCondition) {
+      AND.push(assignedToFilterCondition);
     }
-
     // F. Search OR conditions
     if (searchFilter?.OR) {
       AND.push({ OR: searchFilter.OR });
@@ -116,6 +119,7 @@ export const getTasksByClientId = async (
 
       select: {
         id: true,
+        serialNumber: true,
         title: true,
         description: true,
         priority: {
@@ -131,6 +135,7 @@ export const getTasksByClientId = async (
         taskCategory: {
           select: {
             categoryName: true,
+            prefix: true,
           },
         },
         assignedTo: {
@@ -201,6 +206,7 @@ export const getTasksByClientId = async (
       totalCount,
     };
     // parse the decimal values to strings for frontend
+
     const accommodatedResponse = JSON.parse(
       JSON.stringify(GetTasksByClientIdResponseSchema.parse(responseData))
     );
