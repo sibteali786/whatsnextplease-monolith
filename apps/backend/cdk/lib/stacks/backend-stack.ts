@@ -379,8 +379,8 @@ export class WnpBackendStack extends cdk.Stack {
 
           // 🆕 SES Configuration - ADD THESE NEW VARIABLES
           SES_REGION: 'us-east-1', // SES is regional, ensure it matches your setup
-          SES_FROM_EMAIL: 'noreply@whatsnextplease.com', // Default sender email
-          SES_REPLY_TO_EMAIL: 'support@whatsnextplease.com', // Optional reply-to
+          SES_FROM_EMAIL: 'noreply@updates.whatsnextplease.com', // Default sender email
+          SES_REPLY_TO_EMAIL: 'support@updates.whatsnextplease.com', // Optional reply-to
           SES_CONFIGURATION_SET: configurationSet.configurationSetName,
           SES_VERIFIED_DOMAIN: 'whatsnextplease.com',
 
@@ -561,7 +561,7 @@ export class WnpBackendStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'SESFromEmail', {
-      value: 'noreply@whatsnextplease.com',
+      value: 'noreply@updates.whatsnextplease.com',
       description: 'Default SES From Email Address',
       exportName: `SESFromEmail-${props.stage}`,
     });
