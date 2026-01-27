@@ -42,13 +42,13 @@ jobs:
         with:
           version: 8
 
-      - name: Install dependencies
-        run: pnpm install
-
       - name: Configure npm for GitHub Packages
         run: |
           echo "@HillCountryCoder:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install
 
       - name: Run backend migrations
         working-directory: ./apps/backend
@@ -149,7 +149,7 @@ jobs:
           build-args: |
             NODE_ENV=production
           secrets: |
-            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            GITHUB_TOKEN=${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Clean up temporary files
         if: always()
