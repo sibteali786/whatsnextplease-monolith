@@ -21,6 +21,7 @@ import { serialNumberRoutes } from './routes/serialNumber.routes';
 import { taskLinkRoutes } from './routes/taskLink.routes';
 import { migrationRoutes } from './routes/migration.routes';
 import { preferenceRoutes } from './routes/preference.routes';
+import { worklogRoutes } from './routes/worklog.routes';
 
 export async function createServer() {
   const app = express();
@@ -87,6 +88,7 @@ export async function createServer() {
   app.use('/chat', chatRoutes);
   app.use('/', commentRoutes);
   app.use('/auth', migrationRoutes);
+  app.use('/', worklogRoutes);
   // Health check route
   app.get('/ping', (req, res) => {
     res.json({ message: 'pong' });
