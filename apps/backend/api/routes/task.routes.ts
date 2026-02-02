@@ -77,6 +77,8 @@ router.get('/metadata', authMiddleware, controller.getTaskMetadata);
  */
 router.get('/priority/:level', authMiddleware, controller.getTasksByPriorityLevel);
 
+router.post('/by-status', authMiddleware, controller.getTasksByStatus);
+
 router.get('/user/:userId/count', authMiddleware, controller.getUserTaskCount);
 
 /**

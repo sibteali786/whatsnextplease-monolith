@@ -194,7 +194,11 @@ export const getFileIdsByClientId = async (clientId: string) => {
     throw new Error('Failed to retrieve file ids by given client id');
   }
 };
-export const fetchClients = async (cursor: string | null, pageSize: number, search?: string) => {
+export const fetchClients = async (
+  cursor: string | null,
+  pageSize: number | null,
+  search?: string
+) => {
   'use server';
 
   const { clients, nextCursor, totalCount, hasNextPage } = await getClientsList({

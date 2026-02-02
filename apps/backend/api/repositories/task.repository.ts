@@ -19,11 +19,12 @@ export interface TaskFilters {
   priority?: TaskPriorityEnum | TaskPriorityEnum[];
   assignedToId?: string | null | { not: null };
   categoryId?: string;
+  clientId?: string;
 }
 
 export interface TaskQueryOptions {
   cursor?: string;
-  pageSize: number;
+  pageSize: number | undefined;
   orderBy?: Prisma.TaskOrderByWithRelationInput;
   context?: USER_CREATED_TASKS_CONTEXT;
 }
@@ -58,6 +59,7 @@ export class TaskRepository {
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
       ...dateFilter,
+
       ...(status && { status: { statusName: { in: Array.isArray(status) ? status : [status] } } }), // Handle both single and array status
 
       ...(priority && {
@@ -140,6 +142,17 @@ export class TaskRepository {
     if (hasNextCursor) {
       tasks.pop();
     } */
+
+    //  ALL TASKS MODE
+    if (pageSize === undefined) {
+      return {
+        tasks: filteredTasks,
+        hasNextCursor: false,
+        nextCursor: null,
+      };
+    }
+
+    //  PAGINATED MODE
     const startIndex = cursor ? filteredTasks.findIndex(t => t.id === cursor) + 1 : 0;
     const paginatedTasks = filteredTasks.slice(startIndex, startIndex + pageSize);
     const hasNextCursor = startIndex + pageSize < filteredTasks.length;
@@ -154,6 +167,70 @@ export class TaskRepository {
       hasNextCursor,
       nextCursor,
     }; */
+  }
+  /**
+   * Get tasks for specific statuses
+   */
+
+  async getTasksForStatuses(args: {
+    where: Prisma.TaskWhereInput;
+    orderBy: Prisma.TaskOrderByWithRelationInput;
+    cursor?: string;
+    pageSize?: number;
+  }) {
+    const { where, orderBy, cursor, pageSize } = args;
+
+    return this.prisma.task.findMany({
+      where,
+      ...(pageSize && { take: pageSize }),
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy,
+
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        serialNumber: true,
+        priority: { select: { id: true, priorityName: true } },
+        status: { select: { id: true, statusName: true } },
+        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+        assignedTo: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        },
+        associatedClient: {
+          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+        },
+        assignedToId: true,
+        associatedClientId: true,
+        dueDate: true,
+        timeForTask: true,
+        overTime: true,
+        taskSkills: {
+          select: { skill: { select: { id: true, name: true } } },
+        },
+        taskFiles: {
+          select: {
+            file: {
+              select: {
+                id: true,
+                fileName: true,
+                filePath: true,
+                fileSize: true,
+                uploadedBy: true,
+                uploadedAt: true,
+              },
+            },
+          },
+        },
+        createdByClient: {
+          select: { id: true, companyName: true, contactName: true },
+        },
+        createdByClientId: true,
+        createdByUser: { select: { id: true, firstName: true, lastName: true } },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   }
 
   /**
@@ -628,7 +705,9 @@ export class TaskRepository {
     };
 
     const { cursor, pageSize, orderBy = { id: 'asc' } } = options;
-
+    if (pageSize === undefined) {
+      throw new Error('pageSize cannot be undefined');
+    }
     const where: Prisma.TaskWhereInput = {
       ...updatedFilters.whereCondition,
       ...updatedFilters.dateFilter,
@@ -653,6 +732,7 @@ export class TaskRepository {
         ],
       }),
     };
+
     const tasks = await this.prisma.task.findMany({
       where,
       take: pageSize + 1,
@@ -684,6 +764,7 @@ export class TaskRepository {
         updatedAt: true,
       },
     });
+
     const hasNextCursor = tasks.length > pageSize;
     const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
     if (hasNextCursor) {
