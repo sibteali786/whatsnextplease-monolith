@@ -320,6 +320,8 @@ export const TaskSchema = z.object({
   assignedToId: z.string().nullable().optional(),
   associatedClientId: z.string().nullable().optional(),
   taskFiles: z.array(TaskFileSchema).optional().nullable(),
+  totalTimeSpent: z.number().optional().nullable(),
+  latestTimeRemaining: z.number().optional().nullable(),
 });
 export type Task = z.infer<typeof TaskSchema>;
 const TaskTableSchema = TaskSchema;
