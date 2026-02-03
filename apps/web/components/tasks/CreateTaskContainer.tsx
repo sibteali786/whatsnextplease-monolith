@@ -63,6 +63,8 @@ interface CreateTaskContainerProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   fetchTasks?: () => Promise<void>;
+  onReload?: () => void;
+  status?: TaskStatusEnum;
 }
 
 // Extended user interface to include task count
@@ -74,6 +76,8 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
   open,
   setOpen,
   fetchTasks,
+  onReload,
+  status,
 }) => {
   const [skills, setSkills] = useState<{ id: string; name: string }[]>([]);
 
@@ -101,7 +105,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
     title: '',
     description: '',
     skills: [],
-    statusName: TaskStatusEnum.NEW,
+    statusName: status ? status : TaskStatusEnum.NEW,
     priorityName: TaskPriorityEnum.MEDIUM,
     taskCategoryName: taskCategories.length > 0 ? taskCategories[0]?.categoryName || '' : '',
     assignedToId: '',
@@ -443,6 +447,8 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
         if (fetchTasks) {
           await fetchTasks();
+        } else if (onReload) {
+          onReload();
         }
       } else {
         // Improved error handling with specific messages and actions

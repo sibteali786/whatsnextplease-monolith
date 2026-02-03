@@ -5,7 +5,14 @@ import { TaskService, BatchUpdateRequest, BatchDeleteRequest } from '../services
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError, ValidationError } from '@wnp/types';
 import { DurationEnum } from '@wnp/types';
-import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType } from '@prisma/client';
+import {
+  TaskStatusEnum,
+  TaskPriorityEnum,
+  Roles,
+  CreatorType,
+  TaskSortField,
+  SortDirection,
+} from '@prisma/client';
 import z from 'zod';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
@@ -92,13 +99,14 @@ export class TaskController {
     try {
       const userId = req.query.userId as string;
       const cursor = req.query.cursor as string;
-      const pageSizeStr = req.query.pageSize as string;
+      const pageSizeStr = req.query.pageSize as string | undefined;
       const searchTerm = (req.query.search as string) || '';
       const duration = (req.query.duration as DurationEnum) || DurationEnum.ALL;
       const status = req.query.status as TaskStatusEnum;
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
       const categoryId = req.query.categoryId as string;
+
       const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
       const pageSize = pageSizeStr ? parseInt(pageSizeStr, 10) : 10;
@@ -498,6 +506,79 @@ export class TaskController {
     }
   };
 
+  /* Get Tasks by Statuses */
+  private handleGetTasksByStatus = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      function parseSortByParam(
+        sortBy?: string
+      ): { field: TaskSortField; direction: SortDirection } | undefined {
+        if (!sortBy) return undefined;
+
+        const [fieldRaw, directionRaw] = sortBy.split('-');
+
+        if (!Object.values(TaskSortField).includes(fieldRaw as TaskSortField)) return undefined;
+
+        const direction = directionRaw === 'DESC' ? SortDirection.DESC : SortDirection.ASC;
+
+        return {
+          field: fieldRaw as TaskSortField,
+          direction,
+        };
+      }
+
+      const statusesStr = req.body.statuses as string; // "NEW,IN_PROGRESS,COMPLETED"
+      if (!statusesStr) {
+        throw new BadRequestError('At least one status is required');
+      }
+
+      const statuses = statusesStr
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s in TaskStatusEnum) as TaskStatusEnum[];
+      if (statuses.length === 0) {
+        throw new BadRequestError('At least one valid status is required');
+      }
+      const {
+        pageSize,
+        cursor,
+        search,
+        userId,
+        assignedToId,
+        categoryId,
+        duration,
+        clientId,
+        sortBy,
+      } = req.body;
+
+      const pageSizeNum = pageSize ? parseInt(pageSize as string, 10) : undefined;
+      if (!req.user) {
+        throw new BadRequestError('User authentication required');
+      }
+      const sortByParsed = parseSortByParam(sortBy as string | undefined);
+
+      const result = await this.taskService.getTasksByStatuses(statuses, {
+        userId: userId as string,
+        role: req.user.role,
+        cursor: cursor as string | undefined,
+        pageSize: pageSizeNum,
+        searchTerm: search as string,
+        assignedToId: assignedToId as string,
+        categoryId: categoryId as string,
+        duration: duration as DurationEnum,
+        clientId: clientId as string | undefined,
+        sortBy: sortByParsed,
+      });
+
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   /**
    * Update task status with validation
    */
@@ -882,6 +963,7 @@ export class TaskController {
   updateTaskField = asyncHandler(this.handleUpdateTaskField);
   getTaskMetadata = asyncHandler(this.handleGetTaskMetadata);
   getTasksByPriorityLevel = asyncHandler(this.handleGetTasksByPriorityLevel);
+  getTasksByStatus = asyncHandler(this.handleGetTasksByStatus);
   updateTaskStatusWithValidation = asyncHandler(this.handleUpdateTaskStatusWithValidation);
   getUserTaskCount = asyncHandler(this.handleGetUserTaskCount);
 }

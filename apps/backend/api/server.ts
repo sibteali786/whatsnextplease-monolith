@@ -20,6 +20,7 @@ import { chatRoutes } from './routes/chat.routes';
 import { serialNumberRoutes } from './routes/serialNumber.routes';
 import { taskLinkRoutes } from './routes/taskLink.routes';
 import { migrationRoutes } from './routes/migration.routes';
+import { preferenceRoutes } from './routes/preference.routes';
 
 export async function createServer() {
   const app = express();
@@ -79,6 +80,7 @@ export async function createServer() {
   app.use('/taskAgents', taskAgentRoutes);
   app.use('/files', fileRoutes);
   app.use('/tasks', taskRoutes);
+  app.use('/preference', preferenceRoutes);
   app.use('/password-reset', passwordResetRoutes);
   app.use('/task-sequences', serialNumberRoutes);
   app.use('/taskLinks', taskLinkRoutes);

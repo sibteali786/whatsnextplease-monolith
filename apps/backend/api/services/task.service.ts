@@ -1,5 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Roles, TaskStatusEnum, TaskPriorityEnum, CreatorType, Prisma } from '@prisma/client';
+import {
+  Roles,
+  TaskStatusEnum,
+  TaskPriorityEnum,
+  CreatorType,
+  Prisma,
+  TaskSortField,
+  SortDirection,
+} from '@prisma/client';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@wnp/types';
 import {
   canViewTasks,
@@ -53,7 +61,7 @@ export interface TaskQueryParams {
   userId?: string;
   role: Roles;
   cursor?: string;
-  pageSize?: number;
+  pageSize?: number | undefined;
   searchTerm?: string;
   duration?: DurationEnum;
   status?: TaskStatusEnum;
@@ -61,6 +69,11 @@ export interface TaskQueryParams {
   assignedToId?: string | null | { not: null };
   categoryId?: string;
   context?: USER_CREATED_TASKS_CONTEXT;
+  sortBy?: {
+    field: TaskSortField;
+    direction: SortDirection;
+  };
+  clientId?: string;
 }
 
 export interface UpdateTaskFieldRequest {
@@ -739,6 +752,99 @@ export class TaskService {
       prioritiesIncluded: level,
     };
   }
+
+  async getTasksByStatuses(statuses: TaskStatusEnum[], params: TaskQueryParams) {
+    const {
+      userId,
+      role,
+      cursor,
+      pageSize,
+      searchTerm,
+      assignedToId,
+      categoryId,
+      duration,
+      clientId,
+      sortBy,
+    } = params;
+
+    if (!canViewTasks(role)) {
+      throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
+    }
+    function mapSortByToOrderBy(sortBy?: {
+      field: TaskSortField;
+      direction: SortDirection;
+    }): Prisma.TaskOrderByWithRelationInput | undefined {
+      if (!sortBy) return undefined;
+
+      const order = sortBy.direction === SortDirection.DESC ? 'desc' : 'asc';
+
+      switch (sortBy.field) {
+        case TaskSortField.START_DATE:
+          return { createdAt: order };
+
+        case TaskSortField.END_DATE:
+          return { dueDate: order };
+
+        case TaskSortField.PRIORITY:
+          return { priority: { priorityName: order } };
+
+        default:
+          return undefined;
+      }
+    }
+
+    const orderBy = mapSortByToOrderBy(sortBy) ?? { createdAt: 'desc' };
+
+    const baseWhere: Prisma.TaskWhereInput = {
+      ...(userId ? getTaskFilterCondition(userId, role) : {}),
+      ...getDateFilter(duration || DurationEnum.ALL),
+      ...(assignedToId !== undefined && { assignedToId }),
+      ...(categoryId && { taskCategoryId: categoryId }),
+      ...(searchTerm && {
+        OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { description: { contains: searchTerm, mode: 'insensitive' } },
+        ],
+      }),
+      ...(clientId && {
+        OR: [{ createdByClientId: clientId }, { associatedClientId: clientId }],
+      }),
+    };
+    // New type: each status has tasks + count
+    const tasksByStatus: Record<TaskStatusEnum, { tasks: any[]; count: number }> = {} as any;
+
+    await Promise.all(
+      statuses.map(async status => {
+        // Get tasks for this status (paginated)
+        const tasks = await this.taskRepository.getTasksForStatuses({
+          where: {
+            ...baseWhere,
+            status: { statusName: status },
+          },
+          orderBy,
+          cursor,
+          pageSize,
+        });
+
+        // Get total count for this status (ignoring pagination)
+        const count = await this.taskRepository.countTasks({
+          whereCondition: baseWhere,
+          status,
+        });
+
+        tasksByStatus[status] = {
+          tasks: tasks.map(task => ({
+            ...task,
+            taskSkills: task.taskSkills.map(ts => ts.skill.name),
+          })),
+          count,
+        };
+      })
+    );
+
+    return tasksByStatus;
+  }
+
   /**
    * Create a draft task (for two-step creation flow)
    */

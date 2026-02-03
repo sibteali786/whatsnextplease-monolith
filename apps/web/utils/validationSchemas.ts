@@ -218,9 +218,13 @@ export const ClientsListResponseSchema = errorSchema.merge(
 );
 export type ClientsListResponse = z.infer<typeof ClientsListResponseSchema>;
 // Define the input parameters schema
+// is pageSize is null then that means there is no limit and to fetch all results
 export const GetClientsListParamsSchema = z.object({
   cursor: z.string().nullable(),
-  pageSize: z.number().min(1).default(10),
+  pageSize: z
+    .union([z.number().min(1), z.null()])
+    .optional()
+    .default(10),
 });
 
 export const ActiveClientSchema = z.object({

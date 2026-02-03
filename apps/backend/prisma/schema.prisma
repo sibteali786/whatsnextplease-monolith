@@ -29,7 +29,7 @@ enum Roles {
 }
 
 model Role {
-    id          String   @id @default(uuid())
+    id          String   @id @default(uuid()) 
     name        Roles    @unique @default(SUPER_USER)
     description String?
     users       User[]
@@ -74,6 +74,7 @@ model User {
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
     passwordResetTokens  PasswordResetToken[]
+    preference Preference?
 }
 
 model UserSkill {
@@ -123,6 +124,8 @@ model Client {
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
     passwordResetTokens  PasswordResetToken[]
+    preference Preference?
+
 }
 
 model EmailVerificationToken {
@@ -361,6 +364,67 @@ model TaskCommentFile {
 
     @@unique([commentId, fileId])
 }
+
+
+// Stores user-specific preferences such as saved task view filters (extendable for future settings)
+model Preference {
+    id        String   @id @default(uuid())
+    // Either a user or a client
+    userId    String?  @unique
+    user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    clientId  String?  @unique
+    client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+    taskViewFilters TaskViewFilter[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+// Defines the direction in which task results should be sorted
+enum SortDirection {
+    ASC
+    DESC
+}
+// Specifies the task field used for sorting in saved task view filters
+enum TaskSortField {
+    START_DATE
+    END_DATE
+    PRIORITY
+}
+// Represents a user-defined saved filter configuration for Gantt and Kanban task views
+model TaskViewFilter {
+    id             String   @id @default(uuid())
+    name           String
+    preferenceId   String
+    preference     Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+
+    // Phase (Task Category)
+    taskCategoryId String?   // categoryId
+
+    // Status
+   /*  status       TaskStatusEnum? */
+
+    // Assignee
+    assignedToId   String? 
+
+    // Client
+    clientId    String?
+
+    // Sorting
+    sortField      TaskSortField?
+    sortDirection  SortDirection?  
+
+
+
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    @@unique([preferenceId, name])
+    @@index([preferenceId])
+}
+
+
 
 //// =========================================
 // Messaging

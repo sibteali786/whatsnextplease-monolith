@@ -2,6 +2,7 @@
 import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
 import { DurationEnum } from '@/types';
 import { USER_CREATED_TASKS_CONTEXT } from './commonUtils/taskPermissions';
+import { TasksByStatusFilters } from './tasks/useTasksByStatus';
 interface BatchUpdateRequest {
   taskIds: string[];
   updates: {
@@ -28,6 +29,8 @@ interface TaskQueryParams {
   priority?: TaskPriorityEnum | TaskPriorityEnum[];
   assignedToId?: string | null;
   categoryId?: string;
+  clientId?: string;
+  sortBy?: string;
   context?: USER_CREATED_TASKS_CONTEXT;
 }
 
@@ -259,6 +262,34 @@ class TaskApiClient {
 
     if (!response.ok) {
       throw new Error(`Failed to fetch tasks by priority level: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * NEW: Get tasks by statuses (multiple statuses)
+   */
+  async getTasksByStatus(statuses: TaskStatusEnum[], filters?: TasksByStatusFilters) {
+    const payload: any = {
+      statuses: statuses.join(','),
+      ...filters,
+    };
+
+    // No need to check object, sortBy is always string
+    // if (filters?.sortBy && typeof filters.sortBy === 'object') { ... } <-- remove
+
+    const response = await fetch(`${this.baseUrl}/tasks/by-status`, {
+      method: 'POST',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch tasks by statuses');
     }
 
     return response.json();
