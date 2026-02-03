@@ -67,13 +67,6 @@ const Kanban = ({ user }: { user: UserState | null }) => {
     if (data) setKanbanData(data);
   }, [data]);
 
-  /*  useEffect(() => {
-    const interval = setInterval(() => {
-      onReload();
-    }, 30_000); 
-
-    return () => clearInterval(interval);
-  }, [onReload]); */
   // Loading state
   if (loading) {
     return <KanbanSkeleton />;
@@ -163,7 +156,7 @@ const Kanban = ({ user }: { user: UserState | null }) => {
       }}
       onDragCancel={() => setActiveTask(null)}
     >
-      <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-col md:flex-row gap-4 overflow-x-auto pb-4 custom-scrollbar2">
         {columns.map(column => {
           const columnData = kanbanData?.[column.type];
           return (

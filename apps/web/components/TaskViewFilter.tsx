@@ -167,7 +167,8 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to save view');
+        console.log('errorData', errorData);
+        throw new Error(errorData.details.error || 'Failed to save view');
       }
 
       const data = await res.json();
@@ -184,6 +185,16 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
       });
     } catch (err) {
       console.error('Failed to create task view filter:', err);
+      const errorMessage =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Your view could not be saved. Please try again.';
+      toast({
+        title: 'Failed to Save View',
+        description: errorMessage,
+        variant: 'destructive',
+        icon: <UserX size={40} />,
+      });
     }
   };
 
@@ -204,7 +215,7 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
       const viewsData = await viewResponse.json();
       setViews(viewsData.filters);
     } catch (err) {
-      console.error('Error fetching clients:', err);
+      console.error('Error fetching views:', err);
     }
   };
 
@@ -548,7 +559,8 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
               placeholder="New view name"
               value={newViewName}
               onChange={e => setNewViewName(e.target.value)}
-              onKeyDown={e => {
+              onKeyDownCapture={e => {
+                e.stopPropagation();
                 if (e.key === 'Enter') handleAddView();
               }}
               className="flex-1 border-b bg-transparent focus:ring-1 focus:ring-blue-500 focus:outline-none h-full"

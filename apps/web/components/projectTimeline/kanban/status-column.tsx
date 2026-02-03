@@ -115,7 +115,17 @@ const StatusColumn = ({
             },
           }),
         ]);
+        // Handle skill API errors
+        if (!skillsResponse.ok) {
+          const errorText = await skillsResponse.text();
+          throw new Error(`Skills API error: ${skillsResponse.status} ${errorText}`);
+        }
 
+        // Handle category API errors
+        if (!categoriesResponse.ok) {
+          const errorText = await categoriesResponse.text();
+          throw new Error(`Categories API error: ${categoriesResponse.status} ${errorText}`);
+        }
         const skillsData = await skillsResponse.json();
         const categoriesData = await categoriesResponse.json();
 
@@ -124,6 +134,9 @@ const StatusColumn = ({
         setTaskCategories(categoriesData);
       } catch (error) {
         console.error('Error checking prerequisites:', error);
+        setHasSkills(false);
+        setHasTaskCategories(false);
+        setTaskCategories([]);
       }
     };
 
@@ -133,9 +146,11 @@ const StatusColumn = ({
   return (
     <div
       className={`
+        custom-scrollbar relative
         flex flex-col gap-4 rounded-xl p-2
         transition-all duration-200
         md:w-[300px] md:min-w-[300px] 
+        md:max-h-[500px] md:h-[500px] md:overflow-y-auto
         ${isOver ? 'border-2 border-primary bg-primary/5 shadow-md' : 'border border-transparent'}
       `}
       ref={setNodeRef}
@@ -177,7 +192,7 @@ const StatusColumn = ({
       <Button
         size={'sm'}
         variant="ghost"
-        className="flex items-center justify-center gap-2 px-0 bg-muted/70"
+        className="flex items-center justify-center gap-2 px-0 bg-muted/70 min-h-[35px] h-[35px]"
         onClick={() => createTaskHandler()}
         disabled={!hasSkills || !hasTaskCategories}
       >

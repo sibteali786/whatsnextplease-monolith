@@ -40,7 +40,7 @@ const DeleteTaskDialog = ({
         });
 
         if (onReload) {
-          await onReload();
+          onReload();
         }
       } else {
         toast({

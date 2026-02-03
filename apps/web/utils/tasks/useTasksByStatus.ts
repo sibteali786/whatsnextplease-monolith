@@ -89,7 +89,7 @@ export function useTasksByStatus(statuses: TaskStatusEnum[]) {
     return () => {
       isCancelled = true;
     };
-  }, [JSON.stringify(statuses), filtersUpdate, reload]);
+  }, [statuses.join(','), filtersUpdate, reload]);
 
   return { data, loading, error, onReload };
 }

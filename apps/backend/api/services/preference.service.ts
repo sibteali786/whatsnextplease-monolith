@@ -21,6 +21,18 @@ export class PreferenceService {
   async createTaskViewFilter(userId: string, data: TaskViewFilterCreateDto) {
     const preference = await this.getOrCreatePreference(userId);
 
+    // Check if a filter with the same name exists
+    const existing = await prisma.taskViewFilter.findFirst({
+      where: {
+        preferenceId: preference.id,
+        name: data.name,
+      },
+    });
+
+    if (existing) {
+      throw new Error(`A task view filter with the name "${data.name}" already exists.`);
+    }
+
     return await prisma.taskViewFilter.create({
       data: {
         name: data.name,

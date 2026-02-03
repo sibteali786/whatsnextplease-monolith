@@ -75,10 +75,18 @@ export class TaskRepository {
         ],
       }), */
     };
-    const tasks = await this.prisma.task.findMany({
+
+    // Determine take and cursor for pagination
+    const take = pageSize ? pageSize + 1 : undefined; // +1 to detect next page
+    const prismaCursor = cursor ? { id: cursor } : undefined;
+
+    let tasks = await this.prisma.task.findMany({
       where,
       /*       take: pageSize + 1,
       ...(cursor && { cursor: { id: cursor }, skip: 1 }), */
+      take,
+      skip: prismaCursor ? 1 : 0, // skip cursor itself
+      ...(prismaCursor && { cursor: prismaCursor }),
       orderBy,
       select: {
         id: true,
@@ -126,37 +134,30 @@ export class TaskRepository {
       },
     });
 
-    let filteredTasks = tasks;
-
-    // Apply Fuse.js fuzzy search if searchTerm is provided
+    // Apply Fuse.js fuzzy search if needed
     if (searchTerm) {
       const fuse = new Fuse(tasks, {
         keys: ['serialNumber', 'title', 'description'],
-        threshold: 0.3, // Adjust threshold for fuzzy sensitivity
+        threshold: 0.3,
       });
-      filteredTasks = fuse.search(searchTerm).map(result => result.item);
+      tasks = fuse.search(searchTerm).map(result => result.item);
     }
 
+    // Determine pagination info
+    let paginatedTasks = tasks;
+    let hasNextCursor = false;
+    let nextCursor: string | null = null;
+    if (pageSize) {
+      hasNextCursor = tasks.length > pageSize;
+      paginatedTasks = hasNextCursor ? tasks.slice(0, pageSize) : tasks;
+      nextCursor = hasNextCursor ? paginatedTasks[paginatedTasks.length - 1].id : null;
+    }
     /*   const hasNextCursor = tasks.length > pageSize;
     const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
     if (hasNextCursor) {
       tasks.pop();
     } */
 
-    //  ALL TASKS MODE
-    if (pageSize === undefined) {
-      return {
-        tasks: filteredTasks,
-        hasNextCursor: false,
-        nextCursor: null,
-      };
-    }
-
-    //  PAGINATED MODE
-    const startIndex = cursor ? filteredTasks.findIndex(t => t.id === cursor) + 1 : 0;
-    const paginatedTasks = filteredTasks.slice(startIndex, startIndex + pageSize);
-    const hasNextCursor = startIndex + pageSize < filteredTasks.length;
-    const nextCursor = hasNextCursor ? paginatedTasks[paginatedTasks.length - 1].id : null;
     return {
       tasks: paginatedTasks,
       hasNextCursor,

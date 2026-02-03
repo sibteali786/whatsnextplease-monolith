@@ -520,12 +520,12 @@ export class TaskController {
 
         const [fieldRaw, directionRaw] = sortBy.split('-');
 
-        if (!(fieldRaw in TaskSortField)) return undefined;
+        if (!Object.values(TaskSortField).includes(fieldRaw as TaskSortField)) return undefined;
 
         const direction = directionRaw === 'DESC' ? SortDirection.DESC : SortDirection.ASC;
 
         return {
-          field: TaskSortField[fieldRaw as keyof typeof TaskSortField],
+          field: fieldRaw as TaskSortField,
           direction,
         };
       }
@@ -539,7 +539,9 @@ export class TaskController {
         .split(',')
         .map(s => s.trim())
         .filter(s => s in TaskStatusEnum) as TaskStatusEnum[];
-
+      if (statuses.length === 0) {
+        throw new BadRequestError('At least one valid status is required');
+      }
       const {
         pageSize,
         cursor,
