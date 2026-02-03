@@ -22,6 +22,8 @@ interface WorkLogItemProps {
   onDelete: (workLogId: string) => void;
   deleting: boolean;
   verboseTime?: boolean;
+  totalTimeSpent?: number | null;
+  taskTimeForTask?: number | null;
 }
 
 export default function WorkLogItem({
@@ -30,6 +32,8 @@ export default function WorkLogItem({
   onDelete,
   deleting,
   verboseTime = false,
+  totalTimeSpent,
+  taskTimeForTask,
 }: WorkLogItemProps) {
   const [canEdit, setCanEdit] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
@@ -161,7 +165,11 @@ export default function WorkLogItem({
           </Badge>
           {workLog.timeRemaining !== null && (
             <Badge variant="outline" className="font-mono">
-              {formatTimeFromMinutes(workLog.timeRemaining, verboseTime)} remaining
+              {formatTimeFromMinutes(
+                Math.round((taskTimeForTask || 0) * 60) - (totalTimeSpent || 0),
+                verboseTime
+              )}{' '}
+              remaining
             </Badge>
           )}
         </div>

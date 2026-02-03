@@ -26,6 +26,8 @@ interface WorkLogListProps {
   hasMore: boolean;
   nextCursor: string | null;
   verboseTime?: boolean;
+  taskTimeForTask?: number | null;
+  taskTotalTimeSpent?: number | null;
 }
 
 export default function WorkLogList({
@@ -36,6 +38,8 @@ export default function WorkLogList({
   hasMore,
   nextCursor,
   verboseTime = false,
+  taskTimeForTask,
+  taskTotalTimeSpent,
 }: WorkLogListProps) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
@@ -150,6 +154,8 @@ export default function WorkLogList({
               onDelete={handleDelete}
               deleting={deletingIds.includes(workLog.id)}
               verboseTime={verboseTime}
+              totalTimeSpent={taskTotalTimeSpent}
+              taskTimeForTask={taskTimeForTask}
             />
           ))}
         </div>
@@ -187,6 +193,10 @@ export default function WorkLogList({
           taskId={taskId}
           onWorkLogAdded={handleWorkLogUpdated}
           editingWorkLog={editingWorkLog}
+          taskTimeForTask={taskTimeForTask}
+          // Subtract the editing entry's own timeSpent to avoid double-counting
+          // e.g. total=7h, editing entry=5h → pass 2h so form adds back whatever user types
+          taskTotalTimeSpent={(taskTotalTimeSpent || 0) - (editingWorkLog.timeSpent || 0)}
         />
       )}
 

@@ -79,7 +79,7 @@ export default function WorkLogForm({
     // 1. Not editing (new work log)
     // 2. User hasn't manually entered time remaining
     // 3. Task has original estimate
-    if (!isEditing && taskTimeForTask) {
+    if (taskTimeForTask) {
       // Convert task's timeForTask from hours (Decimal) to minutes
       const originalEstimateMinutes = Math.round(taskTimeForTask * 60);
 
@@ -118,6 +118,7 @@ export default function WorkLogForm({
         }
       }
     }
+    // TODO: If timeForTask is not added Which is not possible we can fallback to dueDate as well
   }, [
     form.watch('timeSpent'),
     form.watch('timeRemaining'),
@@ -131,14 +132,13 @@ export default function WorkLogForm({
   const timeSpent = form.watch('timeSpent');
   const timeRemaining = form.watch('timeRemaining');
 
-  const timeSpentMinutes = parseTimeToMinutes(timeSpent);
+  const currentSpentMinutes = parseTimeToMinutes(timeSpent);
   const timeRemainingMinutes = parseTimeToMinutes(timeRemaining || '');
-  const progress =
-    timeSpentMinutes && timeRemainingMinutes
-      ? calculateProgress(timeSpentMinutes, timeRemainingMinutes)
-      : 0;
 
-  const hasProgress = timeSpentMinutes && timeRemainingMinutes;
+  const totalSpentMinutes = (taskTotalTimeSpent || 0) + (currentSpentMinutes || 0);
+  const progress = calculateProgress(totalSpentMinutes, timeRemainingMinutes || 0);
+
+  const hasProgress = currentSpentMinutes && timeRemainingMinutes;
 
   const onSubmit = async (data: WorkLogFormData) => {
     try {
@@ -211,7 +211,7 @@ export default function WorkLogForm({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {timeSpentMinutes ? formatTimeFromMinutes(timeSpentMinutes) : '0m'} logged
+                  {totalSpentMinutes ? formatTimeFromMinutes(totalSpentMinutes) : '0m'} logged
                 </span>
                 <span className="text-muted-foreground">
                   {timeRemainingMinutes ? formatTimeFromMinutes(timeRemainingMinutes) : '0m'}{' '}

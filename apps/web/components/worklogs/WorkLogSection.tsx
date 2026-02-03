@@ -37,6 +37,7 @@ export default function WorkLogSection({
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [verboseTime, setVerboseTime] = useState(false);
+  const [localTimeSpent, setLocalTimeSpent] = useState<number>(0);
 
   const { toast } = useToast();
 
@@ -65,6 +66,12 @@ export default function WorkLogSection({
         setTotalCount(result.totalCount || 0);
         setHasMore(result.hasNextCursor || false);
         setNextCursor(result.nextCursor || null);
+
+        const calculatedSpent = (result.workLogs || []).reduce(
+          (sum: number, wl: WorkLog) => sum + (wl.timeSpent || 0),
+          0
+        );
+        setLocalTimeSpent(calculatedSpent);
       } else {
         toast({
           title: 'Load Failed',
@@ -94,6 +101,8 @@ export default function WorkLogSection({
     // Add new work log to the beginning of the list
     setWorkLogs(prev => [newWorkLog, ...prev]);
     setTotalCount(prev => prev + 1);
+
+    setLocalTimeSpent(prev => prev + (newWorkLog.timeSpent || 0));
     setShowForm(false);
 
     // Notify parent to refresh task data (for aggregated values)
@@ -105,7 +114,8 @@ export default function WorkLogSection({
   const handleWorkLogsUpdate = (updatedWorkLogs: WorkLog[]) => {
     setWorkLogs(updatedWorkLogs);
     setTotalCount(updatedWorkLogs.length);
-
+    const calculatedSpent = updatedWorkLogs.reduce((sum, wl) => sum + (wl.timeSpent || 0), 0);
+    setLocalTimeSpent(calculatedSpent);
     // Notify parent to refresh task data
     if (onDataChange) {
       onDataChange();
@@ -207,6 +217,8 @@ export default function WorkLogSection({
           hasMore={hasMore}
           nextCursor={nextCursor}
           verboseTime={verboseTime}
+          taskTimeForTask={taskTimeForTask}
+          taskTotalTimeSpent={localTimeSpent}
         />
       )}
 
@@ -217,7 +229,7 @@ export default function WorkLogSection({
         taskId={taskId}
         onWorkLogAdded={handleWorkLogAdded}
         taskTimeForTask={taskTimeForTask}
-        taskTotalTimeSpent={totalTimeSpent}
+        taskTotalTimeSpent={localTimeSpent}
       />
     </div>
   );
