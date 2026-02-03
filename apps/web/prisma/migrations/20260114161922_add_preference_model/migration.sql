@@ -3,7 +3,7 @@ CREATE TYPE "SortDirection" AS ENUM ('ASC', 'DESC');
 
 -- CreateEnum
 CREATE TYPE "TaskSortField" AS ENUM ('START_DATE', 'END_DATE', 'PRIORITY');
-
+ 
 -- CreateTable
 CREATE TABLE "Preference" (
     "id" TEXT NOT NULL,
