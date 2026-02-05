@@ -762,7 +762,7 @@ model WorkLog {
     timeSpent     Int // Required: time spent in minutes
     timeRemaining Int? // Optional: estimated remaining time in minutes
     startedAt     DateTime // UTC timestamp: when work was performed
-    description   String   @db.Text // Rich text (HTML from RichTextEditor)
+    description   String?   @db.Text // Rich text (HTML from RichTextEditor)
 
     // Soft delete support (for audit trail)
     isDeleted   Boolean   @default(false)

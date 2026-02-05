@@ -127,17 +127,27 @@ export function calculateTimeRemaining(originalEstimate: number, timeSpent: numb
 /**
  * Parse time string with validation and error message
  * @param timeString - Time string to parse
+ * @param options - Validation options
  * @returns Object with minutes or error message
  */
-export function parseTimeWithValidation(timeString: string): {
+export function parseTimeWithValidation(
+  timeString: string,
+  options?: {
+    allowZero?: boolean;
+    fieldName?: string;
+  }
+): {
   success: boolean;
   minutes?: number;
   error?: string;
 } {
+  const fieldName = options?.fieldName || 'Time';
+  const allowZero = options?.allowZero ?? false;
+
   if (!timeString || timeString.trim() === '') {
     return {
       success: false,
-      error: 'Time string cannot be empty',
+      error: `${fieldName} cannot be empty`,
     };
   }
 
@@ -146,14 +156,14 @@ export function parseTimeWithValidation(timeString: string): {
   if (minutes === null) {
     return {
       success: false,
-      error: 'Invalid time format. Use format like "1w 2d 3h 30m" (weeks, days, hours, minutes)',
+      error: `Invalid ${fieldName.toLowerCase()} format. Use format like "1w 2d 3h 30m" (weeks, days, hours, minutes)`,
     };
   }
 
-  if (minutes === 0) {
+  if (minutes === 0 && !allowZero) {
     return {
       success: false,
-      error: 'Time spent must be greater than 0',
+      error: `${fieldName} must be greater than 0`,
     };
   }
 
@@ -161,7 +171,7 @@ export function parseTimeWithValidation(timeString: string): {
     // ~2000 hours or ~250 days
     return {
       success: false,
-      error: 'Time value is too large. Maximum is approximately 2000 hours.',
+      error: `${fieldName} value is too large. Maximum is approximately 2000 hours.`,
     };
   }
 

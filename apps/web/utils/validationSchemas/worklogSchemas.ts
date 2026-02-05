@@ -8,7 +8,7 @@ export const workLogSchema = z.object({
     .string()
     .min(1, 'Time spent is required')
     .refine(
-      (val) => {
+      val => {
         // Validate format: 1w 2d 3h 4m
         const regex = /^\s*(?:(\d+)w)?\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/i;
         return regex.test(val.trim());
@@ -18,7 +18,7 @@ export const workLogSchema = z.object({
       }
     )
     .refine(
-      (val) => {
+      val => {
         // Ensure at least one time unit is provided
         const regex = /^\s*(?:(\d+)w)?\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/i;
         const match = val.trim().match(regex);
@@ -35,7 +35,7 @@ export const workLogSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => {
+      val => {
         if (!val || val.trim() === '') return true; // Optional field
         const regex = /^\s*(?:(\d+)w)?\s*(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*$/i;
         return regex.test(val.trim());
@@ -45,24 +45,61 @@ export const workLogSchema = z.object({
       }
     ),
 
-  startedAt: z.date({
-    required_error: 'Date is required',
-    invalid_type_error: 'Invalid date',
-  }).refine(
-    (date) => date <= new Date(),
-    {
+  startedAt: z
+    .date({
+      required_error: 'Date is required',
+      invalid_type_error: 'Invalid date',
+    })
+    .refine(date => date <= new Date(), {
       message: 'Date cannot be in the future',
-    }
-  ),
+    }),
 
-  startedTime: z
-    .string()
-    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
+  startedTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
 
   description: z
     .string()
-    .min(10, 'Description must be at least 10 characters')
-    .max(10000, 'Description is too long (max 10,000 characters)'),
+    .transform(val => {
+      // First, normalize the value - strip empty HTML tags
+      if (!val) return '';
+
+      const normalized = val.trim();
+
+      // Common empty states from RichTextEditor
+      const emptyPatterns = ['', '<p></p>', '<p><br></p>', '<p> </p>', '<p><br/></p>', '<p>\n</p>'];
+
+      if (emptyPatterns.includes(normalized)) {
+        return '';
+      }
+
+      return normalized;
+    })
+    .refine(
+      val => {
+        // If empty after normalization, it's valid (optional)
+        if (!val || val === '') return true;
+
+        // If provided, check meaningful content (strip HTML for length)
+        const textOnly = val.replace(/<[^>]*>/g, '').trim();
+        return textOnly.length >= 3;
+      },
+      {
+        message: 'Description must be at least 3 characters when provided',
+      }
+    )
+    .refine(
+      val => {
+        if (!val) return true;
+        return val.length <= 10000;
+      },
+      {
+        message: 'Description is too long (max 10,000 characters)',
+      }
+    )
+    .transform(val => {
+      // Final transform: convert empty to undefined for API
+      return val === '' ? undefined : val;
+    })
+    .optional(),
 });
 
 export type WorkLogFormData = z.infer<typeof workLogSchema>;
@@ -74,7 +111,7 @@ export const getDefaultWorkLogValues = (editingWorkLog?: {
   timeSpent: number;
   timeRemaining: number | null;
   startedAt: string;
-  description: string;
+  description?: string;
 }): Partial<WorkLogFormData> => {
   if (!editingWorkLog) {
     return {

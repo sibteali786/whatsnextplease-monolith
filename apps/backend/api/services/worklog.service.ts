@@ -56,7 +56,10 @@ export class WorkLogService {
       }
 
       // 2. Parse and validation timeSpent
-      const timeSpentResult = parseTimeWithValidation(input.timeSpent);
+      const timeSpentResult = parseTimeWithValidation(input.timeSpent, {
+        allowZero: false,
+        fieldName: 'Time spent',
+      });
       if (!timeSpentResult.success) {
         return {
           success: false,
@@ -67,7 +70,11 @@ export class WorkLogService {
       // 3. Parse timeRemaining if provided
       let timeRemainingMinutes: number | undefined;
       if (input.timeRemaining) {
-        const timeRemainingResult = parseTimeWithValidation(input.timeRemaining);
+        const timeRemainingResult = parseTimeWithValidation(input.timeRemaining, {
+          allowZero: true,
+          fieldName: 'Time remaining',
+        });
+        console.log('Time remaining validation result:', timeRemainingResult);
         if (!timeRemainingResult.success) {
           return {
             success: false,
@@ -256,7 +263,10 @@ export class WorkLogService {
 
       // Parse timeSpent if provided
       if (input.timeSpent) {
-        const timeSpentResult = parseTimeWithValidation(input.timeSpent);
+        const timeSpentResult = parseTimeWithValidation(input.timeSpent, {
+          allowZero: false,
+          fieldName: 'Time spent',
+        });
         if (!timeSpentResult.success) {
           return {
             success: false,
@@ -272,7 +282,10 @@ export class WorkLogService {
           // Allow clearing timeRemaining
           updateData.timeRemaining = undefined;
         } else {
-          const timeRemainingResult = parseTimeWithValidation(input.timeRemaining);
+          const timeRemainingResult = parseTimeWithValidation(input.timeRemaining, {
+            allowZero: true,
+            fieldName: 'Time remaining',
+          });
           if (!timeRemainingResult.success) {
             return {
               success: false,
@@ -296,12 +309,7 @@ export class WorkLogService {
 
       // Update description if provided
       if (input.description !== undefined) {
-        if (input.description.trim().length === 0) {
-          return {
-            success: false,
-            error: 'Work description cannot be empty',
-          };
-        }
+        // allow empty string as description, but not string with only spaces
         if (input.description.length > 10000) {
           return {
             success: false,

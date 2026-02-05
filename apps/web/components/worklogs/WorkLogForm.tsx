@@ -138,7 +138,8 @@ export default function WorkLogForm({
   const totalSpentMinutes = (taskTotalTimeSpent || 0) + (currentSpentMinutes || 0);
   const progress = calculateProgress(totalSpentMinutes, timeRemainingMinutes || 0);
 
-  const hasProgress = currentSpentMinutes && timeRemainingMinutes;
+  const hasProgress = Boolean(currentSpentMinutes) && Boolean(timeRemainingMinutes);
+  console.log(hasProgress, currentSpentMinutes, timeRemainingMinutes);
 
   const onSubmit = async (data: WorkLogFormData) => {
     try {
@@ -146,6 +147,7 @@ export default function WorkLogForm({
       const [hours = 0, minutes = 0] = data.startedTime.split(':').map(Number);
       const startedDateTime = new Date(data.startedAt);
       startedDateTime.setHours(hours, minutes, 0, 0);
+      const description = data.description?.trim() || '';
 
       if (isEditing) {
         // Update existing work log
@@ -153,7 +155,7 @@ export default function WorkLogForm({
           timeSpent: data.timeSpent,
           timeRemaining: data.timeRemaining?.trim() || undefined,
           startedAt: startedDateTime.toISOString(),
-          description: data.description.trim(),
+          description: description,
         });
 
         if (result.success && result.workLog) {
@@ -171,7 +173,7 @@ export default function WorkLogForm({
           timeSpent: data.timeSpent,
           timeRemaining: data.timeRemaining?.trim() || undefined,
           startedAt: startedDateTime.toISOString(),
-          description: data.description.trim(),
+          description: description,
         });
 
         if (result.success && result.workLog) {
@@ -234,7 +236,7 @@ export default function WorkLogForm({
                     <FormControl>
                       <TimeInput
                         label="Time spent"
-                        placeholder="1z"
+                        placeholder="2h 30m"
                         required
                         error={form.formState.errors.timeSpent?.message}
                         {...field}
@@ -252,7 +254,7 @@ export default function WorkLogForm({
                     <FormControl>
                       <TimeInput
                         label="Time remaining"
-                        placeholder="1z"
+                        placeholder="1d 2h"
                         showFormatHint={false}
                         error={form.formState.errors.timeRemaining?.message}
                         {...field}
@@ -359,15 +361,13 @@ export default function WorkLogForm({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>
-                    Work description <span className="text-destructive">*</span>
-                  </FormLabel>
+                  <FormLabel>Work description</FormLabel>
                   <FormControl>
                     <RichTextEditor
-                      content={field.value}
+                      content={field.value || ''}
                       onChange={field.onChange}
                       onMentionsChange={() => {}} // Not using mentions in work logs
-                      placeholder="Type /ai for Atlassian Intelligence or @ to mention and notify someone."
+                      placeholder="Type @ to mention and notify someone."
                       disabled={form.formState.isSubmitting}
                       taskId={taskId}
                     />

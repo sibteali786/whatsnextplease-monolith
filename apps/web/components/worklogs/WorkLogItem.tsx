@@ -175,12 +175,16 @@ export default function WorkLogItem({
         </div>
 
         {/* Work Description */}
-        <div
-          className="prose prose-sm max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-          dangerouslySetInnerHTML={{
-            __html: workLog.description || '<p>No description</p>',
-          }}
-        />
+        {workLog.description ? (
+          <div
+            className="prose prose-sm max-w-none break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+            dangerouslySetInnerHTML={{
+              __html: workLog.description,
+            }}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground italic">No description provided</p>
+        )}
       </div>
     </div>
   );

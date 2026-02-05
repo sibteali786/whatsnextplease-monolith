@@ -26,7 +26,7 @@ export interface WorkLogWithRelations {
   timeSpent: number;
   timeRemaining: number | null;
   startedAt: Date;
-  description: string;
+  description: string | null;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;

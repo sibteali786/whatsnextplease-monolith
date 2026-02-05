@@ -161,12 +161,12 @@ export default function WorkLogSection({
           >
             {verboseTime ? (
               <>
-                <ToggleRight className="w-4 h-4" />
+                <ToggleRight className="w-6 h-6" />
                 Verbose
               </>
             ) : (
               <>
-                <ToggleLeft className="w-4 h-4" />
+                <ToggleLeft className="w-6 h-6" />
                 Compact
               </>
             )}

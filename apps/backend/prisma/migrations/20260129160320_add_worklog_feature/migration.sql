@@ -12,7 +12,7 @@ CREATE TABLE "WorkLog" (
     "timeSpent" INTEGER NOT NULL,
     "timeRemaining" INTEGER,
     "startedAt" TIMESTAMP(3) NOT NULL,
-    "description" TEXT NOT NULL,
+    "description" TEXT,
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "deletedAt" TIMESTAMP(3),
     "deletedById" TEXT,

@@ -7,7 +7,7 @@ interface CreateWorkLogRequest {
   timeSpent: string; // e.g., "2h 30m"
   timeRemaining?: string;
   startedAt: string; // ISO string
-  description: string;
+  description?: string;
 }
 
 interface UpdateWorkLogRequest {
@@ -33,7 +33,7 @@ export interface WorkLog {
   timeSpent: number; // in minutes
   timeRemaining: number | null;
   startedAt: string;
-  description: string;
+  description?: string;
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
