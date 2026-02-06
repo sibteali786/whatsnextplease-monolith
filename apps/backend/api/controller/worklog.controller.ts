@@ -110,6 +110,7 @@ export class WorkLogController {
         totalCount: result.totalCount,
         hasNextCursor: result.hasNextCursor,
         nextCursor: result.nextCursor,
+        totalTimeSpent: result.totalTimeSpent,
         message: 'Work logs retrieved successfully',
       });
     } catch (error) {

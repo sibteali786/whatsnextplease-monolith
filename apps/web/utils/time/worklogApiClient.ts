@@ -73,7 +73,7 @@ class WorkLogApiClient {
   /**
    * Get work logs for a task
    */
-  async getWorkLogs(taskId: string, cursor?: string, pageSize = 20) {
+  async getWorkLogs(taskId: string, cursor?: string, pageSize = 10) {
     const params = new URLSearchParams();
     if (cursor) params.append('cursor', cursor);
     params.append('pageSize', String(pageSize));

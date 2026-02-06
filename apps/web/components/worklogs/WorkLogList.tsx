@@ -21,13 +21,19 @@ import {
 interface WorkLogListProps {
   taskId: string;
   workLogs: WorkLog[];
-  onWorkLogsUpdate: (workLogs: WorkLog[], hasMore: boolean, nextCursor: string | null) => void;
+  onWorkLogsUpdate: (
+    workLogs: WorkLog[],
+    hasMore: boolean,
+    nextCursor: string | null,
+    totalTimeSpent?: number
+  ) => void;
   totalCount: number;
   hasMore: boolean;
   nextCursor: string | null;
   verboseTime?: boolean;
   taskTimeForTask?: number | null;
   taskTotalTimeSpent?: number | null;
+  newTotal?: number;
 }
 
 export default function WorkLogList({
@@ -40,6 +46,7 @@ export default function WorkLogList({
   verboseTime = false,
   taskTimeForTask,
   taskTotalTimeSpent,
+  newTotal,
 }: WorkLogListProps) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
@@ -62,7 +69,8 @@ export default function WorkLogList({
         onWorkLogsUpdate(
           [...workLogs, ...result.workLogs],
           result.hasNextCursor || false,
-          result.nextCursor || null
+          result.nextCursor || null,
+          result.totalTimeSpent
         );
       } else {
         toast({
@@ -108,7 +116,8 @@ export default function WorkLogList({
         onWorkLogsUpdate(
           workLogs.filter(wl => wl.id !== workLogToDelete),
           hasMore,
-          nextCursor
+          nextCursor,
+          newTotal
         );
         toast({
           title: 'Work Log Deleted',
@@ -140,7 +149,8 @@ export default function WorkLogList({
     onWorkLogsUpdate(
       workLogs.map(wl => (wl.id === updatedWorkLog.id ? updatedWorkLog : wl)),
       hasMore,
-      nextCursor
+      nextCursor,
+      newTotal
     );
     setShowEditDialog(false);
     setEditingWorkLog(undefined);

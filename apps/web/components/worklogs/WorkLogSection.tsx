@@ -67,11 +67,7 @@ export default function WorkLogSection({
         setHasMore(result.hasNextCursor || false);
         setNextCursor(result.nextCursor || null);
 
-        const calculatedSpent = (result.workLogs || []).reduce(
-          (sum: number, wl: WorkLog) => sum + (wl.timeSpent || 0),
-          0
-        );
-        setLocalTimeSpent(calculatedSpent);
+        setLocalTimeSpent(result.totalTimeSpent || 0);
       } else {
         toast({
           title: 'Load Failed',
@@ -114,12 +110,14 @@ export default function WorkLogSection({
   const handleWorkLogsUpdate = (
     updatedWorkLogs: WorkLog[],
     newHasMore: boolean,
-    newNextCursor: string | null
+    newNextCursor: string | null,
+    serverTotalTimeSpent?: number
   ) => {
     setWorkLogs(updatedWorkLogs);
     setTotalCount(updatedWorkLogs.length);
-    const calculatedSpent = updatedWorkLogs.reduce((sum, wl) => sum + (wl.timeSpent || 0), 0);
-    setLocalTimeSpent(calculatedSpent);
+    if (serverTotalTimeSpent !== undefined) {
+      setLocalTimeSpent(serverTotalTimeSpent);
+    }
     setHasMore(newHasMore);
     setNextCursor(newNextCursor);
     // Notify parent to refresh task data
@@ -225,6 +223,7 @@ export default function WorkLogSection({
           verboseTime={verboseTime}
           taskTimeForTask={taskTimeForTask}
           taskTotalTimeSpent={localTimeSpent}
+          newTotal={localTimeSpent}
         />
       )}
 

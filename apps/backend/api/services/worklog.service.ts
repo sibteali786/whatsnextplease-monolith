@@ -148,6 +148,7 @@ export class WorkLogService {
     totalCount?: number;
     hasNextCursor?: boolean;
     nextCursor?: string | null;
+    totalTimeSpent?: number;
     error?: string;
   }> {
     try {
@@ -167,13 +168,14 @@ export class WorkLogService {
       });
 
       const totalCount = await this.repository.countWorkLogsByTaskId(taskId);
-
+      const totalTimeSpent = await this.repository.getTotalTimeSpent(taskId);
       return {
         success: true,
         workLogs: result.workLogs,
         totalCount,
         hasNextCursor: result.hasNextCursor,
         nextCursor: result.nextCursor,
+        totalTimeSpent,
       };
     } catch (error) {
       logger.error('Error fetching work logs:', error);
