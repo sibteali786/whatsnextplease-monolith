@@ -21,7 +21,7 @@ import {
 interface WorkLogListProps {
   taskId: string;
   workLogs: WorkLog[];
-  onWorkLogsUpdate: (workLogs: WorkLog[]) => void;
+  onWorkLogsUpdate: (workLogs: WorkLog[], hasMore: boolean, nextCursor: string | null) => void;
   totalCount: number;
   hasMore: boolean;
   nextCursor: string | null;
@@ -56,10 +56,14 @@ export default function WorkLogList({
     setLoadingMore(true);
 
     try {
-      const result = await workLogApiClient.getWorkLogs(taskId, nextCursor, 20);
+      const result = await workLogApiClient.getWorkLogs(taskId, nextCursor, 5);
 
       if (result.success && result.workLogs) {
-        onWorkLogsUpdate([...workLogs, ...result.workLogs]);
+        onWorkLogsUpdate(
+          [...workLogs, ...result.workLogs],
+          result.hasNextCursor || false,
+          result.nextCursor || null
+        );
       } else {
         toast({
           title: 'Load Failed',
@@ -101,7 +105,11 @@ export default function WorkLogList({
 
       if (result.success) {
         // Remove from list
-        onWorkLogsUpdate(workLogs.filter(wl => wl.id !== workLogToDelete));
+        onWorkLogsUpdate(
+          workLogs.filter(wl => wl.id !== workLogToDelete),
+          hasMore,
+          nextCursor
+        );
         toast({
           title: 'Work Log Deleted',
           description: 'The time entry has been deleted successfully',
@@ -129,7 +137,11 @@ export default function WorkLogList({
   };
   const handleWorkLogUpdated = (updatedWorkLog: WorkLog) => {
     // Update the work log in the list
-    onWorkLogsUpdate(workLogs.map(wl => (wl.id === updatedWorkLog.id ? updatedWorkLog : wl)));
+    onWorkLogsUpdate(
+      workLogs.map(wl => (wl.id === updatedWorkLog.id ? updatedWorkLog : wl)),
+      hasMore,
+      nextCursor
+    );
     setShowEditDialog(false);
     setEditingWorkLog(undefined);
   };
@@ -200,7 +212,7 @@ export default function WorkLogList({
         />
       )}
 
-      {/* Alert Dialog for deleting confirmtion */}
+      {/* Alert Dialog for deleting confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

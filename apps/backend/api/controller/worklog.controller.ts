@@ -23,8 +23,8 @@ export class WorkLogController {
       const { timeSpent, timeRemaining, startedAt, description } = req.body;
 
       // Validate required fields
-      if (!timeSpent || !startedAt || !description) {
-        throw new BadRequestError('timeSpent, startedAt, and description are required');
+      if (!timeSpent || !startedAt) {
+        throw new BadRequestError('timeSpent and startedAt are required');
       }
 
       // Get authenticated user info
@@ -83,7 +83,7 @@ export class WorkLogController {
   ): Promise<void> => {
     try {
       const { taskId } = req.params;
-      const { cursor, pageSize = '20' } = req.query;
+      const { cursor, pageSize = '10' } = req.query;
 
       // Validate authentication
       const userId = req.user?.id;

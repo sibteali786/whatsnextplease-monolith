@@ -84,14 +84,7 @@ export class WorkLogService {
         timeRemainingMinutes = timeRemainingResult.minutes;
       }
 
-      // 4. Validate description
-      if (!input.description || input.description.trim().length === 0) {
-        return {
-          success: false,
-          error: 'Work description is required',
-        };
-      }
-
+      // 4. Validate description, it can be emopty but not just spaces, and should be max 10,000 characters
       if (input.description.length > 10000) {
         return {
           success: false,
@@ -148,7 +141,7 @@ export class WorkLogService {
   async getWorkLogsByTaskId(
     taskId: string,
     cursor?: string,
-    pageSize = 20
+    pageSize = 10
   ): Promise<{
     success: boolean;
     workLogs?: WorkLogWithRelations[];

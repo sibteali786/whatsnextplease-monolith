@@ -139,7 +139,6 @@ export default function WorkLogForm({
   const progress = calculateProgress(totalSpentMinutes, timeRemainingMinutes || 0);
 
   const hasProgress = Boolean(currentSpentMinutes) && Boolean(timeRemainingMinutes);
-  console.log(hasProgress, currentSpentMinutes, timeRemainingMinutes);
 
   const onSubmit = async (data: WorkLogFormData) => {
     try {

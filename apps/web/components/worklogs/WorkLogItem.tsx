@@ -40,10 +40,8 @@ export default function WorkLogItem({
 
   // check permissions
   useEffect(() => {
-    console.log('WorkLogItem mounted with workLog:', workLog);
     const checkPermissions = async () => {
       const currentUser = await getCurrentUser();
-      console.log('Current User in WorkLogItem:', currentUser);
       if (!currentUser) return;
 
       // User can edit/delete their own work logs
@@ -166,7 +164,7 @@ export default function WorkLogItem({
           {workLog.timeRemaining !== null && (
             <Badge variant="outline" className="font-mono">
               {formatTimeFromMinutes(
-                Math.round((taskTimeForTask || 0) * 60) - (totalTimeSpent || 0),
+                Math.max(0, Math.round((taskTimeForTask || 0) * 60) - (totalTimeSpent || 0)),
                 verboseTime
               )}{' '}
               remaining

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Clock, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -56,10 +56,10 @@ export default function WorkLogSection({
     setDefaultVerbose();
   }, []);
 
-  const loadWorkLogs = async () => {
+  const loadWorkLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await workLogApiClient.getWorkLogs(taskId, undefined, 20);
+      const result = await workLogApiClient.getWorkLogs(taskId, undefined, 5);
 
       if (result.success) {
         setWorkLogs(result.workLogs || []);
@@ -89,7 +89,7 @@ export default function WorkLogSection({
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId]);
 
   useEffect(() => {
     if (taskId) {
@@ -111,11 +111,17 @@ export default function WorkLogSection({
     }
   };
 
-  const handleWorkLogsUpdate = (updatedWorkLogs: WorkLog[]) => {
+  const handleWorkLogsUpdate = (
+    updatedWorkLogs: WorkLog[],
+    newHasMore: boolean,
+    newNextCursor: string | null
+  ) => {
     setWorkLogs(updatedWorkLogs);
     setTotalCount(updatedWorkLogs.length);
     const calculatedSpent = updatedWorkLogs.reduce((sum, wl) => sum + (wl.timeSpent || 0), 0);
     setLocalTimeSpent(calculatedSpent);
+    setHasMore(newHasMore);
+    setNextCursor(newNextCursor);
     // Notify parent to refresh task data
     if (onDataChange) {
       onDataChange();
