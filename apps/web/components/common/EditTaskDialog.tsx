@@ -142,6 +142,7 @@ interface EditTaskDialogProps {
   taskCategories: { id: string; categoryName: string }[];
   fetchTasks?: () => Promise<void>;
   onTaskUpdate?: () => Promise<void>;
+  onReload?: () => void;
 }
 
 export default function EditTaskDialog({
@@ -152,6 +153,7 @@ export default function EditTaskDialog({
   taskCategories,
   fetchTasks,
   onTaskUpdate,
+  onReload,
 }: EditTaskDialogProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -593,6 +595,8 @@ export default function EditTaskDialog({
         onOpenChange(false);
         if (fetchTasks) {
           await fetchTasks(); // Refresh tasks if fetchTasks is provided
+        } else if (onReload) {
+          onReload();
         }
 
         if (onTaskUpdate) {

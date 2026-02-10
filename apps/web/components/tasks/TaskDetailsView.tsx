@@ -23,6 +23,7 @@ import { handleCommentFragment } from '@/utils/commentNavigation';
 import { SerialNumberBadge } from './SerialNumberBadge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import TaskLinks from './TaskLinks';
+import WorkLogSection from '../worklogs/WorkLogSection';
 
 interface TaskDetailsViewProps {
   taskId: string;
@@ -325,9 +326,10 @@ export default function TaskDetailsView({
           <Separator />
           {/* Tabs for Comments and Links */}
           <Tabs defaultValue="comments" className="mt-6">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList className="grid w-full grid-cols-3 mb-4">
               <TabsTrigger value="comments">Comments</TabsTrigger>
               <TabsTrigger value="links">Links</TabsTrigger>
+              <TabsTrigger value="worklog">Work Log</TabsTrigger>
             </TabsList>
 
             <TabsContent value="comments" className="mt-0">
@@ -336,6 +338,15 @@ export default function TaskDetailsView({
 
             <TabsContent value="links" className="mt-0">
               <TaskLinks taskId={taskId} key={linksRefreshKey} />
+            </TabsContent>
+            <TabsContent value="worklog" className="mt-0">
+              <WorkLogSection
+                taskId={taskId}
+                totalTimeSpent={taskDetails?.totalTimeSpent}
+                latestTimeRemaining={taskDetails?.latestTimeRemaining}
+                taskTimeForTask={taskDetails?.timeForTask ? Number(taskDetails.timeForTask) : null}
+                onDataChange={refreshTaskData}
+              />
             </TabsContent>
           </Tabs>
         </div>

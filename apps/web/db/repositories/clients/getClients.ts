@@ -11,7 +11,7 @@ import 'server-only';
 
 interface GetClientsListParams {
   cursor: string | null; // Cursor to start fetching the next set of records
-  pageSize?: number; // Number of records to fetch
+  pageSize?: number | null; // Number of records to fetch
   search?: string; // Optional search query
 }
 
@@ -39,7 +39,42 @@ const getClientsList = async ({
       where: whereClause,
     });
 
-    // Fetch clients
+    /**
+     * CASE 1: pageSize is null → fetch ALL clients
+     */
+    if (pageSize === null) {
+      const clients = await prisma.client.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          username: true,
+          companyName: true,
+          contactName: true,
+          email: true,
+          phone: true,
+          website: true,
+          address1: true,
+          address2: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          avatarUrl: true,
+        },
+        orderBy: {
+          id: 'asc',
+        },
+      });
+
+      return ClientsListResponseSchema.parse({
+        success: true,
+        clients,
+        nextCursor: null,
+        hasNextPage: false,
+        totalCount,
+      });
+    }
+
+    // CASE 2: pageSize is a number
     const clients = await prisma.client.findMany({
       where: whereClause,
       take: pageSize + 1, // Fetch one extra to check for next page

@@ -1,3 +1,5 @@
+import ProjectTimeline from '@/components/projectTimeline';
+
 const SuperUser = ({
   activeclients,
   messages,
@@ -13,6 +15,9 @@ const SuperUser = ({
       <div className="col-span-2">{activeclients}</div>
       <div className="col-span-2">{messages}</div>
       <div className="col-span-full">{tasks}</div>
+      <div className="col-span-full">
+        <ProjectTimeline />
+      </div>
     </div>
   );
 };

@@ -1,3 +1,5 @@
+import ProjectTimeline from '@/components/projectTimeline';
+
 const TaskAgent = ({
   activeTasks,
   incomingTasks,
@@ -12,6 +14,9 @@ const TaskAgent = ({
       <div className="col-span-2">{activeTasks}</div>
       <div className="col-span-2">{messages}</div>
       <div className="col-span-full">{incomingTasks}</div>
+      <div className="col-span-full">
+        <ProjectTimeline />
+      </div>
     </div>
   );
 };

@@ -74,6 +74,10 @@ model User {
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
     passwordResetTokens  PasswordResetToken[]
+    preference Preference?
+
+    workLogsAuthored     WorkLog[]                @relation("WorkLogsAuthoredByUser")
+    workLogsDeleted      WorkLog[]                @relation("WorkLogsDeletedByUser")
 }
 
 model UserSkill {
@@ -123,6 +127,8 @@ model Client {
     emailVerifiedAt      DateTime?
     verificationTokens   EmailVerificationToken[]
     passwordResetTokens  PasswordResetToken[]
+    preference Preference?
+    workLogsAuthored     WorkLog[]                @relation("WorkLogsAuthoredByClient")
 }
 
 model EmailVerificationToken {
@@ -225,36 +231,39 @@ model TaskSequence {
 // TODO: Also add ability to attach files with a task, overtime, time to complete a task, required hours to complete task.
 // Updated Task model
 model Task {
-    id                 String        @id @default(uuid())
-    title              String
-    description        String
-    priorityId         String
-    priority           TaskPriority  @relation(fields: [priorityId], references: [id])
-    statusId           String
-    status             TaskStatus    @relation(fields: [statusId], references: [id])
-    taskCategoryId     String
-    taskCategory       TaskCategory  @relation(fields: [taskCategoryId], references: [id])
-    assignedToId       String?
-    assignedTo         User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
-    createdByUserId    String? // Nullable, used if created by User
-    createdByUser      User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
-    createdByClientId  String? // Nullable, used if created by Client
-    createdByClient    Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
-    associatedClientId String?
-    associatedClient   Client?       @relation("TasksAssociatedWithClient", fields: [associatedClientId], references: [id])
-    creatorType        CreatorType
-    dueDate            DateTime?
-    timeForTask        Decimal       @db.Decimal(10, 2) // Time to complete the task in h ours
-    overTime           Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
-    taskHistories      TaskHistory[]
-    invoices           Invoice[]
-    taskSkills         TaskSkill[]
-    taskFiles          TaskFile[] // Relation to TaskFile for attachments
-    serialNumber       String?       @unique
-    createdAt          DateTime      @default(now())
-    updatedAt          DateTime      @updatedAt
-    taskComments       TaskComment[]
-    taskLinks          TaskLink[]
+    id                  String        @id @default(uuid())
+    title               String
+    description         String
+    priorityId          String
+    priority            TaskPriority  @relation(fields: [priorityId], references: [id])
+    statusId            String
+    status              TaskStatus    @relation(fields: [statusId], references: [id])
+    taskCategoryId      String
+    taskCategory        TaskCategory  @relation(fields: [taskCategoryId], references: [id])
+    assignedToId        String?
+    assignedTo          User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+    createdByUserId     String? // Nullable, used if created by User
+    createdByUser       User?         @relation("TasksCreatedByUser", fields: [createdByUserId], references: [id])
+    createdByClientId   String? // Nullable, used if created by Client
+    createdByClient     Client?       @relation("TasksCreatedByClient", fields: [createdByClientId], references: [id])
+    associatedClientId  String?
+    associatedClient    Client?       @relation("TasksAssociatedWithClient", fields: [associatedClientId], references: [id])
+    creatorType         CreatorType
+    dueDate             DateTime?
+    timeForTask         Decimal       @db.Decimal(10, 2) // Time to complete the task in hours
+    overTime            Decimal?      @db.Decimal(10, 2) // Overtime spent on the task in hours
+    taskHistories       TaskHistory[]
+    invoices            Invoice[]
+    taskSkills          TaskSkill[]
+    taskFiles           TaskFile[] // Relation to TaskFile for attachments
+    serialNumber        String?       @unique
+    createdAt           DateTime      @default(now())
+    updatedAt           DateTime      @updatedAt
+    taskComments        TaskComment[]
+    taskLinks           TaskLink[]
+    totalTimeSpent      Int? // Sum of all work logs (minutes), NULL if none
+    latestTimeRemaining Int? // Most recent timeRemaining value (minutes)
+    workLogs            WorkLog[] // Relation to WorkLog
 
     @@index([serialNumber])
     // filter performance
@@ -360,6 +369,65 @@ model TaskCommentFile {
     file      File        @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
     @@unique([commentId, fileId])
+}
+
+
+// Stores user-specific preferences such as saved task view filters (extendable for future settings)
+model Preference {
+    id        String   @id @default(uuid())
+    // Either a user or a client
+    userId    String?  @unique
+    user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    clientId  String?  @unique
+    client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+    taskViewFilters TaskViewFilter[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+// Defines the direction in which task results should be sorted
+enum SortDirection {
+    ASC
+    DESC
+}
+// Specifies the task field used for sorting in saved task view filters
+enum TaskSortField {
+    START_DATE
+    END_DATE
+    PRIORITY
+}
+// Represents a user-defined saved filter configuration for Gantt and Kanban task views
+model TaskViewFilter {
+    id             String   @id @default(uuid())
+    name           String
+    preferenceId   String
+    preference     Preference @relation(fields: [preferenceId], references: [id], onDelete: Cascade)
+
+    // Phase (Task Category)
+    taskCategoryId String?   // categoryId
+
+    // Status
+    /* status       TaskStatusEnum? */
+
+    // Assignee
+    assignedToId   String? 
+
+    // Client
+    clientId    String?
+
+    // Sorting
+    sortField      TaskSortField?
+    sortDirection  SortDirection?  
+
+
+
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    @@unique([preferenceId, name])
+    @@index([preferenceId])
 }
 
 //// =========================================
@@ -670,4 +738,42 @@ model PasswordResetToken {
     user     User?   @relation(fields: [userId], references: [id])
     clientId String?
     client   Client? @relation(fields: [clientId], references: [id])
+}
+
+//// =========================================
+// Work Logs (Time Tracking)
+//// =========================================
+
+model WorkLog {
+    id     String @id @default(uuid())
+    taskId String
+    task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+    // Author (polymorphic - matches TaskComment pattern)
+    authorUserId   String?
+    authorUser     User?       @relation("WorkLogsAuthoredByUser", fields: [authorUserId], references: [id])
+    authorClientId String?
+    authorClient   Client?     @relation("WorkLogsAuthoredByClient", fields: [authorClientId], references: [id])
+    authorType     CreatorType // USER or CLIENT
+
+    // Time tracking (stored in minutes)
+    timeSpent     Int // Required: time spent in minutes
+    timeRemaining Int? // Optional: estimated remaining time in minutes
+    startedAt     DateTime // UTC timestamp: when work was performed
+    description   String?   @db.Text // Rich text (HTML from RichTextEditor)
+
+    // Soft delete support (for audit trail)
+    isDeleted   Boolean   @default(false)
+    deletedAt   DateTime?
+    deletedById String?
+    deletedBy   User?     @relation("WorkLogsDeletedByUser", fields: [deletedById], references: [id])
+
+    // Timestamps
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([taskId, startedAt])
+    @@index([authorUserId])
+    @@index([authorClientId])
+    @@index([isDeleted])
 }

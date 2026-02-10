@@ -1,3 +1,5 @@
+import ProjectTimeline from '@/components/projectTimeline';
+
 const TaskSupervisorLayout = ({
   taskSummary,
   recentUnassignedTasks,
@@ -8,10 +10,13 @@ const TaskSupervisorLayout = ({
   messages: React.ReactNode;
 }) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 md:grid-rows-2 gap-6 p-4">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-4">
       <div className="col-span-2">{taskSummary}</div>
       <div className="col-span-2">{messages}</div>
       <div className="col-span-full">{recentUnassignedTasks}</div>
+      <div className="col-span-full">
+        <ProjectTimeline />
+      </div>
     </div>
   );
 };
