@@ -64,6 +64,14 @@ const darkThemeVars: Record<string, string> = {
   '--g-popup-actions': 'rgba(109, 40, 217, 0.2)',
   '--g-weekend-highlight-color': 'rgba(255, 255, 255, 0.05)',
 };
+function escapeHTML(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 const Chart = ({ tasks }: Props) => {
   const { resolvedTheme } = useTheme();
@@ -154,9 +162,11 @@ const Chart = ({ tasks }: Props) => {
         const days =
           Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
+        const safeName = escapeHTML(task.name);
+
         return `
     <div class="custom-details">
-      <p><strong>${task.name}</strong></p>
+      <p><strong>${safeName}</strong></p>
       <p>${start} - ${end} (${days} Days)</p>
     </div>
   `;

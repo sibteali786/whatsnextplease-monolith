@@ -86,10 +86,6 @@ const Gantt = ({ user }: { user: UserState | null }) => {
         );
 
         if (response?.success) {
-          /*  setTotalCount(response.totalCount); */
-        }
-
-        if (response?.success) {
           /*    setTotalCount(response.totalCount); */
 
           //  MAP → FILTER nulls → SAVE

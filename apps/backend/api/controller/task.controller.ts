@@ -30,16 +30,29 @@ export class TaskController {
   constructor(private readonly taskService: TaskService = new TaskService()) {}
 
   /**
-   * GET /tasks - Get tasks with comprehensive filtering and pagination
+   * GET /tasks - Get tasks with comprehensive filtering, sorting, and pagination
    *
    * @description Retrieves tasks with role-based access control and multiple filter options.
-   * Supports cursor-based pagination and full-text search.
+   * Supports cursor-based pagination, full-text search, client filtering,
+   * dynamic sorting, and optional full dataset retrieval.
+   *
    * @access Private (all authenticated users with canViewTasks permission)
    *
    * @query {string} [userId] - Filter by user ID (applies role-based filtering)
-   * @query {string} [cursor] - Pagination cursor (task ID from previous page)
-   * @query {number} [pageSize=10] - Number of results per page (1-100)
+   *
+   * @query {string} [cursor] - Pagination cursor (task ID from previous page).
+   *   - Use the `nextCursor` value returned from the previous response.
+   *   - Ignored when `fetchAll=true`.
+   *
+   * @query {number} [pageSize=10] - Number of results per page (1-100).
+   *   - Must be a positive integer.
+   *   - Ignored when `fetchAll=true`.
+   *
+   * @query {boolean} [fetchAll=false] - If `true`, disables cursor-based pagination
+   *   and returns all matching tasks in a single response.
+   *
    * @query {string} [search] - Full-text search on title and description (case-insensitive)
+   *
    * @query {DurationEnum} [duration=ALL] - Time-based filter:
    *   - TODAY: Tasks from today
    *   - THIS_WEEK: Tasks from current week
@@ -64,7 +77,30 @@ export class TaskController {
    *   - {uuid}: Tasks assigned to specific user ID
    *   - undefined: No assignment filter (respects role-based access)
    *
+   * @query {string} [clientId] - Filter tasks by associated client UUID
+   *
    * @query {string} [categoryId] - Filter by task category UUID
+   *
+   * @query {string} [sortBy] - Sorting configuration in format:
+   *   `{FIELD}-{DIRECTION}`
+   *
+   *   Supported fields (TaskSortField):
+   *   - START_DATE
+   *   - END_DATE
+   *   - PRIORITY
+   *
+   *   Supported directions:
+   *   - ASC (default)
+   *   - DESC
+   *
+   *   Examples:
+   *   - START_DATE-DESC
+   *   - END_DATE-ASC
+   *   - PRIORITY-DESC
+   *
+   *   Notes:
+   *   - If direction is omitted, defaults to ASC.
+   *   - Invalid field values are ignored.
    *
    * @query {USER_CREATED_TASKS_CONTEXT} [context=general] - Filtering context:
    *   - 'user-profile': Always show tasks assigned to specified userId
@@ -82,13 +118,18 @@ export class TaskController {
    * Search for "bug" in unassigned tasks
    * GET /tasks?search=bug&assignedToId=null
    *
+   * @example
+   * Get all tasks for a client sorted by due date descending
+   * GET /tasks?clientId=client-uuid&sortBy=END_DATE-DESC&fetchAll=true
+   *
    * @returns {Object} Response object
    * @returns {boolean} success - Operation success indicator
    * @returns {TaskTable[]} tasks - Array of task objects with related data
-   * @returns {boolean} hasNextCursor - Whether more results exist
-   * @returns {string|null} nextCursor - Cursor for next page
+   * @returns {boolean} hasNextCursor - Whether more results exist (false when fetchAll=true)
+   * @returns {string|null} nextCursor - Cursor for next page (null when fetchAll=true)
    * @returns {number} totalCount - Total matching tasks (for pagination UI)
    */
+
   private handleGetTasks = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.query.userId as string;

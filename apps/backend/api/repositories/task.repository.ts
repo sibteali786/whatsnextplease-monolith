@@ -91,16 +91,9 @@ export class TaskRepository {
     const prismaCursor = isPaginated && cursor ? { id: cursor } : undefined;
     const skip = prismaCursor ? 1 : 0;
 
-    //const take = pageSize ? pageSize + 1 : undefined; // +1 to detect next page
-    //const prismaCursor = cursor ? { id: cursor } : undefined;
-
     let tasks = await this.prisma.task.findMany({
       where,
-      /*       take: pageSize + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }), */
-      // take,
-      //skip: prismaCursor ? 1 : 0, // skip cursor itself
-      // ...(prismaCursor && { cursor: prismaCursor }),
+
       ...(isPaginated && {
         take,
         skip,
@@ -171,22 +164,12 @@ export class TaskRepository {
       paginatedTasks = hasNextCursor ? tasks.slice(0, pageSize) : tasks;
       nextCursor = hasNextCursor ? paginatedTasks[paginatedTasks.length - 1].id : null;
     }
-    /*   const hasNextCursor = tasks.length > pageSize;
-    const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
-    if (hasNextCursor) {
-      tasks.pop();
-    } */
 
     return {
       tasks: paginatedTasks,
       hasNextCursor,
       nextCursor,
     };
-    /*     return {
-      tasks,
-      hasNextCursor,
-      nextCursor,
-    }; */
   }
   /**
    * Get tasks for specific statuses
