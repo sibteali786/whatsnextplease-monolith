@@ -16,7 +16,11 @@ export const tasksByType = async (
   userId?: string,
   status?: TaskStatusEnum | TaskStatusEnum[],
   priority?: TaskPriorityEnum | TaskPriorityEnum[],
-  assignedToFilter?: string
+  assignedToFilter?: string,
+  clientId?: string,
+  categoryId?: string,
+  sortBy?: string,
+  fetchAll: boolean = false
 ): Promise<GetTaskSchema> => {
   try {
     const queryParams: any = {
@@ -24,6 +28,10 @@ export const tasksByType = async (
       pageSize,
       search: searchTerm,
       duration,
+      categoryId,
+      clientId,
+      sortBy,
+      fetchAll,
     };
 
     // Explicit assignedTo filter takes precedence over type
