@@ -27,6 +27,7 @@ export interface TaskQueryOptions {
   pageSize: number | undefined;
   orderBy?: Prisma.TaskOrderByWithRelationInput;
   context?: USER_CREATED_TASKS_CONTEXT;
+  fetchAll?: boolean;
 }
 
 export interface BatchUpdateData {
@@ -52,9 +53,10 @@ export class TaskRepository {
       priority,
       assignedToId,
       categoryId,
+      clientId,
     } = filters;
 
-    const { cursor, pageSize, orderBy = { createdAt: 'asc' } } = options;
+    const { cursor, pageSize, orderBy = { createdAt: 'desc' }, fetchAll = false } = options;
     // Build comprehensive where clause
     const where: Prisma.TaskWhereInput = {
       ...whereCondition,
@@ -66,7 +68,11 @@ export class TaskRepository {
         priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
       }),
       ...(assignedToId !== undefined && { assignedToId: assignedToId }),
-      ...(categoryId && { categoryId }),
+      ...(clientId && {
+        OR: [{ createdByClientId: clientId }, { associatedClientId: clientId }],
+      }),
+      ...(categoryId && { taskCategoryId: categoryId }),
+      /*   ...(categoryId && { categoryId }), */
       /*   ...(searchTerm && {
         OR: [
           { serialNumber: { contains: searchTerm, mode: 'insensitive' } },
@@ -75,18 +81,31 @@ export class TaskRepository {
         ],
       }), */
     };
-
+    // -------------------------------
+    // Pagination controls
+    // -------------------------------
+    const isPaginated = !fetchAll && !!pageSize;
     // Determine take and cursor for pagination
-    const take = pageSize ? pageSize + 1 : undefined; // +1 to detect next page
-    const prismaCursor = cursor ? { id: cursor } : undefined;
+
+    const take = isPaginated ? pageSize + 1 : undefined;
+    const prismaCursor = isPaginated && cursor ? { id: cursor } : undefined;
+    const skip = prismaCursor ? 1 : 0;
+
+    //const take = pageSize ? pageSize + 1 : undefined; // +1 to detect next page
+    //const prismaCursor = cursor ? { id: cursor } : undefined;
 
     let tasks = await this.prisma.task.findMany({
       where,
       /*       take: pageSize + 1,
       ...(cursor && { cursor: { id: cursor }, skip: 1 }), */
-      take,
-      skip: prismaCursor ? 1 : 0, // skip cursor itself
-      ...(prismaCursor && { cursor: prismaCursor }),
+      // take,
+      //skip: prismaCursor ? 1 : 0, // skip cursor itself
+      // ...(prismaCursor && { cursor: prismaCursor }),
+      ...(isPaginated && {
+        take,
+        skip,
+        ...(prismaCursor && { cursor: prismaCursor }),
+      }),
       orderBy,
       select: {
         id: true,
@@ -147,7 +166,7 @@ export class TaskRepository {
     let paginatedTasks = tasks;
     let hasNextCursor = false;
     let nextCursor: string | null = null;
-    if (pageSize) {
+    if (isPaginated) {
       hasNextCursor = tasks.length > pageSize;
       paginatedTasks = hasNextCursor ? tasks.slice(0, pageSize) : tasks;
       nextCursor = hasNextCursor ? paginatedTasks[paginatedTasks.length - 1].id : null;
@@ -256,7 +275,8 @@ export class TaskRepository {
         priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
       }),
       ...(assignedToId !== undefined && { assignedToId }),
-      ...(categoryId && { categoryId }),
+      /*   ...(categoryId && { categoryId }), */
+      ...(categoryId && { taskCategoryId: categoryId }),
       ...(searchTerm && {
         OR: [
           { title: { contains: searchTerm, mode: 'insensitive' } },

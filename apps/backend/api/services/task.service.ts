@@ -31,6 +31,7 @@ import { ClientService } from './client.service';
 import { TaskSerialNumberService } from './taskSerialNumber.service';
 import { logger } from '../utils/logger';
 import { AdvancedFilterQuery, AdvancedFilterValidator } from '../types/advancedFilter.types';
+import { mapSortByToOrderBy } from '../utils/tasks/sort';
 
 export interface BatchUpdateRequest {
   taskIds: string[];
@@ -74,6 +75,7 @@ export interface TaskQueryParams {
     direction: SortDirection;
   };
   clientId?: string;
+  fetchAll?: boolean;
 }
 
 export interface UpdateTaskFieldRequest {
@@ -132,8 +134,11 @@ export class TaskService {
       status,
       priority,
       assignedToId,
+      clientId,
       categoryId,
       context = USER_CREATED_TASKS_CONTEXT.GENERAL,
+      sortBy,
+      fetchAll = false,
     } = params;
     // Authorization check
     if (!canViewTasks(role)) {
@@ -159,6 +164,9 @@ export class TaskService {
       }
       return [];
     })();
+
+    const orderBy = mapSortByToOrderBy(sortBy) ?? { createdAt: 'desc' };
+
     const whereCondition = userId
       ? context === USER_CREATED_TASKS_CONTEXT.USER_PROFILE
         ? getUserProfileTaskFilter(userId) // Always show tasks assigned to this user
@@ -172,13 +180,16 @@ export class TaskService {
       status: normalizedStatus.length ? normalizedStatus : undefined,
       priority: normalizedPriority.length ? normalizedPriority : undefined,
       assignedToId,
+      clientId,
       categoryId,
     };
 
     const queryOptions: TaskQueryOptions = {
       cursor,
       pageSize,
-      orderBy: { createdAt: 'desc' },
+      /* orderBy: { createdAt: 'desc' }, */
+      orderBy,
+      fetchAll,
     };
 
     // Execute queries
@@ -769,28 +780,6 @@ export class TaskService {
 
     if (!canViewTasks(role)) {
       throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
-    }
-    function mapSortByToOrderBy(sortBy?: {
-      field: TaskSortField;
-      direction: SortDirection;
-    }): Prisma.TaskOrderByWithRelationInput | undefined {
-      if (!sortBy) return undefined;
-
-      const order = sortBy.direction === SortDirection.DESC ? 'desc' : 'asc';
-
-      switch (sortBy.field) {
-        case TaskSortField.START_DATE:
-          return { createdAt: order };
-
-        case TaskSortField.END_DATE:
-          return { dueDate: order };
-
-        case TaskSortField.PRIORITY:
-          return { priority: { priorityName: order } };
-
-        default:
-          return undefined;
-      }
     }
 
     const orderBy = mapSortByToOrderBy(sortBy) ?? { createdAt: 'desc' };

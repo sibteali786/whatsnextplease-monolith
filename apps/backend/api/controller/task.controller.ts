@@ -5,19 +5,13 @@ import { TaskService, BatchUpdateRequest, BatchDeleteRequest } from '../services
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError, ValidationError } from '@wnp/types';
 import { DurationEnum } from '@wnp/types';
-import {
-  TaskStatusEnum,
-  TaskPriorityEnum,
-  Roles,
-  CreatorType,
-  TaskSortField,
-  SortDirection,
-} from '@prisma/client';
+import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType } from '@prisma/client';
 import z from 'zod';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
 import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 import { advancedFilterQuerySchema } from '../types/advancedFilter.types';
+import { parseSortByParam } from '../utils/tasks/sort';
 
 const getUserTaskCountSchema = z.object({
   userId: z.string().uuid('Invalid user ID format'),
@@ -105,7 +99,10 @@ export class TaskController {
       const status = req.query.status as TaskStatusEnum;
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
+      const clientId = req.query.clientId as string;
       const categoryId = req.query.categoryId as string;
+      const sortBy = req.query.sortBy as string;
+      const fetchAll = req.query.fetchAll === 'true';
 
       const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
@@ -119,11 +116,14 @@ export class TaskController {
         throw new BadRequestError('User role is required');
       }
 
-      // FIXED: Handle cursor properly
+      // Handle cursor properly
       let processedCursor: string | undefined = cursor;
       if (cursor === 'undefined' || cursor === 'null' || !cursor) {
         processedCursor = undefined;
       }
+
+      //  Handle sortBy parameter properly
+      const sortByParsed = parseSortByParam(sortBy as string | undefined);
 
       // FIXED: Handle assignedToId properly
       let processedAssignedToId;
@@ -147,8 +147,11 @@ export class TaskController {
         status,
         priority,
         assignedToId: processedAssignedToId,
+        clientId,
         categoryId,
         context,
+        sortBy: sortByParsed,
+        fetchAll,
       });
 
       res.status(200).json(result);
@@ -513,23 +516,6 @@ export class TaskController {
     next: NextFunction
   ) => {
     try {
-      function parseSortByParam(
-        sortBy?: string
-      ): { field: TaskSortField; direction: SortDirection } | undefined {
-        if (!sortBy) return undefined;
-
-        const [fieldRaw, directionRaw] = sortBy.split('-');
-
-        if (!Object.values(TaskSortField).includes(fieldRaw as TaskSortField)) return undefined;
-
-        const direction = directionRaw === 'DESC' ? SortDirection.DESC : SortDirection.ASC;
-
-        return {
-          field: fieldRaw as TaskSortField,
-          direction,
-        };
-      }
-
       const statusesStr = req.body.statuses as string; // "NEW,IN_PROGRESS,COMPLETED"
       if (!statusesStr) {
         throw new BadRequestError('At least one status is required');

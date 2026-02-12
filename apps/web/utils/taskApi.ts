@@ -57,7 +57,7 @@ class TaskApiClient {
         searchParams.append(key, String(value));
       }
     });
-    
+
     const response = await fetch(`${this.baseUrl}/tasks?${searchParams.toString()}`, {
       method: 'GET',
       headers: this.getAuthHeaders(),
