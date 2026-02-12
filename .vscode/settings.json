@@ -1,5 +1,5 @@
 {
   "eslint.workingDirectories": ["./apps/backend", "./apps/web"],
-  "cSpell.words": ["Picklists"],
+  "cSpell.words": ["Gantt", "Picklists"],
   "prisma.pinToPrisma6": true
 }

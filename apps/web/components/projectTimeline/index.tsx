@@ -31,7 +31,7 @@ const ProjectTimeline = () => {
         </div>
         <TaskViewFilterComponent role={currentUser?.role?.name} />
       </div>
-      {view === 'timeline' ? <Gantt /> : <Kanban user={currentUser} />}
+      {view === 'timeline' ? <Gantt user={currentUser} /> : <Kanban user={currentUser} />}
     </div>
   );
 };
