@@ -14,6 +14,9 @@ router.post('/signin', validateSignin, authController.signin);
 // POST /auth/signup - Register new user
 router.post('/signup', validateSignup, authController.signup);
 
+// POST /auth/refresh - Refresh access token
+router.post('/refresh', authController.refresh);
+
 // POST /auth/verify-email - Verify email with token
 router.post('/verify-email', authController.verifyEmail);
 // POST /auth/resend-verification-by-email (public)

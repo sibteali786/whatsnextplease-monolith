@@ -6,9 +6,13 @@ import { getIdpAdminService } from './idp/IdpAdminFactory';
 import { tokenExchangeService } from './idp/TokenExchangeService';
 import { emailVerificationService } from './emailVerification.service';
 import * as jwt from 'jsonwebtoken';
+import { env } from '../config/environment';
+import {
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+} from '@aws-sdk/client-cognito-identity-provider';
 
 const idpAdmin = getIdpAdminService();
-
 interface SigninRequest {
   username: string;
   password: string;
@@ -17,6 +21,9 @@ interface SigninRequest {
 interface SigninResponse {
   success: boolean;
   token?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  refreshExpiresIn?: number;
   user?: any;
   client?: any;
   migrated?: boolean;
@@ -39,6 +46,9 @@ interface SignupRequest {
 interface SignupResponse {
   success: boolean;
   token?: string;
+  refreshToken?: string;
+  refreshExpiresIn?: number;
+  expiresIn?: number;
   user?: any;
   client?: any;
   message?: string;
@@ -137,6 +147,9 @@ export class AuthService {
       return {
         success: true,
         token: tokenResult.tokens!.access_token,
+        refreshToken: tokenResult.tokens!.refresh_token, // ADD THIS
+        expiresIn: tokenResult.tokens!.expires_in,
+        refreshExpiresIn: tokenResult.tokens!.refresh_expires_in,
         [entityType === 'user' ? 'user' : 'client']: this.sanitizeEntity(entity),
         message: 'Logged in successfully',
       };
@@ -156,7 +169,14 @@ export class AuthService {
     entity: any,
     entityType: 'user' | 'client',
     password: string
-  ): Promise<{ success: boolean; token?: string; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    token?: string;
+    error?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    refreshExpiresIn?: number;
+  }> {
     try {
       // 1. Determine IDP group
       const role = entityType === 'client' ? Roles.CLIENT : entity.role?.name;
@@ -213,6 +233,9 @@ export class AuthService {
       return {
         success: true,
         token: tokenResult.tokens!.access_token,
+        refreshToken: tokenResult.tokens!.refresh_token,
+        expiresIn: tokenResult.tokens!.expires_in,
+        refreshExpiresIn: tokenResult.tokens!.refresh_expires_in,
       };
     } catch (error) {
       logger.error(`Migration error:${error}`);
@@ -377,6 +400,9 @@ export class AuthService {
         return {
           success: true,
           token: tokenResult.tokens!.access_token,
+          refreshToken: tokenResult.tokens!.refresh_token,
+          expiresIn: tokenResult.tokens!.expires_in,
+          refreshExpiresIn: tokenResult.tokens!.refresh_expires_in,
           [role === Roles.CLIENT ? 'client' : 'user']: this.sanitizeEntity(entity),
           message: 'Account created successfully',
         };
@@ -465,7 +491,157 @@ export class AuthService {
       return { success: false, error: 'Failed to get current user' };
     }
   }
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshToken(refreshToken: string): Promise<{
+    success: boolean;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    refreshExpiresIn?: number;
+    error?: string;
+  }> {
+    try {
+      const provider = env.AUTH_PROVIDER;
 
+      if (provider === 'keycloak') {
+        return await this.refreshKeycloakToken(refreshToken);
+      } else if (provider === 'cognito') {
+        return await this.refreshCognitoToken(refreshToken);
+      }
+
+      return {
+        success: false,
+        error: `Unknown AUTH_PROVIDER: ${provider}`,
+      };
+    } catch (error) {
+      logger.error('Token refresh error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Token refresh failed',
+      };
+    }
+  }
+
+  /**
+   * Refresh Keycloak token
+   */
+  private async refreshKeycloakToken(refreshToken: string): Promise<{
+    success: boolean;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    error?: string;
+  }> {
+    const keycloakUrl = env.KEYCLOAK_URL;
+    const realm = env.KEYCLOAK_REALM;
+    const clientId = env.KEYCLOAK_CLIENT_ID;
+
+    if (!clientId) {
+      return {
+        success: false,
+        error: 'KEYCLOAK_CLIENT_ID not configured',
+      };
+    }
+
+    const params = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: clientId,
+      refresh_token: refreshToken,
+    });
+
+    try {
+      const response = await fetch(`${keycloakUrl}/realms/${realm}/protocol/openid-connect/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.debug(`Keycloak refresh error: ${response.status} - ${errorText}`);
+        return {
+          success: false,
+          error: `Token refresh failed: ${response.status}`,
+        };
+      }
+
+      const tokens = await response.json();
+
+      logger.info('✅ Successfully refreshed Keycloak token');
+
+      return {
+        success: true,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token, // Keycloak returns new refresh token
+        expiresIn: tokens.expires_in,
+      };
+    } catch (error) {
+      logger.error('Keycloak token refresh failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Token refresh failed',
+      };
+    }
+  }
+
+  /**
+   * Refresh Cognito token (for future use)
+   */
+  private async refreshCognitoToken(refreshToken: string): Promise<{
+    success: boolean;
+    accessToken?: string;
+    refreshToken?: string;
+    expiresIn?: number;
+    error?: string;
+  }> {
+    const region = env.AWS_REGION;
+    const clientId = env.COGNITO_CLIENT_ID;
+
+    if (!clientId) {
+      return {
+        success: false,
+        error: 'COGNITO_CLIENT_ID not configured',
+      };
+    }
+
+    const client = new CognitoIdentityProviderClient({ region });
+
+    try {
+      const command = new InitiateAuthCommand({
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: clientId,
+        AuthParameters: {
+          REFRESH_TOKEN: refreshToken,
+        },
+      });
+
+      const response = await client.send(command);
+
+      if (!response.AuthenticationResult) {
+        return {
+          success: false,
+          error: 'No authentication result from Cognito',
+        };
+      }
+
+      return {
+        success: true,
+        accessToken: response.AuthenticationResult.AccessToken!,
+        refreshToken: response.AuthenticationResult.RefreshToken,
+        expiresIn: response.AuthenticationResult.ExpiresIn,
+      };
+    } catch (error) {
+      logger.error('Cognito token refresh failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Token refresh failed',
+      };
+    }
+  }
   /**
    * Remove sensitive fields from entity
    */

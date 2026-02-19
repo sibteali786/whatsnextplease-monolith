@@ -46,6 +46,9 @@ export class AuthController {
         token: result.token,
         user: result.user,
         client: result.client,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+        refreshExpiresIn: result.refreshExpiresIn,
         migrated: result.migrated || false,
         usedLegacy: result.usedLegacy || false,
       });
@@ -117,6 +120,9 @@ export class AuthController {
         success: true,
         message: result.message || 'Account created successfully',
         token: result.token,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+        refreshExpiresIn: result.refreshExpiresIn,
         user: result.user,
         client: result.client,
       });
@@ -308,6 +314,43 @@ export class AuthController {
       });
     } catch (error) {
       logger.error('Current user error:', error);
+      next(error);
+    }
+  });
+
+  /**
+   * POST /auth/refresh
+   * Refresh access token using refresh token
+   */
+  refresh = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken || typeof refreshToken !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Refresh token is required',
+        });
+      }
+
+      const result = await authService.refreshToken(refreshToken);
+
+      if (!result.success) {
+        return res.status(401).json({
+          success: false,
+          message: result.error || 'Failed to refresh token',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+        message: 'Token refreshed successfully',
+      });
+    } catch (error) {
+      logger.error('Refresh controller error:', error);
       next(error);
     }
   });
