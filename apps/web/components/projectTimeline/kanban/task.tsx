@@ -3,7 +3,7 @@
 import { taskPriorityColors } from '@/utils/taskUtilColorClasses';
 import { Badge } from '../../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../ui/avatar';
-import { Calendar, MoreHorizontal } from 'lucide-react';
+import { Calendar, Equal, MoreHorizontal } from 'lucide-react';
 import { TaskTable } from '@/utils/validationSchemas';
 import { transformEnumValue } from '@/utils/utils';
 
@@ -21,6 +21,7 @@ import { useState } from 'react';
 import EditTaskDialog from '../../common/EditTaskDialog';
 import { Roles } from '@prisma/client';
 import DeleteTaskDialog from './delete-task';
+import { useRouter } from 'next/navigation';
 const DateComponent = ({ dateString }: { dateString?: Date | null }) => {
   const date = dateString ? new Date(dateString) : null;
   const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -55,6 +56,7 @@ const TaskBox = ({
   taskCategories?: { id: string; categoryName: string }[];
   onReload?: () => void;
 }) => {
+  const router = useRouter();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -85,72 +87,88 @@ const TaskBox = ({
         taskId={task.id}
         onReload={onReload}
       />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0 absolute right-4 top-5">
-            <span className="sr-only">Open menu</span>
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={e => {
-              e.stopPropagation();
-              const taskUrl = `${window.location.origin}/taskOfferings/${task.id}`;
-              navigator.clipboard.writeText(taskUrl);
-            }}
-          >
-            Copy Task Link
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={e => {
-              e.stopPropagation(); // Prevents the row click event
-              setIsEditDialogOpen(true);
-            }}
-          >
-            Edit Task
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={async e => {
-              e.stopPropagation();
-              setIsDeleteDialogOpen(true);
-            }}
-          >
-            Delete Task
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...listeners}
-        {...attributes}
-        className="flex flex-col gap-4 p-4 rounded-[16px] border bg-[rgba(255, 255, 255, 0.1)] cursor-grab min-w-[300px] md:min-w-full"
-      >
-        <Badge
-          className={`${taskPriorityColors[task?.priority?.priorityName]} py-1 px-3 text-nowrap w-fit`}
-        >
-          {transformEnumValue(task?.priority?.priorityName)}
-        </Badge>
 
-        <p className="font-bold text-sm ">{task?.title}</p>
-        <div className="flex justify-between gap-2 items-center">
-          <Avatar className="h-6 w-6 rounded-lg">
-            <AvatarImage
-              src={task?.assignedTo?.avatarUrl || 'https://github.com/shadcn.png'}
-              alt={task?.assignedTo?.firstName ?? 'avatar'}
-              className="rounded-full"
-            />
-            <AvatarFallback className="rounded-full text-xs">
-              {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex gap-1 items-center text-muted-foreground">
-            <DateComponent dateString={task?.createdAt} />
-            -
-            <DateComponent dateString={task?.dueDate} />
+      <div
+        style={style}
+        className="flex flex-col rounded-[16px] border bg-[rgba(255, 255, 255, 0.1)]  min-w-[300px] md:min-w-full"
+      >
+        <div
+          ref={setNodeRef}
+          {...listeners}
+          {...attributes}
+          className="w-full flex flex-col items-center justify-around bg-[#ffffff0a] cursor-grab rounded-t-[16px] h-[25px] "
+        >
+          {/* <div className="bg-white/40 w-[30px] h-[2px] min-h-[2px] max-h-[2px]" />
+          <div className="bg-white/40 w-[30px] h-[2px] min-h-[2px] max-h-[2px]" /> */}
+          <Equal className="text-white/40 w-8" />
+        </div>
+        <div
+          className="flex flex-col gap-4 p-4 cursor-pointer hover:bg-primary/10 transition-colors duration-300"
+          onClick={() => router.push(`/taskOfferings/${task.id}`)}
+        >
+          <div className="flex justify-between align-center items-center">
+            <Badge
+              className={`${taskPriorityColors[task?.priority?.priorityName]} py-1 px-3 text-nowrap w-fit`}
+            >
+              {transformEnumValue(task?.priority?.priorityName)}
+            </Badge>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="h-5 w-5 p-0 ">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={e => {
+                    e.stopPropagation();
+                    const taskUrl = `${window.location.origin}/taskOfferings/${task.id}`;
+                    navigator.clipboard.writeText(taskUrl);
+                  }}
+                >
+                  Copy Task Link
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={e => {
+                    e.stopPropagation(); // Prevents the row click event
+                    setIsEditDialogOpen(true);
+                  }}
+                >
+                  Edit Task
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async e => {
+                    e.stopPropagation();
+                    setIsDeleteDialogOpen(true);
+                  }}
+                >
+                  Delete Task
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <p className="font-bold text-sm ">{task?.title}</p>
+          <div className="flex justify-between gap-2 items-center">
+            <Avatar className="h-6 w-6 rounded-lg">
+              <AvatarImage
+                src={task?.assignedTo?.avatarUrl || 'https://github.com/shadcn.png'}
+                alt={task?.assignedTo?.firstName ?? 'avatar'}
+                className="rounded-full"
+              />
+              <AvatarFallback className="rounded-full text-xs">
+                {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex gap-1 items-center text-muted-foreground">
+              <DateComponent dateString={task?.createdAt} />
+              -
+              <DateComponent dateString={task?.dueDate} />
+            </div>
           </div>
         </div>
       </div>

@@ -470,7 +470,7 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
         onValueChange={value => updateFilter('duration', value)}
       >
         <SelectTrigger
-          className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit text-[#9ca3af] *:
+          className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit *:
          border-0 shadow-none focus:ring-0 focus:ring-offset-0
         "
         >
@@ -526,7 +526,7 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
         }}
       >
         <SelectTrigger
-          className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit text-[#9ca3af] *:
+          className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit *:
          border-0 shadow-none focus:ring-0 focus:ring-offset-0
         "
         >
