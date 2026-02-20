@@ -15,13 +15,19 @@ export interface ModeToggle {
   className?: string;
 }
 export const ModeToggle: React.FC<ModeToggle> = ({ className }) => {
-  const { setTheme, theme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
   return (
     <div className={className}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="flex items-center justify-center" variant="outline" size="icon">
-            {theme === 'dark' ? (
+            {resolvedTheme === 'dark' ? (
               <Moon
                 className=" rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
                 size={20}
