@@ -122,7 +122,7 @@ const FileUploadArea = ({ onFilesChange }: FileUploadAreaProps) => {
         const payload = {
           fileName: nextFile.file.name,
           fileSize: fileSizeInKb,
-          uploadedBy: user?.name,
+          uploadedBy: user?.username,
           createdAt: new Date().toISOString(),
           role: user?.role?.name,
           userId: user?.id,
