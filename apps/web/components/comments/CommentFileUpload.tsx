@@ -117,7 +117,7 @@ const CommentFileUpload = forwardRef<CommentFileUploadRef, CommentFileUploadProp
           const payload = {
             fileName: file.name,
             fileSize: fileSizeInKb,
-            uploadedBy: user?.name || 'Unknown',
+            uploadedBy: user?.username || 'Unknown',
             createdAt: new Date().toISOString(),
             role: user?.role?.name || 'USER',
             userId: user?.id || '',
@@ -219,7 +219,9 @@ const CommentFileUpload = forwardRef<CommentFileUploadRef, CommentFileUploadProp
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'An error occurred while deleting the file: ' + (error instanceof Error ? error.message : String(error)),
+          description:
+            'An error occurred while deleting the file: ' +
+            (error instanceof Error ? error.message : String(error)),
           variant: 'destructive',
           icon: <CircleX size={20} />,
         });
