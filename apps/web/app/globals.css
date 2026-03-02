@@ -599,6 +599,12 @@ body {
   padding: 0px !important;
   gap: 5px;
 }
-/* .popup-wrapper {
-  background-color: #030712 !important;
-} */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px; /* 👈 Change scrollbar width here */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #374151;
+  border-radius: 8px;
+  border: 2px solid #111827;
+}

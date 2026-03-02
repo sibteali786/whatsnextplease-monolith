@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 /* import { format, differenceInDays } from 'date-fns'; */
 import { useSearchParams } from 'next/navigation';
-import Chart, { GanttTask } from './chart';
+import Chart, { ChartHandle, GanttTask } from './chart';
 import { TasksByStatusFilters } from '@/utils/tasks/useTasksByStatus';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { TaskTable } from '@/utils/validationSchemas';
@@ -12,6 +12,7 @@ import { CircleX } from 'lucide-react';
 import { UserState } from '@/utils/user';
 import { DurationEnum } from '@/types';
 import GanttSkeleton from './skeleton';
+import TaskColumn from './task-column';
 
 const FILTER_STORAGE_KEY = 'timelineFilter';
 
@@ -41,7 +42,9 @@ function mapTaskToGantt(task: TaskTable): GanttTask | null {
     end: makeEndExclusive(task.dueDate),
     progress: 0,
     dependencies: '',
+    categoryName: task.taskCategory?.categoryName,
     custom_class: task.status ? `status-${task.status}` : undefined,
+    assignedTo: task.assignedTo ?? undefined,
   };
 }
 
@@ -57,7 +60,7 @@ function getFiltersFromStorage(): TasksByStatusFilters {
 }
 const Gantt = ({ user }: { user: UserState | null }) => {
   const searchParams = useSearchParams();
-
+  const chartRef = useRef<ChartHandle>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [tasks, setTasks] = useState<GanttTask[]>([]);
@@ -118,7 +121,14 @@ const Gantt = ({ user }: { user: UserState | null }) => {
   return (
     <div className="space-y-6">
       <div className="relative border rounded-lg z-0">
-        {loading ? <GanttSkeleton /> : <Chart tasks={tasks} />}
+        {loading ? (
+          <GanttSkeleton />
+        ) : (
+          <div className="relative">
+            <TaskColumn tasks={tasks} chartRef={chartRef} />
+            <Chart tasks={tasks} ref={chartRef} />
+          </div>
+        )}
       </div>
     </div>
   );
