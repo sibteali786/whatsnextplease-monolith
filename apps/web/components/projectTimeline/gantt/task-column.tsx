@@ -157,7 +157,7 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
           className="border-b w-full text-left bg-transparent hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 transition-colors duration-300"
         >
           <div className="flex flex-col gap-1">
-            <p className="font-medium text-sm">{task?.name}</p>
+            <p className="font-medium text-sm line-clamp-1">{task?.name}</p>
             <Badge className="py-0.5 px-1 text-[10px] w-fit">
               {task?.categoryName ?? 'Uncategorized'}
             </Badge>
