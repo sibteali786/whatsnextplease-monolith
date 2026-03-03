@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Gantt from 'frappe-gantt';
 import { useTheme } from 'next-themes';
 
@@ -13,8 +13,17 @@ export type GanttTask = {
   progress: number; // required
   dependencies: string; // required, empty string if none
   custom_class?: string;
+  categoryName?: string;
+  assignedTo?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    avatarUrl: string | null;
+  };
 };
-
+export type ChartHandle = {
+  scrollToTask: (taskId: string) => void;
+};
 type Props = {
   tasks: GanttTask[];
 };
@@ -72,8 +81,7 @@ function escapeHTML(value: string) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
-
-const Chart = ({ tasks }: Props) => {
+const Chart = forwardRef<ChartHandle, Props>(({ tasks }, ref) => {
   const { resolvedTheme } = useTheme();
   const ganttRef = useRef<HTMLDivElement>(null);
   const ganttInstance = useRef<any>(null);
@@ -100,7 +108,7 @@ const Chart = ({ tasks }: Props) => {
 
     // Reset scroll
     if (gantt.ganttBody) {
-      gantt.ganttBody.scrollRight = 0;
+      gantt.ganttBody.scrollLeft = 0;
       gantt.ganttBody.scrollTop = 0;
     }
   };
@@ -130,14 +138,14 @@ const Chart = ({ tasks }: Props) => {
       dependencies: false,
       highlight_weekends: true,
       popup_on: 'click',
-      readonly: false,
+      readonly: true,
       view_mode_select: true,
       show_progress: false,
 
       container_height: 600,
       header_height: 60,
       lower_header_height: 50,
-      bar_height: 30,
+      bar_height: 35,
       padding: 24,
       column_width: 70,
       infinite_padding: false,
@@ -168,6 +176,7 @@ const Chart = ({ tasks }: Props) => {
     <div class="custom-details">
       <p><strong>${safeName}</strong></p>
       <p>${start} - ${end} (${days} Days)</p>
+     <a style="text-decoration: underline; text-underline-offset: 3px;" href="/taskOfferings/${encodeURIComponent(task.id)}" target="_blank" rel="noopener noreferrer">View Details</a>
     </div>
   `;
       },
@@ -188,6 +197,51 @@ const Chart = ({ tasks }: Props) => {
       }
     };
   }, [tasks]);
+
+  const scrollToTask = (taskId: string) => {
+    if (!ganttRef.current) return;
+
+    // Select the scrollable container
+    const scrollContainer = ganttRef.current.querySelector(
+      '.gantt-container'
+    ) as HTMLElement | null;
+
+    if (!scrollContainer) {
+      return;
+    }
+
+    // Find the task bar in the Gantt chart
+    const bar = ganttRef.current.querySelector(`[data-id="${taskId}"]`) as HTMLElement | null;
+
+    if (!bar) {
+      return;
+    }
+
+    // Compute the horizontal offset of the bar relative to the container
+    const barRect = bar.getBoundingClientRect();
+    const containerRect = scrollContainer.getBoundingClientRect();
+
+    const offsetLeft = barRect.left - containerRect.left + scrollContainer.scrollLeft;
+
+    const barWidth = barRect.width;
+    const containerWidth = scrollContainer.clientWidth;
+
+    // Center the task in the visible area
+    let targetScroll = offsetLeft - containerWidth / 2 + barWidth / 2;
+
+    // Clamp scroll to valid range
+    const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+    targetScroll = Math.max(0, Math.min(targetScroll, maxScroll));
+
+    // Smoothly scroll
+    scrollContainer.scrollTo({
+      left: targetScroll,
+      behavior: 'smooth',
+    });
+  };
+  useImperativeHandle(ref, () => ({
+    scrollToTask,
+  }));
   useEffect(() => {
     if (!ganttRef.current || !ganttInstance.current) return;
 
@@ -201,9 +255,10 @@ const Chart = ({ tasks }: Props) => {
 
   return (
     <>
-      <div ref={ganttRef} />
+      <div ref={ganttRef} className="pl-[250px]" />
     </>
   );
-};
+});
+Chart.displayName = 'Chart';
 
 export default Chart;

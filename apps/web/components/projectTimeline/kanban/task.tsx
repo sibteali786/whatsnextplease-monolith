@@ -22,6 +22,8 @@ import EditTaskDialog from '../../common/EditTaskDialog';
 import { Roles } from '@prisma/client';
 import DeleteTaskDialog from './delete-task';
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipArrow, TooltipPortal } from '@radix-ui/react-tooltip';
 const DateComponent = ({ dateString }: { dateString?: Date | null }) => {
   const date = dateString ? new Date(dateString) : null;
   const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -153,17 +155,37 @@ const TaskBox = ({
           </div>
 
           <p className="font-bold text-sm ">{task?.title}</p>
-          <div className="flex justify-between gap-2 items-center">
-            <Avatar className="h-6 w-6 rounded-lg">
-              <AvatarImage
-                src={task?.assignedTo?.avatarUrl || 'https://github.com/shadcn.png'}
-                alt={task?.assignedTo?.firstName ?? 'avatar'}
-                className="rounded-full"
-              />
-              <AvatarFallback className="rounded-full text-xs">
-                {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
-              </AvatarFallback>
-            </Avatar>
+          <div
+            className={`${task?.assignedTo ? 'justify-between' : 'justify-end'} flex gap-2 items-center`}
+          >
+            {task?.assignedTo && (
+              <TooltipProvider>
+                <Tooltip delayDuration={250}>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 rounded-lg">
+                      <AvatarImage
+                        src={task?.assignedTo?.avatarUrl || 'https://github.com/shadcn.png'}
+                        alt={task?.assignedTo?.firstName ?? 'avatar'}
+                        className="rounded-full"
+                      />
+                      <AvatarFallback className="rounded-full text-xs">
+                        {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      side="top"
+                      align="center"
+                      className="bg-gray-800 text-white text-xs rounded px-2 py-1 shadow-lg"
+                    >
+                      {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
+                      <TooltipArrow className="fill-gray-800" />
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             <div className="flex gap-1 items-center text-muted-foreground">
               <DateComponent dateString={task?.createdAt} />
               -
