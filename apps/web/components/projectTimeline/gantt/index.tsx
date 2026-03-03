@@ -120,7 +120,7 @@ const Gantt = ({ user }: { user: UserState | null }) => {
   }, [filtersUpdate, user?.id]);
   return (
     <div className="space-y-6">
-      <div className="relative border rounded-lg z-0">
+      <div className="relative border rounded-lg z-0 p-[2px]">
         {loading ? (
           <GanttSkeleton />
         ) : (

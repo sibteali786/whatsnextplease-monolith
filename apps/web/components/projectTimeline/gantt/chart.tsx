@@ -176,7 +176,7 @@ const Chart = forwardRef<ChartHandle, Props>(({ tasks }, ref) => {
     <div class="custom-details">
       <p><strong>${safeName}</strong></p>
       <p>${start} - ${end} (${days} Days)</p>
-      <a style="text-decoration: underline; text-underline-offset: 3px;" href="/taskOfferings/${task.id}" target="_blank">View Details</a>
+     <a style="text-decoration: underline; text-underline-offset: 3px;" href="/taskOfferings/${encodeURIComponent(task.id)}" target="_blank" rel="noopener noreferrer">View Details</a>
     </div>
   `;
       },

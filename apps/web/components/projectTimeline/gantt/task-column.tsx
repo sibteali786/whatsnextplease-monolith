@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TooltipArrow, TooltipPortal } from '@radix-ui/react-tooltip';
+import { useTheme } from 'next-themes';
 type Props = {
   tasks: GanttTask[];
   chartRef: React.RefObject<ChartHandle>;
@@ -16,6 +17,8 @@ type Props = {
 
 const TaskColumn = ({ tasks, chartRef }: Props) => {
   const columnRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
+
   const isSyncingRef = useRef(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const [rowHeight, setRowHeight] = useState(0);
@@ -37,11 +40,16 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
     }
   };
 
+  const ganttContainerRef = useRef<HTMLElement | null>(null);
+  const scrollHandlerRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     const observer = new MutationObserver(() => {
       const ganttContainer = document.querySelector('.gantt-container') as HTMLElement;
 
-      if (ganttContainer && columnRef.current) {
+      if (ganttContainer && columnRef.current && !ganttContainerRef.current) {
+        ganttContainerRef.current = ganttContainer;
+
         const onGanttScroll = () => {
           if (isSyncingRef.current) return;
 
@@ -50,21 +58,31 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
           isSyncingRef.current = false;
         };
 
+        scrollHandlerRef.current = onGanttScroll;
         ganttContainer.addEventListener('scroll', onGanttScroll);
+
         observer.disconnect();
       }
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+
+      if (ganttContainerRef.current && scrollHandlerRef.current) {
+        ganttContainerRef.current.removeEventListener('scroll', scrollHandlerRef.current);
+      }
+
+      ganttContainerRef.current = null;
+      scrollHandlerRef.current = null;
+    };
   }, [tasks]);
 
   const handleScroll = () => {
-    const ganttContainer = document.querySelector('.gantt-container') as HTMLElement;
+    const ganttContainer = ganttContainerRef.current;
 
     if (!ganttContainer || !columnRef.current) return;
-
     if (isSyncingRef.current) return;
 
     isSyncingRef.current = true;
@@ -99,7 +117,7 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
     <div
       ref={columnRef}
       onScroll={handleScroll}
-      className="custom-scrollbar"
+      className="custom-scrollbar-task-column"
       style={{
         minWidth: 250,
         width: 250,
@@ -113,16 +131,20 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
       }}
     >
       {/* Spacer for header alignment */}
-      <div style={{ height: headerHeight }} className="border-b flex items-end pl-3 pb-1">
+      <div
+        style={{ height: headerHeight }}
+        className={`border-b flex items-end pl-3 pb-1 sticky top-0 z-50 ${resolvedTheme === 'dark' ? 'bg-background' : 'bg-white'}`}
+      >
         <p className="text-base font-semibold">Task Name</p>
       </div>
 
       {tasks.map(task => (
-        <div
+        <button
           key={task.id}
           onClick={() => {
             chartRef.current?.scrollToTask(task.id);
           }}
+          type="button"
           style={{
             height: rowHeight || 50,
             display: 'flex',
@@ -132,7 +154,7 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
 
             cursor: 'pointer',
           }}
-          className="border-b"
+          className="border-b w-full text-left bg-transparent hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 transition-colors duration-300"
         >
           <div className="flex flex-col gap-1">
             <p className="font-medium text-sm">{task?.name}</p>
@@ -168,7 +190,7 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
               </Tooltip>
             </TooltipProvider>
           )}
-        </div>
+        </button>
       ))}
     </div>
   );

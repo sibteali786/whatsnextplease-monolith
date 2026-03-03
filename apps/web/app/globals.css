@@ -599,11 +599,18 @@ body {
   padding: 0px !important;
   gap: 5px;
 }
-.custom-scrollbar::-webkit-scrollbar {
+
+.custom-scrollbar-task-column {
+  overflow-y: auto; /* keep scrolling enabled */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.custom-scrollbar-task-column::-webkit-scrollbar {
   width: 6px; /* 👈 Change scrollbar width here */
+  display: none; /* Chrome, Safari, Edge */
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
+.custom-scrollbar-task-column::-webkit-scrollbar-thumb {
   background-color: #374151;
   border-radius: 8px;
   border: 2px solid #111827;
