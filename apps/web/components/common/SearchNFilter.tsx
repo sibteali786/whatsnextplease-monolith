@@ -49,7 +49,7 @@ export const SearchNFilter = ({
   }, [debouncedSearchTerm, duration, onSearch]);
 
   return (
-    <div className="flex items-center gap-4 justify-start flex-1 flex-wrap">
+    <div className="searchNFilter flex items-center gap-2 justify-start flex-1 flex-wrap">
       <div className="relative w-[250px] max-w-[350px]">
         <Input
           placeholder="Search tasks"

@@ -13,6 +13,8 @@ import { UserState } from '@/utils/user';
 import { DurationEnum } from '@/types';
 import GanttSkeleton from './skeleton';
 import TaskColumn from './task-column';
+import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
 
 const FILTER_STORAGE_KEY = 'timelineFilter';
 
@@ -58,24 +60,111 @@ function getFiltersFromStorage(): TasksByStatusFilters {
     return {};
   }
 }
-const Gantt = ({ user }: { user: UserState | null }) => {
+
+const PAGE_SIZE = 10;
+
+const Gantt = ({
+  user,
+  searchTerm,
+  duration,
+  taskOffering = false,
+  advancedFilterLoading,
+  data,
+}: {
+  user: UserState | null;
+  searchTerm?: string;
+  duration?: DurationEnum;
+  taskOffering?: boolean;
+  advancedFilterLoading?: boolean;
+  data?: TaskTable[] | null;
+}) => {
   const searchParams = useSearchParams();
   const chartRef = useRef<ChartHandle>(null);
+
+  const loadingRef = useRef(false);
   const [loading, setLoading] = useState<boolean>(false);
-
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [tasks, setTasks] = useState<GanttTask[]>([]);
-  /*   const [totalCount, setTotalCount] = useState<number | undefined>(0); */
+
   const filtersUpdate = searchParams.get('filtersUpdate');
-  useEffect(() => {
-    const fetchTasks = async () => {
+  // taskOffering Filters
+  const statusFilter = searchParams.get('status');
+  const priorityFilter = searchParams.get('priority');
+  const assignedToFilter = searchParams.get('assignedTo') || undefined;
+
+  const { loadMore: loadMoreAdvanced, hasNextCursor, filtersCleared } = useAdvancedFilterContext();
+
+  const loadMore = async () => {
+    if (!hasMore || loadingRef.current) return;
+
+    loadingRef.current = true;
+
+    try {
+      if (!filtersCleared && loadMoreAdvanced && hasNextCursor) {
+        await loadMoreAdvanced();
+      } else if (filtersCleared && hasMore) {
+        await fetchTasks(cursor);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTimeout(() => {
+        loadingRef.current = false;
+      }, 300); // prevents rapid firing
+    }
+  };
+  const fetchTasks = async (nextCursor: string | null = null) => {
+    if (loadingMore) return;
+
+    if (nextCursor) {
+      setLoadingMore(true);
+    } else {
       setLoading(true);
+    }
 
-      try {
-        const filters = getFiltersFromStorage();
+    try {
+      const filters = getFiltersFromStorage();
+      let response;
+      if (taskOffering) {
+        const statusArray = statusFilter?.split(',') || [];
+        const priorityArray = priorityFilter?.split(',') || [];
 
-        const response = await tasksByType(
-          null,
-          10,
+        const normalizedStatus = statusArray
+          ? statusArray
+              .map(
+                (status: string) => TaskStatusEnum[status as keyof typeof TaskStatusEnum] || null
+              )
+              .filter(status => status !== null)
+          : [];
+        const normalizedPriority = priorityArray
+          ? priorityArray
+              .map(
+                (priority: string) =>
+                  TaskPriorityEnum[priority as keyof typeof TaskPriorityEnum] || null
+              )
+              .filter(priority => priority !== null)
+          : [];
+
+        response = await tasksByType(
+          nextCursor, //cursor
+          PAGE_SIZE, // pageSize
+          searchTerm ?? '',
+          duration ?? DurationEnum.ALL,
+          user?.id,
+          normalizedStatus,
+          normalizedPriority,
+          assignedToFilter,
+          undefined, // clientId
+          undefined, // categoryId
+          undefined, // sortBy
+          false // fetchAll: true to get all tasks without pagination
+        );
+      } else {
+        response = await tasksByType(
+          nextCursor, //cursor
+          PAGE_SIZE, // pageSize
           '',
           filters?.duration ?? DurationEnum.ALL,
           user?.id,
@@ -85,47 +174,79 @@ const Gantt = ({ user }: { user: UserState | null }) => {
           filters?.clientId,
           filters?.categoryId,
           filters?.sortBy,
-          true // fetchAll: true to get all tasks without pagination
+          false // fetchAll: true to get all tasks without pagination
         );
-
-        if (response?.success) {
-          /*    setTotalCount(response.totalCount); */
-
-          //  MAP → FILTER nulls → SAVE
-          if (response.tasks) {
-            const ganttTasks = response.tasks
-              .map(mapTaskToGantt)
-              .filter((t): t is GanttTask => t !== null);
-
-            setTasks(ganttTasks);
-          }
-        }
-      } catch (error) {
-        console.error(error);
-
-        if (error instanceof Error) {
-          toast({
-            variant: 'destructive',
-            title: 'Failed to fetch tasks',
-            description: error.message,
-            icon: <CircleX size={40} />,
-          });
-        }
-      } finally {
-        setLoading(false);
       }
-    };
 
-    fetchTasks();
-  }, [filtersUpdate, user?.id]);
+      if (response?.success && response.tasks) {
+        const ganttTasks = response.tasks
+          .map(mapTaskToGantt)
+          .filter((t): t is GanttTask => t !== null);
+
+        setTasks(prev => [...prev, ...ganttTasks]);
+
+        setCursor(response.nextCursor ?? null);
+        setHasMore(Boolean(response.nextCursor));
+      }
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof Error) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to fetch tasks',
+          description: error.message,
+          icon: <CircleX size={40} />,
+        });
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+  useEffect(() => {
+    if (!filtersCleared) {
+      setHasMore(true);
+    }
+  }, [filtersCleared]);
+
+  useEffect(() => {
+    if (!filtersCleared) return;
+
+    if (data?.length === 0 || data === undefined) {
+      setTasks([]);
+      setCursor(null);
+      setHasMore(true);
+
+      fetchTasks(null);
+    }
+  }, [
+    filtersUpdate,
+    user?.id,
+    searchTerm,
+    duration,
+    statusFilter,
+    priorityFilter,
+    assignedToFilter,
+    filtersCleared,
+  ]);
+
+  useEffect(() => {
+    if (data) {
+      const ganttTasks = data.map(mapTaskToGantt).filter((t): t is GanttTask => t !== null);
+
+      setTasks(ganttTasks);
+    }
+  }, [data]);
+
   return (
     <div className="space-y-6">
       <div className="relative border rounded-lg z-0 p-[2px]">
-        {loading ? (
+        {loading || advancedFilterLoading ? (
           <GanttSkeleton />
         ) : (
           <div className="relative">
-            <TaskColumn tasks={tasks} chartRef={chartRef} />
+            <TaskColumn tasks={tasks} chartRef={chartRef} hasMore={hasMore} loadMore={loadMore} />
             <Chart tasks={tasks} ref={chartRef} />
           </div>
         )}

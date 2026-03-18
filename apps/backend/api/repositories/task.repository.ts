@@ -177,7 +177,7 @@ export class TaskRepository {
 
   async getTasksForStatuses(args: {
     where: Prisma.TaskWhereInput;
-    orderBy: Prisma.TaskOrderByWithRelationInput;
+    orderBy: Prisma.TaskOrderByWithRelationInput | Prisma.TaskOrderByWithRelationInput[];
     cursor?: string;
     pageSize?: number;
   }) {
@@ -185,9 +185,10 @@ export class TaskRepository {
 
     return this.prisma.task.findMany({
       where,
-      ...(pageSize && { take: pageSize }),
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       orderBy,
+      take: pageSize ?? undefined, // always set take
+      cursor: cursor ? { id: cursor } : undefined, // cursor object
+      skip: cursor ? 1 : 0, // skip the cursor itself
 
       select: {
         id: true,
@@ -1215,7 +1216,7 @@ export class TaskRepository {
     query: AdvancedFilterQuery,
     roleBasedWhere?: Prisma.TaskWhereInput
   ) {
-    const { conditions, logicalOperator, cursor, pageSize, orderBy } = query;
+    const { conditions, logicalOperator, cursor, pageSize, orderBy, view, status } = query;
 
     // Build advanced filter where clause
     const advancedWhere = this.buildAdvancedFilterWhere(conditions, logicalOperator);
@@ -1230,49 +1231,233 @@ export class TaskRepository {
       ? { [orderBy.field]: orderBy.direction }
       : { createdAt: 'desc' };
 
-    const tasks = await this.prisma.task.findMany({
-      where,
-      take: pageSize + 1,
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-      orderBy: order,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        serialNumber: true,
-        priority: { select: { id: true, priorityName: true } },
-        status: { select: { id: true, statusName: true } },
-        taskCategory: { select: { id: true, categoryName: true, prefix: true } },
-        assignedTo: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
-        },
-        associatedClient: {
-          select: { id: true, companyName: true, contactName: true, avatarUrl: true },
-        },
-        assignedToId: true,
-        associatedClientId: true,
-        dueDate: true,
-        timeForTask: true,
-        overTime: true,
-        taskSkills: {
-          select: { skill: { select: { id: true, name: true } } },
-        },
-        createdByClient: {
-          select: { id: true, companyName: true, contactName: true },
-        },
-        createdByClientId: true,
-        createdByUser: { select: { id: true, firstName: true, lastName: true } },
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    /**
+     * ===============================
+     * KANBAN VIEW LOGIC
+     * ===============================
+     */
+    if (view === 'kanban') {
+      const kanbanStatuses = [
+        TaskStatusEnum.NEW,
+        TaskStatusEnum.IN_PROGRESS,
+        TaskStatusEnum.REVIEW,
+        TaskStatusEnum.COMPLETED,
+        TaskStatusEnum.BLOCKED,
+      ];
 
-    const hasNextCursor = tasks.length > pageSize;
-    const nextCursor = hasNextCursor ? tasks[pageSize]?.id : null;
-    if (hasNextCursor) {
-      tasks.pop();
+      const kanbanWhere = {
+        AND: [
+          where,
+          {
+            status: {
+              statusName: status
+                ? status
+                : {
+                    in: kanbanStatuses,
+                  },
+            },
+          },
+        ],
+      };
+      const countsByStatus: Record<TaskStatusEnum, number> = {} as Record<TaskStatusEnum, number>;
+
+      if (!status) {
+        const [counts, statuses] = await Promise.all([
+          this.prisma.task.groupBy({
+            by: ['statusId'],
+            _count: {
+              id: true,
+            },
+            where: kanbanWhere,
+          }),
+
+          this.prisma.taskStatus.findMany({
+            select: {
+              id: true,
+              statusName: true,
+            },
+          }),
+        ]);
+
+        const statusMap = new Map(statuses.map(s => [s.id, s.statusName]));
+
+        counts.forEach(c => {
+          const statusName = statusMap.get(c.statusId) as TaskStatusEnum;
+          if (statusName) {
+            countsByStatus[statusName] = c._count.id;
+          }
+        });
+
+        kanbanStatuses.forEach(status => {
+          if (!countsByStatus[status]) {
+            countsByStatus[status] = 0;
+          }
+        });
+      }
+
+      const isInitialLoad = !status; // true if fetching all columns
+      const takeCount = isInitialLoad ? undefined : (pageSize ?? 10) + 1;
+
+      const [tasks, totalCount] = await Promise.all([
+        this.prisma.task.findMany({
+          where: kanbanWhere,
+          orderBy: order,
+          take: takeCount,
+          ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            serialNumber: true,
+            priority: { select: { id: true, priorityName: true } },
+            status: { select: { id: true, statusName: true } },
+            taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+            assignedTo: {
+              select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+            },
+            associatedClient: {
+              select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+            },
+            assignedToId: true,
+            associatedClientId: true,
+            dueDate: true,
+            timeForTask: true,
+            overTime: true,
+            taskSkills: {
+              select: { skill: { select: { id: true, name: true } } },
+            },
+            createdByClient: {
+              select: { id: true, companyName: true, contactName: true },
+            },
+            createdByClientId: true,
+            createdByUser: { select: { id: true, firstName: true, lastName: true } },
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+
+        this.prisma.task.count({
+          where: kanbanWhere,
+        }),
+      ]);
+
+      let hasNextCursor = false;
+      let nextCursor: string | null = null;
+
+      if (!isInitialLoad) {
+        hasNextCursor = tasks.length > (pageSize ?? 10);
+        if (hasNextCursor) {
+          nextCursor = tasks[(pageSize ?? 10) - 1].id;
+          tasks.pop(); // remove the extra task used for pagination
+        }
+      } else {
+        // initial load, show all tasks, no pagination
+        nextCursor = null;
+        hasNextCursor = false;
+      }
+      return {
+        tasks,
+        totalCount,
+        countsByStatus,
+        hasNextCursor,
+        nextCursor,
+      };
+    } else if (view === 'list') {
+      /**
+       * ===============================
+       * Table/List VIEW LOGIC
+       * ===============================
+       */
+      const tasks = await this.prisma.task.findMany({
+        where,
+        take: (pageSize ?? 10) + 1,
+        ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+        orderBy: order,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          serialNumber: true,
+          priority: { select: { id: true, priorityName: true } },
+          status: { select: { id: true, statusName: true } },
+          taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+          assignedTo: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+          associatedClient: {
+            select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+          },
+          assignedToId: true,
+          associatedClientId: true,
+          dueDate: true,
+          timeForTask: true,
+          overTime: true,
+          taskSkills: { select: { skill: { select: { id: true, name: true } } } },
+          createdByClient: { select: { id: true, companyName: true, contactName: true } },
+          createdByClientId: true,
+          createdByUser: { select: { id: true, firstName: true, lastName: true } },
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      const hasNextCursor = tasks.length > (pageSize ?? 10);
+      const nextCursor = hasNextCursor ? tasks[(pageSize ?? 10) - 1].id : null;
+
+      if (hasNextCursor) tasks.pop(); // remove extra task
+
+      const totalCount = await this.prisma.task.count({ where });
+
+      return { tasks, hasNextCursor, nextCursor, totalCount };
+    } else {
+      /**
+       * ===============================
+       * DEFAULT (GANTT VIEW)
+       * ===============================
+       */
+      const tasks = await this.prisma.task.findMany({
+        where,
+        take: pageSize + 1,
+        ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+        orderBy: order,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          serialNumber: true,
+          priority: { select: { id: true, priorityName: true } },
+          status: { select: { id: true, statusName: true } },
+          taskCategory: { select: { id: true, categoryName: true, prefix: true } },
+          assignedTo: {
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+          },
+          associatedClient: {
+            select: { id: true, companyName: true, contactName: true, avatarUrl: true },
+          },
+          assignedToId: true,
+          associatedClientId: true,
+          dueDate: true,
+          timeForTask: true,
+          overTime: true,
+          taskSkills: {
+            select: { skill: { select: { id: true, name: true } } },
+          },
+          createdByClient: {
+            select: { id: true, companyName: true, contactName: true },
+          },
+          createdByClientId: true,
+          createdByUser: { select: { id: true, firstName: true, lastName: true } },
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      const hasNextCursor = tasks.length > pageSize;
+      const nextCursor = hasNextCursor ? tasks[pageSize - 1].id : null;
+
+      if (hasNextCursor) {
+        tasks.pop();
+      }
+
+      return { tasks, hasNextCursor, nextCursor };
     }
-
-    return { tasks, hasNextCursor, nextCursor };
   }
 }

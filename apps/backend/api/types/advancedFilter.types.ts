@@ -144,6 +144,9 @@ export const advancedFilterQuerySchema = z.object({
       direction: z.enum(['asc', 'desc']),
     })
     .optional(),
+  // Optional view type for frontend rendering hints
+  view: z.enum(['list', 'timeline', 'kanban']).optional(),
+  status: z.nativeEnum(TaskStatusEnum).optional(), // For Kanban column pagination
 });
 // ============================================================================
 // TYPESCRIPT TYPES

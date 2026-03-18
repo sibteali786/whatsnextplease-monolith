@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   AdvancedFilterCondition,
   AdvancedFilterQuery,
@@ -8,6 +8,25 @@ import {
 } from '@/types/advancedFilter';
 import { taskApiClient } from '@/utils/taskApi';
 import { useToast } from './use-toast';
+import { TaskStatusEnum } from '@prisma/client';
+
+function mergeKanbanColumns(prev: any, newData: any, status?: TaskStatusEnum) {
+  if (!prev) return newData;
+
+  if (!status) return prev;
+
+  const previousColumn = prev[status] || { tasks: [], count: 0 };
+  const newColumn = newData[status] || { tasks: [], count: 0 };
+
+  return {
+    ...prev,
+    [status]: {
+      ...previousColumn,
+      tasks: [...previousColumn.tasks, ...newColumn.tasks],
+      count: newColumn.count ?? previousColumn.count,
+    },
+  };
+}
 
 export interface UseAdvancedFilterResult {
   // Filter state
@@ -27,26 +46,31 @@ export interface UseAdvancedFilterResult {
   searchResults: any[] | null;
   hasNextCursor: boolean;
   nextCursor: string | null;
-  loadMore: () => Promise<void>;
-
+  loadMore: (extra?: { status?: TaskStatusEnum }) => Promise<void>; // extra is for kanban to specify column
   // validation
   getConditionError: (index: number) => string | null;
   canSearch: boolean;
+  loading: boolean;
+  filtersCleared: boolean;
 }
 
-export function useAdvancedFilter(): UseAdvancedFilterResult {
+export function useAdvancedFilter({
+  view,
+}: {
+  view?: 'list' | 'timeline' | 'kanban';
+}): UseAdvancedFilterResult {
   const { toast } = useToast();
 
   // Filter State
   const [conditions, setConditions] = useState<AdvancedFilterCondition[]>([]);
   const [logicalOperator, setLogicalOperatorState] = useState<'AND' | 'OR'>('AND');
-
+  const [loading, setLoading] = useState(false);
   // Search State
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [hasNextCursor, setHasNextCursor] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-
+  const [filtersCleared, setfiltersCleared] = useState(true);
   // Add condition
   const addCondition = useCallback(
     (condition: AdvancedFilterCondition) => {
@@ -108,7 +132,7 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
   // Clear all filters
   const clearFilters = useCallback(() => {
     setConditions([]);
-    setSearchResults(null);
+    setSearchResults([]);
     setNextCursor(null);
     setHasNextCursor(false);
   }, []);
@@ -125,11 +149,13 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
     }
 
     setIsSearching(true);
+    setLoading(true);
     try {
       const query: AdvancedFilterQuery = {
         conditions,
         logicalOperator,
         pageSize: 10,
+        view,
       };
 
       const result = await taskApiClient.advancedSearch(query);
@@ -139,9 +165,16 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
         setHasNextCursor(result.hasNextCursor);
         setNextCursor(result.nextCursor);
 
+        const totalTasks = Array.isArray(result.tasks)
+          ? result.tasks.length
+          : Object.values(result.tasks as Record<string, { count?: number }>).reduce(
+              (sum, column) => sum + (column.count ?? 0),
+              0
+            );
+
         toast({
           title: 'Search Complete',
-          description: `Found ${result.tasks.length} tasks`,
+          description: `Found ${totalTasks} tasks`,
         });
       }
     } catch (error) {
@@ -153,40 +186,53 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
       });
     } finally {
       setIsSearching(false);
+      setLoading(false);
     }
   }, [conditions, logicalOperator, toast]);
 
   // Load more results
-  const loadMore = useCallback(async () => {
-    if (!nextCursor || isSearching) return;
+  const loadMore = useCallback(
+    async (extra?: { status?: TaskStatusEnum }) => {
+      if (!nextCursor || isSearching) return;
 
-    setIsSearching(true);
-    try {
-      const query: AdvancedFilterQuery = {
-        conditions,
-        logicalOperator,
-        cursor: nextCursor,
-        pageSize: 10,
-      };
+      setIsSearching(true);
+      try {
+        const viewTemp = view ?? 'list';
+        const query: AdvancedFilterQuery = {
+          conditions,
+          logicalOperator,
+          cursor: nextCursor,
+          pageSize: 10,
+          view: viewTemp,
+          status: extra?.status, // NEW: Pass status if provided for loading more in a specific column
+        };
+        const result = await taskApiClient.advancedSearch(query);
 
-      const result = await taskApiClient.advancedSearch(query);
+        if (result.success) {
+          /*      setSearchResults(prev => [...(prev || []), ...result.tasks]); */
 
-      if (result.success) {
-        setSearchResults(prev => [...(prev || []), ...result.tasks]);
-        setHasNextCursor(result.hasNextCursor);
-        setNextCursor(result.nextCursor);
+          setSearchResults(prev => {
+            if (viewTemp === 'kanban') {
+              return mergeKanbanColumns(prev, result.tasks, extra?.status);
+            }
+            return [...(prev || []), ...result.tasks];
+          });
+          setHasNextCursor(result.hasNextCursor);
+          setNextCursor(result.nextCursor);
+        }
+      } catch (error) {
+        console.error('Load more failed:', error);
+        toast({
+          title: 'Failed to Load More',
+          description: error instanceof Error ? error.message : 'An error occurred',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsSearching(false);
       }
-    } catch (error) {
-      console.error('Load more failed:', error);
-      toast({
-        title: 'Failed to Load More',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  }, [conditions, logicalOperator, nextCursor, isSearching, toast]);
+    },
+    [conditions, logicalOperator, nextCursor, isSearching, toast, view]
+  );
 
   // Get validation error for a condition
   const getConditionError = useCallback(
@@ -209,6 +255,14 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
       return validation.valid;
     });
 
+  useEffect(() => {
+    if (conditions.length > 0) {
+      setfiltersCleared(false);
+    } else {
+      setfiltersCleared(true);
+    }
+  }, [conditions]);
+
   return {
     conditions,
     logicalOperator,
@@ -225,5 +279,7 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
     loadMore,
     getConditionError,
     canSearch,
+    loading,
+    filtersCleared,
   };
 }

@@ -10,12 +10,14 @@ import { useTheme } from 'next-themes';
 type Props = {
   tasks: GanttTask[];
   chartRef: React.RefObject<ChartHandle>;
+  loadMore: () => void;
+  hasMore: boolean;
 };
 
 //const HEADER_HEIGHT = 105; // your known header height
 //const ROW_HEIGHT = 54; // 30 bar_height + 24 padding (from your config)
 
-const TaskColumn = ({ tasks, chartRef }: Props) => {
+const TaskColumn = ({ tasks, chartRef, loadMore, hasMore }: Props) => {
   const columnRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
 
@@ -88,6 +90,16 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
     isSyncingRef.current = true;
     ganttContainer.scrollTop = columnRef.current.scrollTop;
     isSyncingRef.current = false;
+
+    const { scrollTop, scrollHeight, clientHeight } = columnRef.current;
+
+    const threshold = 200;
+
+    if (scrollHeight - scrollTop - clientHeight < threshold) {
+      if (hasMore) {
+        loadMore();
+      }
+    }
   };
 
   /**
@@ -140,7 +152,7 @@ const TaskColumn = ({ tasks, chartRef }: Props) => {
 
       {tasks.map(task => (
         <button
-          key={task.id}
+          key={'gantt-task-column-' + task.id}
           onClick={() => {
             chartRef.current?.scrollToTask(task.id);
           }}
