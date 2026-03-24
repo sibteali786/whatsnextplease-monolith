@@ -107,6 +107,8 @@ export interface AdvancedFilterQuery {
     field: 'createdAt' | 'updatedAt' | 'dueDate' | 'title';
     direction: 'asc' | 'desc';
   };
+  view?: 'list' | 'timeline' | 'kanban';
+  status?: TaskStatusEnum; // added for Kanban column pagination
 }
 
 // ============================================================================

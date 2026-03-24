@@ -12,7 +12,8 @@ import KanbanSkeleton from './skeleton';
 import TaskBox from './task';
 import { TaskTable } from '@/utils/validationSchemas';
 import { updateTaskField } from '@/utils/tasks/taskInlineUpdates';
-
+import { DurationEnum } from '@/types';
+import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
 const columns = [
   {
     name: 'New',
@@ -41,17 +42,41 @@ const columns = [
   },
 ];
 
-const Kanban = ({ user }: { user: UserState | null }) => {
+const Kanban = ({
+  user,
+  searchTerm,
+  duration,
+  taskOffering,
+  advancedFilterData,
+  advancedFilterLoading,
+}: {
+  user: UserState | null;
+  searchTerm?: string;
+  duration?: DurationEnum;
+  taskOffering?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  advancedFilterData?: any;
+  advancedFilterLoading?: boolean;
+}) => {
   const [activeTask, setActiveTask] = useState<TaskTable | null>(null);
   const [activeTaskStatus, setActiveTaskStatus] = useState<TaskStatusEnum | null>(null);
+  const { conditions, loadMore: loadMoreAdvanced, filtersCleared } = useAdvancedFilterContext();
 
-  const { data, loading, error, onReload } = useTasksByStatus([
-    TaskStatusEnum.NEW,
-    TaskStatusEnum.IN_PROGRESS,
-    TaskStatusEnum.REVIEW,
-    TaskStatusEnum.COMPLETED,
-    TaskStatusEnum.BLOCKED,
-  ]);
+  const isAdvancedMode = conditions.length > 0;
+  const { data, loading, error, onReload, loadMoreTasks, loadingMore } = useTasksByStatus(
+    [
+      TaskStatusEnum.NEW,
+      TaskStatusEnum.IN_PROGRESS,
+      TaskStatusEnum.REVIEW,
+      TaskStatusEnum.COMPLETED,
+      TaskStatusEnum.BLOCKED,
+    ],
+    user?.id,
+    searchTerm ?? '',
+    duration ?? DurationEnum.ALL,
+    taskOffering,
+    filtersCleared
+  );
   const [kanbanData, setKanbanData] = useState(data);
 
   const findTaskById = (taskId: string) => {
@@ -62,13 +87,22 @@ const Kanban = ({ user }: { user: UserState | null }) => {
     }
     return null;
   };
-
+  const handleLoadMore = async (status: TaskStatusEnum) => {
+    if (isAdvancedMode) {
+      await loadMoreAdvanced({ status });
+    } else {
+      await loadMoreTasks(status);
+    }
+  };
   useEffect(() => {
-    if (data) setKanbanData(data);
-  }, [data]);
-
+    if (advancedFilterData && !Array.isArray(advancedFilterData)) {
+      setKanbanData(advancedFilterData);
+    } else {
+      setKanbanData(data);
+    }
+  }, [data, advancedFilterData]);
   // Loading state
-  if (loading) {
+  if (loading || advancedFilterLoading) {
     return <KanbanSkeleton />;
   }
 
@@ -109,7 +143,6 @@ const Kanban = ({ user }: { user: UserState | null }) => {
       };
     });
   };
-
   return (
     <DndContext
       onDragStart={(event: DragStartEvent) => {
@@ -169,6 +202,9 @@ const Kanban = ({ user }: { user: UserState | null }) => {
               status={column.type}
               onReload={onReload}
               user={user}
+              loadMoreTasks={handleLoadMore}
+              loadingMore={loadingMore[column.type]}
+              isAdvancedMode={isAdvancedMode}
             />
           );
         })}

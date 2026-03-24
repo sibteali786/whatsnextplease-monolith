@@ -1,12 +1,12 @@
 'use client';
 
-import { AlertCircle, CircleX, Loader2, MoreHorizontal, PlusIcon } from 'lucide-react';
+import { AlertCircle, CircleX, Loader2, PlusIcon } from 'lucide-react';
 import TaskBox from './task';
 
 import { TaskTable } from '@/utils/validationSchemas';
 import { useDroppable } from '@dnd-kit/core';
 import { CreatorType, Roles, TaskStatusEnum } from '@prisma/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCookie } from '@/utils/utils';
 import { COOKIE_NAME } from '@/utils/constant';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,9 @@ type StatusColumnProps = {
   totalCount: number;
   onReload: () => void;
   user?: UserState | null;
+  loadMoreTasks: (status: TaskStatusEnum) => void;
+  loadingMore: boolean;
+  isAdvancedMode: boolean;
 };
 
 const StatusColumn = ({
@@ -35,12 +38,16 @@ const StatusColumn = ({
   status,
   onReload,
   user,
+  loadMoreTasks,
+  loadingMore,
+  isAdvancedMode,
 }: StatusColumnProps) => {
+  const scrollLock = useRef(false);
+
   const [open, setOpen] = useState(false);
   const [hasSkills, setHasSkills] = useState(false);
   const [hasTaskCategories, setHasTaskCategories] = useState(false);
   const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
-
   const { toast, dismiss } = useToast();
   const { setCreatedTask } = useCreatedTask();
 
@@ -97,7 +104,26 @@ const StatusColumn = ({
       });
     }
   };
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const threshold = 80; // 80px from bottom
 
+    const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < threshold;
+    if (
+      isNearBottom &&
+      !loadingMore &&
+      !scrollLock.current &&
+      (isAdvancedMode || tasks.length < totalCount)
+    ) {
+      scrollLock.current = true;
+
+      try {
+        await loadMoreTasks(status);
+      } finally {
+        scrollLock.current = false;
+      }
+    }
+  };
   useEffect(() => {
     const checkPrerequisites = async () => {
       try {
@@ -170,11 +196,13 @@ const StatusColumn = ({
             <p className="text-[10px]">{totalCount}</p>
           </div>
         </div>
-        <MoreHorizontal />
       </div>
       {/* task box */}
 
-      <div className="flex flex-row md:flex-col gap-3 overflow-x-auto md:overflow-x-visible pb-4">
+      <div
+        className="flex flex-col gap-3 overflow-y-auto pb-4 max-h-[400px]" // ensure fixed height
+        onScroll={handleScroll}
+      >
         {tasks.length === 0 ? (
           <p>No tasks.</p>
         ) : (
@@ -187,6 +215,11 @@ const StatusColumn = ({
               onReload={onReload}
             />
           ))
+        )}
+        {loadingMore && (
+          <div className="flex justify-center py-2">
+            <Loader2 className="animate-spin h-4 w-4" />
+          </div>
         )}
       </div>
       <Button

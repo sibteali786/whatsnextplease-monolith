@@ -30,10 +30,7 @@ const extractRole = (payload: any): Roles | null => {
   // Keycloak format: { realm_access: { roles: ["WnpInternalUsers", "..."] } }
   // Cognito format: { "cognito:groups": ["WnpInternalUsers"] }
   const groups: string[] =
-    payload.realm_access?.roles ||
-    payload['cognito:groups'] ||
-    payload.groups ||
-    [];
+    payload.realm_access?.roles || payload['cognito:groups'] || payload.groups || [];
 
   // Map IDP groups to roles
   if (groups.includes('WnpExternalClients')) {

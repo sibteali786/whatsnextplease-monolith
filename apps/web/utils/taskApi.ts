@@ -270,9 +270,25 @@ class TaskApiClient {
   /**
    * NEW: Get tasks by statuses (multiple statuses)
    */
-  async getTasksByStatus(statuses: TaskStatusEnum[], filters?: TasksByStatusFilters) {
+  async getTasksByStatus(
+    statuses: TaskStatusEnum[],
+    filters?: TasksByStatusFilters,
+    taskOffering?: boolean,
+    taskOfferingFilters?: {
+      normalizedPriority?: TaskPriorityEnum | TaskPriorityEnum[];
+      assignedToFilter?: string;
+      searchTerm?: string;
+      duration?: DurationEnum;
+      page?: number;
+      pageSize?: number;
+      cursors?: Partial<Record<TaskStatusEnum, string | undefined>>;
+    }
+  ) {
     const payload: any = {
       statuses: statuses.join(','),
+      taskOffering,
+      taskOfferingFilters,
+
       ...filters,
     };
 
@@ -379,6 +395,8 @@ class TaskApiClient {
       field: string;
       direction: 'asc' | 'desc';
     };
+    view?: 'list' | 'timeline' | 'kanban';
+    status?: TaskStatusEnum;
   }) {
     const response = await fetch(`${this.baseUrl}/tasks/advanced-search`, {
       method: 'POST',

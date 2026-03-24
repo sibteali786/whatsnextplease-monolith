@@ -1,61 +1,66 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { SearchNFilter } from '../common/SearchNFilter';
-import { DurationEnum, DurationEnumList } from '@/types';
-import { CreatorType, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DurationEnum } from '@/types';
+import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { UserTasksTable } from '../users/UserTaskTable';
 import { tasksByType } from '@/db/repositories/tasks/tasksByType';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, ChevronDown, ChevronUp, CircleX, Loader2, Plus } from 'lucide-react';
+import { AlertCircle, CircleX, Loader2 } from 'lucide-react';
 import { taskIdsByType } from '@/db/repositories/tasks/taskIdsByType';
 import { TaskTable } from '@/utils/validationSchemas';
 import { Button } from '../ui/button';
-import { CreateTaskContainer } from './CreateTaskContainer';
-import { ToastAction } from '../ui/toast';
-import { createDraftTask } from '@/db/repositories/tasks/createDraftTask';
-import { useCreatedTask } from '@/store/useTaskStore';
+
 import { State } from '../DataState';
 import { CallToAction } from '../CallToAction';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSearchParams } from 'next/navigation';
-import { DynamicBreadcrumb } from '../skills/DynamicBreadcrumb';
-import { AdvancedFilterBuilder } from './AdvancedFilterBuilder';
+
 import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
 
 export const TaskSuperVisorList = ({
   userId,
-  listOfFilter,
   role,
+  searchTerm,
+  duration,
+  checkingPrerequisites,
+  hasSkills,
+  hasTaskCategories,
+  createTaskHandler,
+  reload,
+  advancedFilterData,
+  advancedFilterTaskIds,
 }: {
   userId: string;
-  listOfFilter?: DurationEnumList;
   role: Roles;
+  searchTerm?: string;
+  duration?: DurationEnum;
+  checkingPrerequisites?: boolean;
+  hasSkills?: boolean;
+  hasTaskCategories?: boolean;
+  createTaskHandler?: () => void;
+  reload?: boolean;
+  advancedFilterData?: TaskTable[] | null;
+  advancedFilterTaskIds: string[] | null;
 }) => {
   const searchParams = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [open, setOpen] = useState(false);
-  const [duration, setDuration] = useState<DurationEnum>(DurationEnum.ALL);
+
   const [pageSize, setPageSize] = useState<number>(10);
   const [cursor, setCursor] = useState<string | null>(null);
   const [data, setData] = useState<TaskTable[] | null>([]);
+  const [totalCount, setTotalCount] = useState<number | undefined>(0);
+  const [totalAdvancedCount, setTotalAdvancedCount] = useState<number>(0);
   const [taskIds, setTaskIds] = useState<string[] | null>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [totalCount, setTotalCount] = useState<number | undefined>(0);
   const [pageIndex, setPageIndex] = useState(0);
-  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
-  const { toast, dismiss } = useToast();
-  const { setCreatedTask } = useCreatedTask();
-  const [hasSkills, setHasSkills] = useState(false);
-  const [hasTaskCategories, setHasTaskCategories] = useState(false);
-  const [checkingPrerequisites, setCheckingPrerequisites] = useState(true);
+  const { toast } = useToast();
 
   const [filterMode, setFilterMode] = useState<'normal' | 'advanced'>('normal');
-  // Get advanced filter results
-  const { searchResults, conditions, executeSearch } = useAdvancedFilterContext();
+
+  // Advanced filter context
+  const { searchResults, conditions, loadMore, hasNextCursor } = useAdvancedFilterContext();
   const hasAdvancedFilters = conditions.length > 0;
 
   const statusFilter = searchParams.get('status');
@@ -67,249 +72,177 @@ export const TaskSuperVisorList = ({
     | 'my-tasks';
   const assignedToFilter = searchParams.get('assignedTo') || undefined;
 
-  const handleSearch = (term: string, duration: DurationEnum) => {
-    // Switch to normal mode and clear advanced filters
-    if (filterMode === 'advanced') {
-      setFilterMode('normal');
-    }
-    setSearchTerm(term);
-    setDuration(duration);
-  };
-
-  const createTaskHandler = async () => {
-    if (!hasSkills || !hasTaskCategories) {
-      toast({
-        title: 'Setup Required',
-        description: 'You need to set up task categories and skills before creating tasks.',
-        variant: 'destructive',
-        icon: <AlertCircle size={40} />,
-        action: (
-          <Button
-            onClick={() => (window.location.href = '/settings/picklists')}
-            variant="outline"
-            className="mt-2"
-          >
-            Go to Settings
-          </Button>
-        ),
-      });
-      return;
-    }
-
-    toast({
-      title: 'Creating a Draft Task',
-      description: 'Please wait while we create a draft task for you',
-      icon: <Loader2 className="animate-spin" size={40} />,
-    });
-
-    const response = await createDraftTask(CreatorType.USER, userId, role);
-    if (response.success) {
-      dismiss();
-      setCreatedTask(response.task);
-      setOpen(true);
-    } else {
-      toast({
-        title: 'Failed to Create a Draft Task',
-        description: 'Please try again by clicking on the button to retry creating task',
-        variant: 'destructive',
-        icon: <CircleX size={40} />,
-        action: (
-          <ToastAction altText="Try Again" className="mt-2" onClick={() => createTaskHandler()}>
-            Try again
-          </ToastAction>
-        ),
-      });
-    }
-  };
-
-  const fetchNormalTasks = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const statusArray = statusFilter?.split(',') || [];
-      const priorityArray = priorityFilter?.split(',') || [];
-
-      const normalizedStatus = statusArray
-        ? statusArray
-            .map((status: string) => TaskStatusEnum[status as keyof typeof TaskStatusEnum] || null)
-            .filter(status => status !== null)
-        : [];
-      const normalizedPriority = priorityArray
-        ? priorityArray
-            .map(
-              (priority: string) =>
-                TaskPriorityEnum[priority as keyof typeof TaskPriorityEnum] || null
-            )
-            .filter(priority => priority !== null)
-        : [];
-
-      const response = await tasksByType(
-        cursor,
-        pageSize,
-        searchTerm,
-        duration,
-        userId,
-        normalizedStatus,
-        normalizedPriority,
-        assignedToFilter
-      );
-      const responseIds = await taskIdsByType(
-        searchTerm,
-        duration,
-        userId,
-        normalizedStatus,
-        normalizedPriority,
-        assignedToFilter
-      );
-      if (response && responseIds && response.success && responseIds.success) {
-        setData(response.tasks);
-        setTaskIds(responseIds.taskIds);
-        setTotalCount(response.totalCount);
-      } else {
-        setError(response?.message || 'Failed to fetch tasks');
-      }
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error);
-      setError('An unexpected error occurred while fetching tasks');
-      if (error instanceof Error) {
-        toast({
-          variant: 'destructive',
-          title: `Failed to fetch ${typeFilter ?? 'unassigned'} tasks`,
-          description: error.message || 'Something went wrong!',
-          icon: <CircleX size={40} />,
-        });
-      }
-    }
-    setLoading(false);
-  }, [
-    searchTerm,
-    duration,
-    pageSize,
-    cursor,
-    role,
-    toast,
-    statusFilter,
-    priorityFilter,
-    typeFilter,
-    assignedToFilter,
-  ]);
-
-  // Advanced filter fetch
-  const fetchAdvancedTasks = useCallback(async () => {
-    if (!hasAdvancedFilters) {
-      toast({
-        title: 'No Filters Applied',
-        description: 'Please add at least one condition to search',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  // Handle advanced page changes
+  const handleAdvancedPageChange = async (newPageIndex: number) => {
+    if (!searchResults) return;
     setLoading(true);
     try {
-      await executeSearch();
-      // Results will be handled by the searchResults effect
-    } catch (error) {
-      console.error('Failed to fetch advanced tasks:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Advanced Search Failed',
-        description: error instanceof Error ? error.message : 'Something went wrong!',
-        icon: <CircleX size={40} />,
-      });
+      const startIndex = newPageIndex * pageSize;
+      if (searchResults.length >= startIndex + 1) {
+        setPageIndex(newPageIndex);
+        return;
+      }
+      await loadMore();
+      setPageIndex(newPageIndex);
     } finally {
       setLoading(false);
     }
-  }, [hasAdvancedFilters, executeSearch, toast]);
+  };
 
-  // Unified fetch function that delegates based on mode
-  const fetchTasks = useCallback(() => {
-    if (filterMode === 'advanced') {
-      fetchAdvancedTasks();
-    } else {
-      fetchNormalTasks();
-    }
-  }, [filterMode, fetchNormalTasks, fetchAdvancedTasks]);
+  const paginatedAdvancedData = useMemo(() => {
+    if (!searchResults) return [];
+    const start = pageIndex * pageSize;
+    return searchResults.slice(start, start + pageSize);
+  }, [searchResults, pageIndex, pageSize]);
+
+  // ✅ Normal task fetch accepts cursor explicitly
+  const fetchNormalTasks = useCallback(
+    async (overrideCursor?: string | null) => {
+      if (searchResults && searchResults.length > 0) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const statusArray = statusFilter?.split(',') || [];
+        const priorityArray = priorityFilter?.split(',') || [];
+
+        const normalizedStatus = statusArray
+          .map(s => TaskStatusEnum[s as keyof typeof TaskStatusEnum] || null)
+          .filter(Boolean);
+
+        const normalizedPriority = priorityArray
+          .map(p => TaskPriorityEnum[p as keyof typeof TaskPriorityEnum] || null)
+          .filter(Boolean);
+
+        const response = await tasksByType(
+          overrideCursor ?? null,
+          pageSize,
+          searchTerm || '',
+          duration || DurationEnum.ALL,
+          userId,
+          normalizedStatus,
+          normalizedPriority,
+          assignedToFilter
+        );
+
+        const responseIds = await taskIdsByType(
+          searchTerm || '',
+          duration || DurationEnum.ALL,
+          userId,
+          normalizedStatus,
+          normalizedPriority,
+          assignedToFilter
+        );
+
+        if (response?.success && responseIds?.success) {
+          setData(response.tasks);
+          setTaskIds(responseIds.taskIds);
+          setTotalCount(response.totalCount);
+        } else {
+          setError(response?.message || 'Failed to fetch tasks');
+        }
+      } catch (error) {
+        console.error('Failed to fetch tasks:', error);
+        setError('An unexpected error occurred while fetching tasks');
+        if (error instanceof Error) {
+          toast({
+            variant: 'destructive',
+            title: `Failed to fetch ${typeFilter ?? 'unassigned'} tasks`,
+            description: error.message || 'Something went wrong!',
+            icon: <CircleX size={40} />,
+          });
+        }
+      }
+      setLoading(false);
+    },
+    [
+      searchTerm,
+      duration,
+      pageSize,
+      cursor,
+      role,
+      toast,
+      statusFilter,
+      priorityFilter,
+      typeFilter,
+      assignedToFilter,
+      reload,
+      searchResults,
+    ]
+  );
+
+  // Reset page and cursor when normal filters change
   useEffect(() => {
     if (filterMode === 'normal') {
-      fetchNormalTasks();
+      // Reset pagination and data
+      setPageIndex(0);
+      setCursor(null);
+      setData([]);
+      setTaskIds([]);
+
+      // Explicitly fetch with null cursor
+      fetchNormalTasks(null);
     }
-  }, [searchTerm, duration, pageSize, cursor, assignedToFilter, fetchNormalTasks]);
+  }, [statusFilter, priorityFilter, searchTerm, assignedToFilter, duration]);
 
+  // Fetch normal tasks on initial load
   useEffect(() => {
-    if (Array.isArray(searchResults)) {
-      setData(searchResults);
-      setTaskIds(searchResults.map(t => t.id));
-      setTotalCount(searchResults.length);
+    if (advancedFilterData && advancedFilterData.length > 0) return;
+    if (filterMode === 'normal') {
+      fetchNormalTasks(cursor);
+    }
+  }, [cursor, pageSize, filterMode, advancedFilterData]);
 
-      // Ensure we're in advanced mode
+  // Switch back to normal mode when advanced filters are cleared
+  useEffect(() => {
+    if (!hasAdvancedFilters) {
+      setFilterMode('normal');
+      setPageIndex(0); // reset pagination to first page
+      setCursor(null); // reset cursor for backend
+      setData([]);
+      setTaskIds([]);
+      fetchNormalTasks(null); // fetch fresh data from page 0
+    }
+  }, [hasAdvancedFilters]);
+
+  // Handle advanced results
+  useEffect(() => {
+    if (Array.isArray(searchResults) && searchResults.length > 0) {
+      setData(searchResults);
+      setTaskIds(advancedFilterTaskIds ?? []);
+      setTotalAdvancedCount(hasNextCursor ? searchResults.length + pageSize : searchResults.length);
+
       if (filterMode !== 'advanced') {
         setFilterMode('advanced');
+        setPageIndex(0);
       }
     }
-  }, [searchResults]);
-  useEffect(() => {
-    const checkPrerequisites = async () => {
-      setCheckingPrerequisites(true);
-      try {
-        const [skillsResponse, categoriesResponse] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-        ]);
-
-        const skillsData = await skillsResponse.json();
-        const categoriesData = await categoriesResponse.json();
-
-        setHasSkills(skillsData.length > 0);
-        setHasTaskCategories(categoriesData.length > 0);
-      } catch (error) {
-        console.error('Error checking prerequisites:', error);
-      } finally {
-        setCheckingPrerequisites(false);
-      }
-    };
-
-    checkPrerequisites();
-  }, []);
-  useEffect(() => {
-    // Don't switch modes while we have search results
-    if (searchResults && searchResults.length > 0) {
-      return;
-    }
-
-    if (hasAdvancedFilters) {
-      setFilterMode('advanced');
-    } else {
-      setFilterMode('normal');
-    }
-  }, [hasAdvancedFilters, searchResults, conditions]);
+  }, [searchResults, advancedFilterTaskIds, hasNextCursor]);
 
   const renderTaskTable = () => (
     <UserTasksTable
-      data={data ?? []}
+      filterMode={filterMode}
+      data={filterMode === 'advanced' ? paginatedAdvancedData : (data ?? [])}
       pageSize={pageSize}
       loading={loading}
-      totalCount={totalCount}
       cursor={cursor}
-      setCursor={setCursor}
+      setCursor={filterMode === 'advanced' ? () => {} : setCursor}
       showDescription={true}
       setPageSize={setPageSize}
       pageIndex={pageIndex}
-      setPageIndex={setPageIndex}
-      taskIds={taskIds ?? []}
+      setPageIndex={filterMode === 'advanced' ? handleAdvancedPageChange : setPageIndex}
+      taskIds={filterMode === 'advanced' ? (advancedFilterTaskIds ?? []) : (taskIds ?? [])}
       role={role}
       fetchTasks={fetchNormalTasks}
       showAsModal={false}
+      totalPages={
+        filterMode === 'advanced'
+          ? Math.ceil(totalAdvancedCount / pageSize)
+          : totalCount
+            ? Math.ceil(totalCount / pageSize)
+            : 0
+      }
     />
   );
 
@@ -330,7 +263,7 @@ export const TaskSuperVisorList = ({
           title="Error Loading Tasks"
           description={error}
           ctaText="Try Again"
-          onCtaClick={fetchTasks}
+          onCtaClick={() => fetchNormalTasks(cursor)}
         />
       );
     }
@@ -380,50 +313,6 @@ export const TaskSuperVisorList = ({
         </Alert>
       )}
 
-      <div className="flex justify-between">
-        <DynamicBreadcrumb links={[{ label: 'Task Offerings' }]} />
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
-          >
-            {showAdvancedFilter ? (
-              <>
-                <ChevronUp className="h-4 w-4 mr-2" />
-                Hide Filters
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-4 w-4 mr-2" />
-                Advanced Filters
-              </>
-            )}
-          </Button>
-
-          <Button
-            className="flex gap-2 font-bold text-base"
-            onClick={() => createTaskHandler()}
-            disabled={!hasSkills || !hasTaskCategories}
-          >
-            <Plus className="h-5 w-5" /> Create New Task
-          </Button>
-        </div>
-        <CreateTaskContainer open={open} setOpen={setOpen} fetchTasks={fetchNormalTasks} />
-      </div>
-
-      {/* Advanced Filter Section */}
-      {showAdvancedFilter && (
-        <AdvancedFilterBuilder
-          onSearch={() => {
-            console.log('onSearch callback - staying in advanced mode');
-            setFilterMode('advanced');
-          }}
-          compact={true}
-        />
-      )}
-
-      <SearchNFilter onSearch={handleSearch} filterList={listOfFilter} role={role} />
       {renderContent()}
     </div>
   );

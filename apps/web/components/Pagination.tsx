@@ -1,19 +1,14 @@
-"use client";
+'use client';
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeftIcon, ChevronRightIcon, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 interface DataTablePaginationProps {
   cursor: string | null;
@@ -25,6 +20,7 @@ interface DataTablePaginationProps {
   setPageSize: (size: number) => void;
   totalPages: number;
   clientIds: string[];
+  filterMode?: 'normal' | 'advanced';
 }
 
 export function Pagination({
@@ -37,6 +33,7 @@ export function Pagination({
   totalPages,
   clientIds,
   cursor,
+  filterMode,
 }: DataTablePaginationProps) {
   // Generate page numbers
   const getPageNumbers = () => {
@@ -47,32 +44,37 @@ export function Pagination({
     return pages;
   };
 
-  // Handle page change
   const handlePageChange = (page: number) => {
-    const clientIndex = (page - 1) * pageSize;
-    const newCursor = clientIds[clientIndex - 1] || null;
     setPageIndex(page - 1);
-    console.log({ newCursor, clientIndex, page }, "Testing");
+
+    let newCursor: string | null = null;
+    const clientIndex = (page - 1) * pageSize;
+
+    if (filterMode === 'normal') {
+      // Normal mode logic (cursor index shifted by -1)
+      newCursor = clientIds[clientIndex - 1] || null;
+    } else {
+      // Advanced mode logic (direct index)
+      newCursor = clientIds[clientIndex] || null;
+    }
+
+    // Only update cursor if it changed
     if (cursor !== newCursor) {
       setCursor(newCursor);
     }
   };
-
   return (
     <div className="flex items-center justify-between px-2">
       <div className="flex items-center space-x-2">
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium">Rows per page</p>
-            <Select
-              value={`${pageSize}`}
-              onValueChange={(value) => setPageSize(Number(value))}
-            >
+            <Select value={`${pageSize}`} onValueChange={value => setPageSize(Number(value))}>
               <SelectTrigger className="h-8 w-[70px]">
                 <SelectValue placeholder={pageSize} />
               </SelectTrigger>
               <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((size) => (
+                {[10, 20, 30, 40, 50].map(size => (
                   <SelectItem key={size} value={`${size}`}>
                     {size}
                   </SelectItem>
@@ -97,10 +99,10 @@ export function Pagination({
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </Button>
-        {getPageNumbers().map((page) => (
+        {getPageNumbers().map(page => (
           <Button
             key={page}
-            variant={pageIndex === page - 1 ? "default" : "link"}
+            variant={pageIndex === page - 1 ? 'default' : 'link'}
             size="sm"
             onClick={() => handlePageChange(page)}
             disabled={loading}

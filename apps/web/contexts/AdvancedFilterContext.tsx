@@ -5,8 +5,14 @@ import { useAdvancedFilter, UseAdvancedFilterResult } from '@/hooks/useAdvancedF
 
 const AdvancedFilterContext = createContext<UseAdvancedFilterResult | null>(null);
 
-export function AdvancedFilterProvider({ children }: { children: ReactNode }) {
-  const filterState = useAdvancedFilter();
+export function AdvancedFilterProvider({
+  children,
+  view,
+}: {
+  children: ReactNode;
+  view?: 'list' | 'timeline' | 'kanban';
+}) {
+  const filterState = useAdvancedFilter({ view });
 
   return (
     <AdvancedFilterContext.Provider value={filterState}>{children}</AdvancedFilterContext.Provider>
