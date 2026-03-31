@@ -188,7 +188,17 @@ export function useAdvancedFilter({
       setIsSearching(false);
       setLoading(false);
     }
-  }, [conditions, logicalOperator, toast]);
+  }, [conditions, logicalOperator, toast, view]);
+
+  useEffect(() => {
+    if (
+      (view === 'kanban' && searchResults) ||
+      (view === 'list' && searchResults) ||
+      (view === 'timeline' && searchResults)
+    ) {
+      executeSearch();
+    }
+  }, [view]);
 
   // Load more results
   const loadMore = useCallback(
