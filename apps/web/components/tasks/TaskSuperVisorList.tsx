@@ -72,6 +72,8 @@ export const TaskSuperVisorList = ({
     | 'my-tasks';
   const assignedToFilter = searchParams.get('assignedTo') || undefined;
 
+  // Reset pageIndex when pageSize changes
+
   // Handle advanced page changes
   const handleAdvancedPageChange = async (newPageIndex: number) => {
     if (!searchResults) return;
@@ -90,7 +92,7 @@ export const TaskSuperVisorList = ({
   };
 
   const paginatedAdvancedData = useMemo(() => {
-    if (!searchResults) return [];
+    if (!searchResults || !Array.isArray(searchResults)) return [];
     const start = pageIndex * pageSize;
     return searchResults.slice(start, start + pageSize);
   }, [searchResults, pageIndex, pageSize]);
@@ -219,6 +221,25 @@ export const TaskSuperVisorList = ({
       }
     }
   }, [searchResults, advancedFilterTaskIds, hasNextCursor]);
+
+  useEffect(() => {
+    setPageIndex(0);
+
+    if (filterMode === 'normal') {
+      setCursor(null);
+      setData([]);
+      fetchNormalTasks(null);
+    }
+
+    // ✅ FIX for advanced mode
+    if (filterMode === 'advanced' && searchResults) {
+      const requiredItems = pageSize; // page 1 → need at least pageSize items
+
+      if (searchResults.length < requiredItems && hasNextCursor) {
+        loadMore(); // 🔥 fetch more data
+      }
+    }
+  }, [pageSize]);
 
   const renderTaskTable = () => (
     <UserTasksTable
