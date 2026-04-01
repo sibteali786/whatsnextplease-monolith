@@ -90,7 +90,7 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
   const [users, setUsers] = useState<Array<{ id: string; name: string; avatarUrl: string }>>([]);
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [views, setViews] = useState<TaskViewFilter[]>([]);
-  const view = (searchParams.get('view') as 'timeline' | 'kanban') ?? 'kanban';
+  const view = (searchParams.get('view') as 'timeline' | 'kanban') ?? 'timeline';
   const [currentViewFilter, setCurrentViewFilter] = useState<TaskViewFilter>();
   const [newViewName, setNewViewName] = useState('');
 

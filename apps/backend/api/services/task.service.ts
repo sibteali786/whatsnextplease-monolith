@@ -62,7 +62,9 @@ export interface TaskQueryParams {
   userId?: string;
   role: Roles;
   cursor?: string;
+  cursors?: Record<TaskStatusEnum, string | undefined>;
   pageSize?: number | undefined;
+  page?: number;
   searchTerm?: string;
   duration?: DurationEnum;
   status?: TaskStatusEnum;
@@ -74,6 +76,9 @@ export interface TaskQueryParams {
     field: TaskSortField;
     direction: SortDirection;
   };
+  statusFilter?: TaskStatusEnum | TaskStatusEnum[];
+  priorityFilter?: TaskPriorityEnum | TaskPriorityEnum[];
+
   clientId?: string;
   fetchAll?: boolean;
 }
@@ -768,7 +773,8 @@ export class TaskService {
     const {
       userId,
       role,
-      cursor,
+      cursors = {} as Record<TaskStatusEnum, string | undefined>,
+
       pageSize,
       searchTerm,
       assignedToId,
@@ -776,19 +782,28 @@ export class TaskService {
       duration,
       clientId,
       sortBy,
+      priorityFilter,
     } = params;
-
+    const pageSizeNum = pageSize ?? 10;
     if (!canViewTasks(role)) {
       throw new ForbiddenError(`Role ${role} is not authorized to view tasks.`);
     }
+    const baseOrderBy = mapSortByToOrderBy(sortBy) ?? { createdAt: 'desc' };
 
-    const orderBy = mapSortByToOrderBy(sortBy) ?? { createdAt: 'desc' };
-
+    const orderBy = Array.isArray(baseOrderBy)
+      ? [...baseOrderBy, { id: 'desc' }]
+      : [baseOrderBy, { id: 'desc' }];
     const baseWhere: Prisma.TaskWhereInput = {
       ...(userId ? getTaskFilterCondition(userId, role) : {}),
       ...getDateFilter(duration || DurationEnum.ALL),
       ...(assignedToId !== undefined && { assignedToId }),
       ...(categoryId && { taskCategoryId: categoryId }),
+
+      ...(priorityFilter && {
+        priority: {
+          priorityName: { in: Array.isArray(priorityFilter) ? priorityFilter : [priorityFilter] },
+        },
+      }),
       ...(searchTerm && {
         OR: [
           { title: { contains: searchTerm, mode: 'insensitive' } },
@@ -801,20 +816,19 @@ export class TaskService {
     };
     // New type: each status has tasks + count
     const tasksByStatus: Record<TaskStatusEnum, { tasks: any[]; count: number }> = {} as any;
-
     await Promise.all(
       statuses.map(async status => {
-        // Get tasks for this status (paginated)
+        const cursorForStatus = cursors[status]; // get last task ID for this status
+
         const tasks = await this.taskRepository.getTasksForStatuses({
           where: {
             ...baseWhere,
             status: { statusName: status },
           },
           orderBy,
-          cursor,
-          pageSize,
+          cursor: cursorForStatus,
+          pageSize: pageSizeNum,
         });
-
         // Get total count for this status (ignoring pagination)
         const count = await this.taskRepository.countTasks({
           whereCondition: baseWhere,
@@ -1696,6 +1710,89 @@ export class TaskService {
 
     // Execute advanced search
     const result = await this.taskRepository.findTasksWithAdvancedFilter(query, roleBasedWhere);
+
+    /**
+     * =========================
+     * KANBAN VIEW
+     * =========================
+     */
+    if (query.view === 'kanban') {
+      /**
+       * COLUMN LOAD (scroll load more)
+       */
+      if (query.status) {
+        return {
+          success: true,
+          tasks: {
+            [query.status]: {
+              tasks: result.tasks.map(task => ({
+                ...task,
+                taskSkills: task.taskSkills.map(ts => ts.skill.name),
+              })),
+              count: result.totalCount,
+            },
+          },
+          hasNextCursor: result.hasNextCursor,
+          nextCursor: result.nextCursor,
+          query: {
+            conditions: query.conditions,
+            logicalOperator: query.logicalOperator,
+          },
+        };
+      }
+
+      /**
+       * INITIAL LOAD (all columns)
+       */
+      const statuses = [
+        TaskStatusEnum.NEW,
+        TaskStatusEnum.IN_PROGRESS,
+        TaskStatusEnum.REVIEW,
+        TaskStatusEnum.COMPLETED,
+        TaskStatusEnum.BLOCKED,
+      ];
+
+      const tasksByStatus: Record<TaskStatusEnum, { tasks: any[]; count: number }> = {} as any;
+
+      statuses.forEach(status => {
+        const tasks = result.tasks.filter(task => task.status && task.status.statusName === status);
+        tasksByStatus[status] = {
+          tasks: tasks.map(task => ({
+            ...task,
+            taskSkills: task.taskSkills.map(ts => ts.skill.name),
+          })),
+          count: result.countsByStatus?.[status] ?? 0,
+        };
+      });
+
+      return {
+        success: true,
+        tasks: tasksByStatus,
+        hasNextCursor: result.hasNextCursor,
+        nextCursor: result.nextCursor,
+        query: {
+          conditions: query.conditions,
+          logicalOperator: query.logicalOperator,
+        },
+      };
+    }
+
+    if (query.view === 'list') {
+      return {
+        success: true,
+        tasks: result.tasks.map(task => ({
+          ...task,
+          taskSkills: task.taskSkills.map(ts => ts.skill.name),
+        })),
+        totalCount: result.totalCount,
+        hasNextCursor: result.hasNextCursor,
+        nextCursor: result.nextCursor,
+        query: {
+          conditions: query.conditions,
+          logicalOperator: query.logicalOperator,
+        },
+      };
+    }
 
     // Format tasks
     const formattedTasks = result.tasks.map(task => ({

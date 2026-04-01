@@ -1,4 +1,4 @@
-import { TaskSuperVisorList } from '@/components/tasks/TaskSuperVisorList';
+import TaskSupervisorBase from '@/components/tasks/TaskSupervisorBase';
 import { UserTasks } from '@/components/users/UserTasks';
 import { AdvancedFilterProvider } from '@/contexts/AdvancedFilterContext';
 import { DurationEnum, DurationEnumList } from '@/types';
@@ -7,7 +7,11 @@ import { getCurrentUser } from '@/utils/user';
 import { transformEnumValue } from '@/utils/utils';
 import { Roles } from '@prisma/client';
 
-export default async function TasksPage() {
+export default async function TasksPage({
+  searchParams,
+}: {
+  searchParams?: { view?: 'list' | 'timeline' | 'kanban' };
+}) {
   const user = await getCurrentUser();
 
   // Convert DurationEnum into a list of filter objects
@@ -33,8 +37,9 @@ export default async function TasksPage() {
   // Task Agents, Task Supervisors, and Super Users all use TaskSuperVisorList
   // This gives Task Agents access to the tabbed interface (All, Assigned, Unassigned)
   return (
-    <AdvancedFilterProvider>
-      <TaskSuperVisorList
+    <AdvancedFilterProvider view={searchParams?.view}>
+      <TaskSupervisorBase
+        user={user}
         role={user?.role?.name ?? Roles.SUPER_USER}
         userId={user.id}
         listOfFilter={listToFilterUpon}

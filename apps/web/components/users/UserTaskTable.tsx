@@ -48,7 +48,7 @@ import { UserDropdownMenuContent } from '../tasks/BatchUpdateDialog';
 interface UserTasksTableProps {
   data: TaskTable[];
   loading: boolean;
-  totalCount?: number;
+  /* totalCount?: number; */
   pageSize: number;
   cursor: string | null;
   setCursor: (cursor: string | null) => void;
@@ -61,12 +61,14 @@ interface UserTasksTableProps {
   fetchTasks?: () => Promise<void>;
   showAsModal?: boolean;
   onTaskUpdate?: () => Promise<void>;
+  totalPages: number;
+  filterMode?: 'normal' | 'advanced';
 }
 
 export function UserTasksTable({
   data,
   loading,
-  totalCount,
+  /*   totalCount, */
   pageSize,
   cursor,
   setCursor,
@@ -79,6 +81,8 @@ export function UserTasksTable({
   fetchTasks,
   showAsModal = false,
   onTaskUpdate,
+  totalPages,
+  filterMode,
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
@@ -277,7 +281,7 @@ export function UserTasksTable({
     },
   });
 
-  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
+  /*   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0; */
 
   const handleRowClick = (task: TaskTable) => {
     if (showAsModal) {
@@ -444,6 +448,7 @@ export function UserTasksTable({
           setPageIndex={setPageIndex}
           totalPages={totalPages}
           clientIds={taskIds ?? []}
+          filterMode={filterMode}
         />
       </div>
 

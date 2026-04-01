@@ -6,13 +6,14 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Gantt from './gantt';
 import Kanban from './kanban';
+import { AdvancedFilterProvider } from '@/contexts/AdvancedFilterContext';
 
 const ProjectTimeline = () => {
   const searchParams = useSearchParams();
 
   const [currentUser, setCurrentUser] = useState<UserState | null>(null);
 
-  const view = (searchParams.get('view') as 'timeline' | 'kanban') ?? 'kanban';
+  const view = (searchParams.get('view') as 'timeline' | 'kanban') ?? 'timeline';
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -31,7 +32,9 @@ const ProjectTimeline = () => {
         </div>
         <TaskViewFilterComponent role={currentUser?.role?.name} />
       </div>
-      {view === 'timeline' ? <Gantt user={currentUser} /> : <Kanban user={currentUser} />}
+      <AdvancedFilterProvider>
+        {view === 'kanban' ? <Kanban user={currentUser} /> : <Gantt user={currentUser} />}
+      </AdvancedFilterProvider>
     </div>
   );
 };

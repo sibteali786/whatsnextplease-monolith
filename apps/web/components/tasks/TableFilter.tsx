@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { usersList } from '@/db/repositories/users/usersList';
 import { Input } from '../ui/input';
 import { Search, UserRoundX } from 'lucide-react';
+import { Button } from '../ui/button';
 export default function TableFilter({
   role,
   statusFilter,
@@ -29,6 +30,8 @@ export default function TableFilter({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const view = (searchParams.get('view') as 'list' | 'timeline' | 'kanban') ?? 'list';
+
   const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
   const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
   const [allUsers, setAllUsers] = useState<Array<{ id: string; name: string; avatarUrl: string }>>(
@@ -127,7 +130,7 @@ export default function TableFilter({
   }, [searchQuery, allUsers]);
 
   return (
-    <div className="flex gap-4">
+    <>
       {/* Show hint when Type filter is disabled */}
       {isSpecificUserSelected && (
         <span className="text-xs text-muted-foreground self-center">
@@ -223,20 +226,23 @@ export default function TableFilter({
       }
 
       {/* Status Filter */}
-      <MultiSelect
-        options={(statusFilter && statusFilter.length > 0
-          ? statusFilter // show only passed statuses
-          : Object.values(TaskStatusEnum)
-        ) // default: show all
-          .map(value => ({
-            label: transformEnumValue(value),
-            value: value,
-          }))}
-        onValueChange={handleStatusChange}
-        value={selectedStatus}
-        placeholder="Status"
-        maxCount={1}
-      />
+      {view !== 'kanban' && (
+        <MultiSelect
+          options={(statusFilter && statusFilter.length > 0
+            ? statusFilter // show only passed statuses
+            : Object.values(TaskStatusEnum)
+          ) // default: show all
+            .map(value => ({
+              label: transformEnumValue(value),
+              value: value,
+            }))}
+          onValueChange={handleStatusChange}
+          value={selectedStatus}
+          placeholder="Status"
+          maxCount={1}
+        />
+      )}
+
       {/*  Priority Filter */}
       <MultiSelect
         options={Object.entries(TaskPriorityEnum).map(([, value]) => ({
@@ -248,6 +254,31 @@ export default function TableFilter({
         placeholder="Priority"
         maxCount={1}
       />
-    </div>
+      {/* View Toggle */}
+      <div className="flex gap-2 flex-wrap w-full justify-end">
+        <Button
+          variant={view === 'list' ? 'default' : 'outline'}
+          onClick={() => updateParams('view', 'list')}
+          size={'sm'}
+        >
+          List
+        </Button>
+        <Button
+          variant={view === 'timeline' ? 'default' : 'outline'}
+          onClick={() => updateParams('view', 'timeline')}
+          size={'sm'}
+        >
+          Timeline
+        </Button>
+
+        <Button
+          variant={view === 'kanban' ? 'default' : 'outline'}
+          onClick={() => updateParams('view', 'kanban')}
+          size={'sm'}
+        >
+          Kanban
+        </Button>
+      </div>
+    </>
   );
 }

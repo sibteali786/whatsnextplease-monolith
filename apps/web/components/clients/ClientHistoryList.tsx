@@ -106,7 +106,8 @@ export default function ClientHistoryList({ clientId, role }: { clientId: string
         data={data}
         pageSize={pageSize}
         loading={loading}
-        totalCount={totalCount}
+        /*  totalCount={totalCount} */
+        totalPages={totalCount ? Math.ceil(totalCount / pageSize) : 0}
         cursor={cursor}
         setCursor={setCursor}
         pageIndex={pageIndex}

@@ -571,7 +571,8 @@ export class TaskController {
       }
       const {
         pageSize,
-        cursor,
+
+        cursors: rootCursors,
         search,
         userId,
         assignedToId,
@@ -579,25 +580,54 @@ export class TaskController {
         duration,
         clientId,
         sortBy,
+        taskOffering,
+        taskOfferingFilters,
       } = req.body;
-
+      const cursorsFromFrontend = rootCursors ?? taskOfferingFilters?.cursors ?? {};
       const pageSizeNum = pageSize ? parseInt(pageSize as string, 10) : undefined;
       if (!req.user) {
         throw new BadRequestError('User authentication required');
       }
       const sortByParsed = parseSortByParam(sortBy as string | undefined);
 
+      // FIXED: Handle assignedToId properly
+      const assignedId = assignedToId || taskOfferingFilters?.assignedToFilter;
+      let processedAssignedToId;
+      if (assignedId === 'null') {
+        processedAssignedToId = null; // Unassigned tasks
+      } else if (assignedId === 'not-null') {
+        processedAssignedToId = { not: null }; // Assigned tasks
+      } else if (assignedId && assignedId !== 'undefined') {
+        processedAssignedToId = assignedId; // Specific user ID
+      } else {
+        processedAssignedToId = undefined; // All tasks (no filter)
+      }
+
+      const normalizedPriority: TaskPriorityEnum[] = (() => {
+        if (taskOfferingFilters?.normalizedPriority) {
+          const priorityArray = decodeURIComponent(taskOfferingFilters?.normalizedPriority).split(
+            ','
+          );
+
+          return priorityArray
+            .map(s => TaskPriorityEnum[s as keyof typeof TaskPriorityEnum])
+            .filter(Boolean);
+        }
+        return [];
+      })();
+
       const result = await this.taskService.getTasksByStatuses(statuses, {
         userId: userId as string,
         role: req.user.role,
-        cursor: cursor as string | undefined,
+        cursors: cursorsFromFrontend,
         pageSize: pageSizeNum,
-        searchTerm: search as string,
-        assignedToId: assignedToId as string,
+        searchTerm: search || taskOfferingFilters?.searchTerm || '',
+        assignedToId: processedAssignedToId as string,
         categoryId: categoryId as string,
-        duration: duration as DurationEnum,
+        duration: taskOffering ? taskOfferingFilters?.duration : (duration as DurationEnum),
         clientId: clientId as string | undefined,
         sortBy: sortByParsed,
+        priorityFilter: normalizedPriority.length ? normalizedPriority : undefined,
       });
 
       res.status(200).json(result);
