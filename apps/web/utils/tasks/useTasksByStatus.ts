@@ -2,13 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { taskApiClient } from '../taskApi';
 import { TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { DurationEnum } from '@/types';
-import { TaskTable } from '../validationSchemas';
 import { useSearchParams } from 'next/navigation';
-
-interface TasksByStatusData {
-  tasks: TaskTable[];
-  count: number;
-}
+import { TasksByStatusData } from '@/types/tasks/api-response';
 
 export interface TasksByStatusFilters {
   duration?: DurationEnum;

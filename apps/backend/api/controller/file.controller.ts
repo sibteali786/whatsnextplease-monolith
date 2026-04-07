@@ -312,6 +312,60 @@ export class FileController {
     }
   };
 
+  handleGetFilesByUserId = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+      const { cursor, limit, entityType } = req.query;
+
+      if (!userId) {
+        throw new BadRequestError('User ID is required');
+      }
+
+      const result = await this.fileService.getFilesByUserId(userId, {
+        cursor: typeof cursor === 'string' ? cursor : undefined,
+        limit: typeof limit === 'string' ? parseInt(limit) : undefined,
+        entityType: typeof entityType === 'string' ? entityType : undefined,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result.files,
+        hasNextCursor: result.hasNextCursor,
+        nextCursor: result.nextCursor,
+        totalCount: result.totalCount,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  handleGetFileIdsByUserId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { userId } = req.params;
+      const { entityType } = req.query;
+
+      if (!userId) {
+        throw new BadRequestError('User ID is required');
+      }
+
+      const result = await this.fileService.getFileIdsByUserId(
+        userId,
+        typeof entityType === 'string' ? entityType : undefined
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result.fileIds,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // Public methods for route binding
   uploadFile = asyncHandler(this.handleUploadFile);
   deleteFileById = asyncHandler(this.handleDeleteFileById);
@@ -319,7 +373,8 @@ export class FileController {
   generateDownloadUrlByKey = asyncHandler(this.handleGenerateDownloadUrlByKey);
   getFileDetails = asyncHandler(this.handleGetFileDetails);
   legacyUploadAndSaveFile = asyncHandler(this.handleLegacyUploadAndSaveFile);
-
+  getFilesByUserId = asyncHandler(this.handleGetFilesByUserId);
+  getFileIdsByUserId = asyncHandler(this.handleGetFileIdsByUserId);
   // Multer middleware
   static uploadMiddleware = upload.single('file');
 }

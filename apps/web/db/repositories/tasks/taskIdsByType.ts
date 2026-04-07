@@ -60,7 +60,7 @@ export const taskIdsByType = async (
     if (response.success) {
       return {
         success: true,
-        taskIds: response.taskIds,
+        taskIds: response.data || [],
       };
     } else {
       throw new Error(response.message || 'Failed to fetch task IDs');

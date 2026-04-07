@@ -53,8 +53,8 @@ export default function AddLinkForm({ taskId, onLinkAdded, onCancel }: AddLinkFo
     try {
       const result = await taskLinkAPI.createTaskLink(taskId, trimmedUrl);
 
-      if (result.success && result.link) {
-        onLinkAdded(result.link);
+      if (result.success && result.data) {
+        onLinkAdded(result.data);
         setUrl('');
         setError(null);
       } else {

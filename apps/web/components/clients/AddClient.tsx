@@ -16,11 +16,12 @@ import { PhoneInput } from '../ui/phone-input';
 import { AddClientInput, addClientSchema } from '@/utils/validationSchemas';
 import { CircleCheckBig, CircleX, Loader2 } from 'lucide-react'; // Importing the loader icon
 import { useState } from 'react';
-import addClient from '@/db/repositories/clients/addClient';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import PasswordStrengthMeter from '../PasswordStrengthMeter';
 import { getPasswordStrength } from '@/utils/utils';
+import { apiClient } from '@/lib/apiClient';
+import { CreateClientResponse } from '@/types/tasks/api-response';
 
 const AddClientForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false); // State to handle form submission
@@ -37,23 +38,23 @@ const AddClientForm = () => {
   const onSubmit = async (data: AddClientInput) => {
     setIsSubmitting(true); // Start the loader
     try {
-      const formData = new FormData();
-      formData.append('username', data.username);
-      formData.append('companyName', data.companyName);
-      formData.append('contactName', data.contactName || '');
-      formData.append('email', data.email || '');
-      formData.append('website', data.website || '');
-      formData.append('passwordHash', data.password || '');
-      formData.append('phone', data.phone || '');
-      formData.append('address1', data.address1 || '');
-      formData.append('address2', data.address2 || '');
-      formData.append('city', data.city || '');
-      formData.append('state', data.state || '');
-      formData.append('zipCode', data.zipCode || '');
+      const dataObject = {
+        username: data.username,
+        companyName: data.companyName,
+        contactName: data.contactName || '',
+        email: data.email || '',
+        website: data.website || '',
+        passwordHash: data.password || '',
+        phone: data.phone || '',
+        address1: data.address1 || '',
+        address2: data.address2 || '',
+        city: data.city || '',
+        state: data.state || '',
+        zipCode: data.zipCode || '',
+      };
 
-      const response = await addClient(formData);
+      const response = await apiClient.post<CreateClientResponse>('/client/create', dataObject);
       if (response.success) {
-        console.log('Client data submitted:', response);
         toast({
           title: 'Client Created',
           description: `The client ${data.contactName} was created`,

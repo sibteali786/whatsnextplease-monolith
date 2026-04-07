@@ -22,6 +22,7 @@ interface SigninResponse {
   success: boolean;
   token?: string;
   refreshToken?: string;
+  idToken?: string;
   expiresIn?: number;
   refreshExpiresIn?: number;
   user?: any;
@@ -47,6 +48,7 @@ interface SignupResponse {
   success: boolean;
   token?: string;
   refreshToken?: string;
+  idToken?: string;
   refreshExpiresIn?: number;
   expiresIn?: number;
   user?: any;
@@ -115,7 +117,7 @@ export class AuthService {
       // 3. Check if user needs migration
       if (!entity.cognitoSub) {
         logger.info(`User ${username} needs migration to IDP`);
-
+        console.log(`User ${username} needs migration to IDP`, entity);
         // Migrate user to IDP
         const migrationResult = await this.migrateUserToIdp(entity, entityType!, password);
 
@@ -124,11 +126,14 @@ export class AuthService {
           logger.warn(`Migration failed for ${username}, using legacy JWT`);
           return this.createLegacyJwtResponse(entity, entityType!);
         }
-
         // Migration successful
         return {
           success: true,
           token: migrationResult.token!,
+          refreshToken: migrationResult.refreshToken,
+          idToken: migrationResult.idToken,
+          expiresIn: migrationResult.expiresIn,
+          refreshExpiresIn: migrationResult.refreshExpiresIn,
           [entityType === 'user' ? 'user' : 'client']: this.sanitizeEntity(entity),
           migrated: true,
           message: 'Logged in successfully (account upgraded)',
@@ -143,11 +148,12 @@ export class AuthService {
         logger.warn(`IDP token failed for ${username}, using legacy JWT`);
         return this.createLegacyJwtResponse(entity, entityType!);
       }
-
+      console.log('Token in Signin', tokenResult);
       return {
         success: true,
         token: tokenResult.tokens!.access_token,
-        refreshToken: tokenResult.tokens!.refresh_token, // ADD THIS
+        refreshToken: tokenResult.tokens!.refresh_token,
+        idToken: tokenResult.tokens!.id_token,
         expiresIn: tokenResult.tokens!.expires_in,
         refreshExpiresIn: tokenResult.tokens!.refresh_expires_in,
         [entityType === 'user' ? 'user' : 'client']: this.sanitizeEntity(entity),
@@ -172,6 +178,7 @@ export class AuthService {
   ): Promise<{
     success: boolean;
     token?: string;
+    idToken?: string;
     error?: string;
     refreshToken?: string;
     expiresIn?: number;
@@ -179,7 +186,7 @@ export class AuthService {
   }> {
     try {
       // 1. Determine IDP group
-      const role = entityType === 'client' ? Roles.CLIENT : entity.role?.name;
+      const role = entityType === 'client' ? Roles.CLIENT : (entity.role?.name ?? Roles.TASK_AGENT);
       const idpGroups = [idpAdmin.mapRoleToGroup(role)];
 
       // 2. Create user in IDP
@@ -190,8 +197,9 @@ export class AuthService {
         lastName: entityType === 'user' ? entity.lastName : entity.companyName,
         password,
         groups: idpGroups,
+        role,
       });
-
+      console.log('Create Result:', createResult);
       if (!createResult.success) {
         logger.error(`Failed to create IDP user: ${createResult.error}`);
         return {
@@ -229,11 +237,11 @@ export class AuthService {
           error: 'Migration succeeded but failed to get token',
         };
       }
-
       return {
         success: true,
         token: tokenResult.tokens!.access_token,
         refreshToken: tokenResult.tokens!.refresh_token,
+        idToken: tokenResult.tokens!.id_token,
         expiresIn: tokenResult.tokens!.expires_in,
         refreshExpiresIn: tokenResult.tokens!.refresh_expires_in,
       };
@@ -323,6 +331,7 @@ export class AuthService {
         lastName: role === Roles.CLIENT ? companyName : lastName,
         password,
         groups: idpGroups,
+        role,
       });
 
       if (!idpResult.success) {
@@ -401,6 +410,7 @@ export class AuthService {
           success: true,
           token: tokenResult.tokens!.access_token,
           refreshToken: tokenResult.tokens!.refresh_token,
+          idToken: tokenResult.tokens!.id_token,
           expiresIn: tokenResult.tokens!.expires_in,
           refreshExpiresIn: tokenResult.tokens!.refresh_expires_in,
           [role === Roles.CLIENT ? 'client' : 'user']: this.sanitizeEntity(entity),
@@ -487,6 +497,7 @@ export class AuthService {
         client: entityType === 'client' ? sanitized : undefined,
       };
     } catch (error) {
+      console.log('getCurrentEntityFromToken error:', error);
       logger.error('getCurrentEntityFromToken error:', error);
       return { success: false, error: 'Failed to get current user' };
     }

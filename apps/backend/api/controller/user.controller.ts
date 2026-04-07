@@ -10,6 +10,7 @@ import { logger } from '../utils/logger';
 import { hashPW } from '../utils/auth/hashPW';
 import { Roles } from '@prisma/client';
 import prisma from '../config/db';
+import { syncProfileToIdp } from '../utils/idpSyncHelper';
 
 export class UserController {
   constructor(
@@ -100,7 +101,10 @@ export class UserController {
           await this.s3Service.deleteFile(oldFileKey);
           logger.info(`Successfully deleted old profile picture: ${oldFileKey}`);
         }
-        res.status(201).json(updatedUser);
+        res.status(201).json({
+          success: true,
+          data: updatedUser,
+        });
       } catch (dbError) {
         // If database update fails, cleanup the uploaded file
         if (fileKey) {
@@ -154,7 +158,37 @@ export class UserController {
         throw new NotFoundError('User not found');
       }
 
-      res.status(200).json(user);
+      res.status(200).json({
+        success: true,
+        data: user,
+        message: 'User profile retrieved successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private handleGetUserByProfileId = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const userId = req.params.id;
+      if (!userId) {
+        throw new BadRequestError('User ID is required');
+      }
+
+      const user = await this.userService.getUserProfile(userId);
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      res.status(200).json({
+        success: true,
+        data: user,
+        message: 'User profile retrieved successfully',
+      });
     } catch (error) {
       next(error);
     }
@@ -179,6 +213,7 @@ export class UserController {
               ...req.body,
             })
           : null;
+      const rawPassword = parsedUser?.passwordHash;
       let updateData = parsedUser;
       if (parsedUser && parsedUser.passwordHash) {
         const hashedPassword = await hashPW(parsedUser.passwordHash);
@@ -192,7 +227,26 @@ export class UserController {
         ...updateData,
         id: userId,
       });
-      res.status(200).json(updatedUser);
+      if (updatedUser.cognitoSub) {
+        await syncProfileToIdp(
+          updatedUser.cognitoSub,
+          updatedUser.username,
+          {
+            rawPassword,
+            username: parsedUser?.username,
+            email: parsedUser?.email,
+            firstName: parsedUser?.firstName,
+            lastName: parsedUser?.lastName,
+            // role sync: only if roleId changed and you resolve it to Roles enum
+            // omit for now unless you're handling role changes in this endpoint
+          },
+          `user ${userId}`
+        );
+      }
+      res.status(200).json({
+        success: true,
+        data: updatedUser,
+      });
     } catch (error) {
       next(error);
     }
@@ -451,7 +505,61 @@ export class UserController {
         },
       });
 
-      res.status(200).json(updatedUser);
+      res.status(200).json({
+        success: true,
+        data: updatedUser,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private handleCreateUser = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const {
+        role,
+        firstName,
+        lastName,
+        username,
+        email,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        password,
+      } = req.body;
+
+      // Basic validation
+      if (!role || !firstName || !lastName || !username || !email || !password) {
+        throw new BadRequestError('Missing required fields');
+      }
+
+      // Hash the password
+      const passwordHash = await hashPW(password);
+
+      await this.userService.createUser({
+        role,
+        firstName,
+        lastName,
+        username,
+        email,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        passwordHash,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'User created successfully',
+      });
     } catch (error) {
       next(error);
     }
@@ -460,6 +568,7 @@ export class UserController {
   getUserSkills = asyncHandler(this.handleGetUserSkills);
   updateProfilePicture = asyncHandler(this.handleUpdateProfilePicture);
   getUserProfile = asyncHandler(this.handleGetUserProfile);
+  getUserProfileById = asyncHandler(this.handleGetUserByProfileId);
   updateProfile = asyncHandler(this.handleUpdateProfile);
   deleteUser = asyncHandler(this.handleDeleteUser);
   getUsersWithRoles = asyncHandler(this.getUsersWithRolesHandler);
@@ -468,4 +577,5 @@ export class UserController {
   getCurrentUser = asyncHandler(this.handleGetCurrentUser);
   searchUsersForMentions = asyncHandler(this.searchUsersForMentionsHandler);
   updateUserById = asyncHandler(this.handleUpdateUserById);
+  createUser = asyncHandler(this.handleCreateUser);
 }

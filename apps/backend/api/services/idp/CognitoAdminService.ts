@@ -6,8 +6,16 @@ import {
   AdminDeleteUserCommand,
   ListUsersCommand,
   AttributeType,
+  AdminUpdateUserAttributesCommand,
+  AdminRemoveUserFromGroupCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { IIdpAdminService, CreateUserRequest, CreateUserResponse } from './IIdpAdminService';
+import {
+  IIdpAdminService,
+  CreateUserRequest,
+  CreateUserResponse,
+  UpdateUserResponse,
+  UpdateUserRequest,
+} from './IIdpAdminService';
 import { UserGroup } from '@HillCountryCoder/auth-client';
 import { Roles } from '@prisma/client';
 import { logger } from '../../utils/logger';
@@ -39,6 +47,7 @@ export class CognitoAdminService implements IIdpAdminService {
           { Name: 'email_verified', Value: 'true' },
           { Name: 'given_name', Value: request.firstName || '' },
           { Name: 'family_name', Value: request.lastName || '' },
+          ...(request.role ? [{ Name: 'custom:wnp_role', Value: String(request.role) }] : []),
         ],
         MessageAction: 'SUPPRESS', // Dont send welcome email
       });
@@ -133,5 +142,89 @@ export class CognitoAdminService implements IIdpAdminService {
       return UserGroup.WnpExternalClients;
     }
     return UserGroup.WnpInternalUsers;
+  }
+
+  async updateUser(
+    sub: string,
+    username: string,
+    updates: UpdateUserRequest
+  ): Promise<UpdateUserResponse> {
+    try {
+      const skippedFields: string[] = [];
+
+      // 2. Update standard attributes (email, firstName, lastName)
+      const attributes: { Name: string; Value: string }[] = [];
+      if (updates.email !== undefined) attributes.push({ Name: 'email', Value: updates.email });
+      if (updates.firstName !== undefined)
+        attributes.push({ Name: 'given_name', Value: updates.firstName });
+      if (updates.lastName !== undefined)
+        attributes.push({ Name: 'family_name', Value: updates.lastName });
+
+      if (attributes.length > 0) {
+        const command = new AdminUpdateUserAttributesCommand({
+          UserPoolId: this.userPoolId,
+          Username: username,
+          UserAttributes: attributes,
+        });
+        await this.client.send(command);
+        logger.info(`Updated Cognito attributes for user: ${username}`);
+      }
+
+      // 3. Update password
+      if (updates.password) {
+        const command = new AdminSetUserPasswordCommand({
+          UserPoolId: this.userPoolId,
+          Username: username,
+          Password: updates.password,
+          Permanent: true,
+        });
+        await this.client.send(command);
+        logger.info(`Updated Cognito password for user: ${username}`);
+      }
+
+      // 4. Update group if role changed
+      if (updates.role !== undefined) {
+        const newGroupName = this.mapRoleToGroup(updates.role);
+
+        // Get current groups
+        const { AdminListGroupsForUserCommand } =
+          await import('@aws-sdk/client-cognito-identity-provider');
+        const listCommand = new AdminListGroupsForUserCommand({
+          UserPoolId: this.userPoolId,
+          Username: username,
+        });
+        const currentGroupsResponse = await this.client.send(listCommand);
+        const currentGroups = currentGroupsResponse.Groups || [];
+
+        // Remove from existing groups
+        for (const group of currentGroups) {
+          if (group.GroupName) {
+            const removeCommand = new AdminRemoveUserFromGroupCommand({
+              UserPoolId: this.userPoolId,
+              Username: username,
+              GroupName: group.GroupName,
+            });
+            await this.client.send(removeCommand);
+          }
+        }
+
+        // Add to new group
+        const addCommand = new AdminAddUserToGroupCommand({
+          UserPoolId: this.userPoolId,
+          Username: username,
+          GroupName: newGroupName,
+        });
+        await this.client.send(addCommand);
+        logger.info(`Reassigned Cognito user ${username} to group: ${newGroupName}`);
+      }
+
+      return { success: true, skippedFields: skippedFields.length ? skippedFields : undefined };
+    } catch (error) {
+      logger.error(`Cognito updateUser error for ${sub}:${username}: ${error}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 }

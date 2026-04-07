@@ -16,7 +16,6 @@ import { PhoneInput } from '../ui/phone-input';
 import { AddUserInput, addUserSchema } from '@/utils/validationSchemas';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import addUser from '@/db/repositories/users/addUser';
 import { getPasswordStrength } from '@/utils/utils';
 import { useRouter } from 'next/navigation';
 import {
@@ -28,6 +27,9 @@ import {
 } from '@/components/ui/select';
 import PasswordStrengthMeter from '../PasswordStrengthMeter';
 import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/lib/apiClient';
+import { StandardApiResponse } from '@/types/api';
+import { Roles } from '@prisma/client';
 
 const AddUserForm = () => {
   const { toast } = useToast();
@@ -40,20 +42,21 @@ const AddUserForm = () => {
 
   const onSubmit = async (data: AddUserInput) => {
     try {
-      const formData = new FormData();
-      formData.append('role', data.role || '');
-      formData.append('firstName', data.firstName);
-      formData.append('lastName', data.lastName);
-      formData.append('username', data.username);
-      formData.append('email', data.email);
-      formData.append('phone', data.phone || '');
-      formData.append('address', data.address || '');
-      formData.append('city', data.city || '');
-      formData.append('state', data.state || '');
-      formData.append('zipCode', data.zipCode || '');
-      formData.append('password', data.password);
+      const dataObject = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        username: data.username,
+        email: data.email || '',
+        phone: data.phone || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zipCode: data.zipCode || '',
+        password: data.password || '',
+        role: data.role,
+      };
 
-      const response = await addUser(formData);
+      const response = await apiClient.post<StandardApiResponse>('/user/create', dataObject);
       if (response.success) {
         toast({ description: response.message, variant: 'success' });
         router.push('/users');
@@ -72,15 +75,7 @@ const AddUserForm = () => {
     setPasswordStrength(getPasswordStrength(value));
   };
 
-  const roles = [
-    'Developer',
-    'Manager',
-    'Administrator',
-    'Designer',
-    'Software Engineer',
-    'Product Manager',
-    'Salesman',
-  ]; // Hardcoded list of roles
+  const roles = Object.values(Roles);
 
   return (
     <Form {...form}>

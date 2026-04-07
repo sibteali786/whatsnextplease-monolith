@@ -3,12 +3,44 @@ import { Prisma, Roles, User } from '@prisma/client';
 import prisma from '../config/db';
 import { UpdateProfileDto } from '@wnp/types';
 import { logger } from '../utils/logger';
+import z from 'zod';
 export interface UserProfile extends Omit<User, 'passwordHash'> {
   role: {
     name: string;
     id: string;
   };
 }
+
+export const CreateUserSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  username: z.string().min(3, 'Username must be at least 3 characters long'),
+  email: z.string().email('Invalid email format.'),
+  passwordHash: z
+    .string()
+    .min(6, 'Password must be at least 6 characters long')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[\W_]/, 'Password must contain at least one special character'),
+  role: z.nativeEnum(Roles),
+  phone: z.string().nullable().optional(),
+  avatarUrl: z.string().url('Invalid URL format').nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  state: z.string().nullable().optional(),
+  zipCode: z.string().nullable().optional(),
+});
+
+export const CreateUserSchemaResponse = CreateUserSchema.merge(
+  z.object({
+    id: z.string().uuid(),
+    role: z.object({
+      name: z.nativeEnum(Roles),
+    }),
+  })
+);
+
 export type RoleFilter = Roles | 'ALL_ROLES' | '';
 export class UserService {
   async updateProfilePicture(userId: string, profileUrl: string) {
@@ -643,6 +675,23 @@ export class UserService {
         role: {
           name: roleName,
         },
+      },
+    });
+  }
+
+  async createUser(userData: z.infer<typeof CreateUserSchema>): Promise<void> {
+    // find the roleId to associate with the new user
+    const role = await prisma.role.findUnique({
+      where: { name: userData.role },
+    });
+    if (!role) {
+      throw new Error(`Role ${userData.role} not found`);
+    }
+    const { role: _, ...userDataWithoutRole } = userData;
+    await prisma.user.create({
+      data: {
+        ...userDataWithoutRole,
+        roleId: role.id, // Assign default role (e.g., Task Agent)
       },
     });
   }

@@ -6,35 +6,35 @@ import { Roles } from '@prisma/client';
 import { useEffect, useState } from 'react';
 import { getCookie } from '@/utils/utils';
 import { getCurrentUser, UserState } from '@/utils/user';
+import { apiClient } from '@/lib/apiClient';
+import {
+  ClientProfileType,
+  GetClientProfileResponse,
+  GetUserProfileResponse,
+  UserProfileType,
+} from '@/types/tasks/api-response';
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<UserProfileType | ClientProfileType | undefined>(
+    undefined
+  );
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserState | null>(null);
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get token the same way as other pages
-        const token = getCookie(COOKIE_NAME);
         const userInfo = await getCurrentUser();
         setUser(userInfo);
         // Then get profile based on role
-        const profileResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/${userInfo?.role?.name !== Roles.CLIENT ? 'user' : 'client'}/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
 
-        if (!profileResponse.ok) {
+        const profileResponse = await apiClient.get<
+          GetUserProfileResponse | GetClientProfileResponse
+        >(`/${userInfo?.role?.name !== Roles.CLIENT ? 'user' : 'client'}/profile`);
+
+        if (!profileResponse.success) {
           throw new Error('Failed to fetch profile');
         }
-
-        const profileData = await profileResponse.json();
-        setProfile(profileData);
+        setProfile(profileResponse.data);
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {

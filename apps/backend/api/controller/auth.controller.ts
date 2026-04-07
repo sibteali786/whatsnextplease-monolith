@@ -5,6 +5,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { Roles } from '@prisma/client';
 import { authService } from '../services/auth.service';
 import { logger } from '../utils/logger';
+import { sseTokenService } from '../services/sseToken.service';
 
 export class AuthController {
   /**
@@ -47,6 +48,7 @@ export class AuthController {
         user: result.user,
         client: result.client,
         refreshToken: result.refreshToken,
+        idToken: result.idToken,
         expiresIn: result.expiresIn,
         refreshExpiresIn: result.refreshExpiresIn,
         migrated: result.migrated || false,
@@ -121,6 +123,7 @@ export class AuthController {
         message: result.message || 'Account created successfully',
         token: result.token,
         refreshToken: result.refreshToken,
+        idToken: result.idToken,
         expiresIn: result.expiresIn,
         refreshExpiresIn: result.refreshExpiresIn,
         user: result.user,
@@ -309,8 +312,10 @@ export class AuthController {
 
       return res.status(200).json({
         success: true,
-        user: result.user,
-        client: result.client,
+        data: {
+          user: result.user,
+          client: result.client,
+        },
       });
     } catch (error) {
       logger.error('Current user error:', error);
@@ -354,6 +359,27 @@ export class AuthController {
       next(error);
     }
   });
+
+  // Add to AuthController class
+  issueSseToken = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      try {
+        const userId = req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ success: false, message: 'Authentication required' });
+        }
+        const sseToken = sseTokenService.issue(userId);
+
+        return res.status(200).json({
+          success: true,
+          sseToken,
+          expiresIn: 60,
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
 }
 
 export const authController = new AuthController();

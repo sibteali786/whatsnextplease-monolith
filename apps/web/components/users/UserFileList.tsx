@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { FileTable } from '../clients/file-table';
 import { UploadContextType } from '@/utils/validationSchemas';
-import { fetchFilesByUserId, fetchFileIdsByUserId } from '@/actions/fileActions';
+import { apiClient } from '@/lib/apiClient';
+import { FileIdsByUserId } from '@/types/tasks/api-response';
 
 export default function UserFileList({ userId }: { userId: string }) {
   const [fileIds, setFileIds] = useState<string[]>([]);
@@ -12,8 +13,12 @@ export default function UserFileList({ userId }: { userId: string }) {
   useEffect(() => {
     const loadFileIds = async () => {
       try {
-        const result = await fetchFileIdsByUserId(userId);
-        setFileIds(result.fileIds ?? []);
+        const params: Record<string, string | number> = {};
+        params.entityType = 'user';
+        const result = await apiClient.get<FileIdsByUserId>(`/files/user/${userId}/ids`, {
+          params,
+        });
+        setFileIds(result.data ?? []);
       } catch (error) {
         console.error('Error loading file IDs:', error);
         setFileIds([]);
@@ -31,12 +36,7 @@ export default function UserFileList({ userId }: { userId: string }) {
 
   return (
     <div>
-      <FileTable
-        id={userId}
-        fetchData={fetchFilesByUserId} // Pass the server action directly
-        fileIds={fileIds}
-        context={UploadContextType.USER_PROFILE}
-      />
+      <FileTable id={userId} fileIds={fileIds} context={UploadContextType.USER_PROFILE} />
     </div>
   );
 }

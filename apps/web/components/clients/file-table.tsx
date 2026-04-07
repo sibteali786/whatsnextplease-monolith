@@ -28,25 +28,16 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { fileAPI } from '@/utils/fileAPI';
 import { useFilePreview } from '@/hooks/useFilePreview';
 import { FilePreviewModal, PreviewFile } from '../files/FilePreviewModal';
+import { apiClient } from '@/lib/apiClient';
+import { FilesByUserId } from '@/types/tasks/api-response';
 
 interface FileTableProps {
   fileIds: string[] | null;
   id: string;
   context: 'CLIENT_PROFILE' | 'USER_PROFILE';
-  fetchData: (
-    id: string,
-    cursor: string | null,
-    pageSize: number
-  ) => Promise<{
-    files: FileType[] | undefined;
-    success: boolean;
-    hasNextCursor: boolean | undefined;
-    nextCursor?: string | null;
-    totalCount: number | undefined;
-  }>;
 }
 
-export function FileTable({ fetchData, id, context }: FileTableProps) {
+export function FileTable({ id, context, fileIds }: FileTableProps) {
   const [data, setData] = useState<FileType[] | undefined>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -173,9 +164,18 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
   const fetchFiles = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetchData(id, cursor, pageSize);
+      const params: Record<string, string | number> = { pageSize };
+      if (cursor) {
+        params.cursor = cursor;
+      }
+      const entityType = context === 'CLIENT_PROFILE' ? 'client' : 'user';
+      params.entityType = entityType;
+      const response = await apiClient.get<FilesByUserId>(`/files/user/${id}`, {
+        params,
+      });
+      console.log('API Response for fetching files:', response);
       if (response.success) {
-        setData(response.files);
+        setData(response.data);
         setTotalCount(response.totalCount);
         setCursor(response.nextCursor ?? null);
       } else {
@@ -185,7 +185,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
       console.error('Error fetching files:', error);
     }
     setLoading(false);
-  }, [fetchData, id, cursor, pageSize]);
+  }, [id, cursor, pageSize]);
 
   useEffect(() => {
     fetchFiles();
@@ -232,7 +232,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
     const metadata = {
       fileName: file.name,
       fileSize: `${file.size / 1000}kb`,
-      uploadedBy: user.name || user.username,
+      uploadedBy: user.username,
       createdAt: new Date().toISOString(),
       role: user.role?.name || 'CLIENT',
       userId: user.id,
@@ -421,7 +421,7 @@ export function FileTable({ fetchData, id, context }: FileTableProps) {
           pageSize={pageSize}
           setPageSize={setPageSize}
           totalPages={totalPages}
-          clientIds={[]}
+          clientIds={fileIds ?? []}
         />
       </div>
 

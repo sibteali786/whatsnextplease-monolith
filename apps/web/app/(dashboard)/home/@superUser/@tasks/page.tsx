@@ -11,34 +11,45 @@ export default function TasksSection() {
   const [open, setOpen] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<TaskPriorityEnum>(TaskPriorityEnum.CRITICAL);
 
-  const { data: criticalData, loading: criticalLoading } = useTasksByPriorityLevel(
-    TaskPriorityEnum.CRITICAL,
-    {
-      pageSize: 5,
-    }
-  );
-  const { data: highData, loading: highLoading } = useTasksByPriorityLevel(TaskPriorityEnum.HIGH, {
+  const criticalState = useTasksByPriorityLevel(TaskPriorityEnum.CRITICAL, {
     pageSize: 5,
   });
-  const { data: mediumData, loading: mediumLoading } = useTasksByPriorityLevel(
-    TaskPriorityEnum.MEDIUM,
-    {
-      pageSize: 5,
-    }
-  );
-  const { data: lowData, loading: lowLoading } = useTasksByPriorityLevel(TaskPriorityEnum.LOW, {
+  const highState = useTasksByPriorityLevel(TaskPriorityEnum.HIGH, {
     pageSize: 5,
   });
-  const { data: holdData, loading: holdLoading } = useTasksByPriorityLevel(TaskPriorityEnum.HOLD, {
+  const mediumState = useTasksByPriorityLevel(TaskPriorityEnum.MEDIUM, {
     pageSize: 5,
   });
+  const lowState = useTasksByPriorityLevel(TaskPriorityEnum.LOW, {
+    pageSize: 5,
+  });
+  const holdState = useTasksByPriorityLevel(TaskPriorityEnum.HOLD, {
+    pageSize: 5,
+  });
+
+  const criticalData = criticalState.status === 'success' ? criticalState.data : null;
+  const highData = highState.status === 'success' ? highState.data : null;
+  const mediumData = mediumState.status === 'success' ? mediumState.data : null;
+  const lowData = lowState.status === 'success' ? lowState.data : null;
+  const holdData = holdState.status === 'success' ? holdState.data : null;
+
+  const criticalLoading = criticalState.status === 'loading';
+  const highLoading = highState.status === 'loading';
+  const mediumLoading = mediumState.status === 'loading';
+  const lowLoading = lowState.status === 'loading';
+  const holdLoading = holdState.status === 'loading';
   const handlePriorityChange = (level: TaskPriorityEnum) => {
     setSelectedLevel(level);
     setOpen(true);
   };
 
   // Check if any data is still loading
-  const anyLoading = criticalLoading || highLoading || mediumLoading || lowLoading || holdLoading;
+  const anyLoading =
+    criticalLoading === true ||
+    highLoading === true ||
+    mediumLoading === true ||
+    lowLoading === true ||
+    holdLoading === true;
 
   // Calculate total tasks
   const totalTasks =
@@ -99,9 +110,9 @@ export default function TasksSection() {
       <h2 className="text-2xl font-bold col-span-full mb-4">Tasks by Priority</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Critical Tasks (combines URGENT + CRITICAL) */}
-        {criticalData && criticalData.totalCount > 0 && (
+        {criticalData?.data && criticalData?.totalCount && criticalData.totalCount > 0 && (
           <TaskList
-            tasks={convertToTaskByPriority(criticalData.tasks)}
+            tasks={convertToTaskByPriority(criticalData.data)}
             title={`Critical (${criticalData.totalCount})`}
             icon="AlertTriangle"
             priority={TaskPriorityEnum.CRITICAL} // For legacy compatibility
@@ -110,9 +121,9 @@ export default function TasksSection() {
         )}
 
         {/* High Priority Tasks */}
-        {highData && highData.totalCount > 0 && (
+        {highData?.data && highData?.totalCount && highData.totalCount > 0 && (
           <TaskList
-            tasks={convertToTaskByPriority(highData.tasks)}
+            tasks={convertToTaskByPriority(highData.data)}
             title={`High (${highData.totalCount})`}
             icon="ArrowUp"
             priority={TaskPriorityEnum.HIGH}
@@ -121,9 +132,9 @@ export default function TasksSection() {
         )}
 
         {/* Medium Priority Tasks (combines NORMAL + MEDIUM) */}
-        {mediumData && mediumData.totalCount > 0 && (
+        {mediumData?.data && mediumData?.totalCount && mediumData.totalCount > 0 && (
           <TaskList
-            tasks={convertToTaskByPriority(mediumData.tasks)}
+            tasks={convertToTaskByPriority(mediumData.data)}
             title={`Medium (${mediumData.totalCount})`}
             icon="Minus"
             priority={TaskPriorityEnum.MEDIUM}
@@ -132,9 +143,9 @@ export default function TasksSection() {
         )}
 
         {/* Low Priority Tasks (combines LOW_PRIORITY + LOW) */}
-        {lowData && lowData.totalCount > 0 && (
+        {lowData?.data && lowData?.totalCount && lowData.totalCount > 0 && (
           <TaskList
-            tasks={convertToTaskByPriority(lowData.tasks)}
+            tasks={convertToTaskByPriority(lowData.data)}
             title={`Low (${lowData.totalCount})`}
             icon="ArrowDown"
             priority={TaskPriorityEnum.LOW}
@@ -143,9 +154,9 @@ export default function TasksSection() {
         )}
 
         {/* On Hold Tasks */}
-        {holdData && holdData.totalCount > 0 && (
+        {holdData?.data && holdData?.totalCount && holdData.totalCount > 0 && (
           <TaskList
-            tasks={convertToTaskByPriority(holdData.tasks)}
+            tasks={convertToTaskByPriority(holdData.data)}
             title={`On Hold (${holdData.totalCount})`}
             icon="Pause"
             priority={TaskPriorityEnum.HOLD}

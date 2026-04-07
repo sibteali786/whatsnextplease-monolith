@@ -5,6 +5,7 @@ import { getUserFromToken } from './authTools';
 import { cache } from 'react';
 import { COOKIE_NAME } from './constant';
 import { Roles, UserSkill } from '@prisma/client';
+
 export interface UserState {
   id: string;
   name?: string;
@@ -18,10 +19,10 @@ export interface UserState {
     name: Roles | undefined;
   } | null;
 }
+
 export const getCurrentUser = cache(async () => {
   const token = cookies().get(COOKIE_NAME);
   if (!token) redirect('/signin');
-
   const entity = await getUserFromToken(token);
   if (!entity) redirect('/signin');
 

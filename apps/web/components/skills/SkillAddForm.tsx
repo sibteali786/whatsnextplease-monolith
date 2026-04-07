@@ -17,8 +17,7 @@ import {
 import { SkillCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, CircleX } from 'lucide-react';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+import { apiClient } from '@/lib/apiClient';
 
 // Schema for skill validation
 const skillSchema = z.object({
@@ -54,21 +53,14 @@ export const SkillAddForm: React.FC<SkillFormProps> = ({
 
       const cleanedName = data.name.trim();
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/create`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: cleanedName,
-          description: data.description,
-          skillCategoryId: selectedCategory.id,
-        }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await apiClient.post<any>('/skill/create', {
+        name: cleanedName,
+        description: data.description,
+        skillCategoryId: selectedCategory.id,
       });
-      const result = await response.json();
 
-      if (response.ok && result.success) {
+      if (response.success) {
         toast({
           title: 'Skill Created Successfully',
           description: `"${data.name}" has been added to ${selectedCategory.categoryName}`,
@@ -78,7 +70,7 @@ export const SkillAddForm: React.FC<SkillFormProps> = ({
         form.reset();
         onSuccess();
       } else {
-        form.setError('root', { message: result.message });
+        form.setError('root', { message: response.message || 'Failed to create skill' });
       }
     } catch (error) {
       toast({

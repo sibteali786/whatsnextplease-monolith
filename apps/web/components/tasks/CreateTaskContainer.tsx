@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { z } from 'zod';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, CheckCircle, CircleX } from 'lucide-react';
-import { getCookie, parseOriginalEstimate, trimWhitespace } from '@/utils/utils';
+import { parseOriginalEstimate, trimWhitespace } from '@/utils/utils';
 import { updateTaskById } from '@/db/repositories/tasks/updateTaskbyId';
 import { deleteTaskById } from '@/db/repositories/tasks/deleteTaskById';
 import { useCreatedTask } from '@/store/useTaskStore';
@@ -17,8 +18,9 @@ import { UserAssigneeSchema } from '@/utils/validationSchemas';
 import { usersList } from '@/db/repositories/users/usersList';
 import { getCurrentUser, UserState } from '@/utils/user';
 import { Button } from '../ui/button';
-import { COOKIE_NAME } from '@/utils/constant';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '@/lib/apiClient';
+import { GetTaskCountForUserByIdResponse } from '@/types/tasks/api-response';
 
 export const createTaskSchema = z.object({
   title: z
@@ -147,21 +149,15 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
         usersList.map(async user => {
           try {
             // Call the backend to get current task count for this user
-            const response = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/tasks/user/${user.id}/count`,
-              {
-                headers: {
-                  Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-                  'Content-Type': 'application/json',
-                },
-              }
+            const response = await apiClient.get<GetTaskCountForUserByIdResponse>(
+              `/tasks/user/${user.id}/count`
             );
 
-            if (response.ok) {
-              const responseData = await response.json();
+            if (response.data && response.data.taskCounts) {
+              const responseData = response.data;
 
               // Extract the active task count from the nested structure
-              const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
+              const activeTasksCount = responseData?.taskCounts?.activeTasksCount || 0;
 
               return {
                 ...user,
@@ -170,7 +166,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
             } else {
               // If API fails, return user without count
               console.warn(
-                `Failed to fetch task count for user ${user.id}. Status: ${response.status}`
+                `Failed to fetch task count for user ${user.id}. Status: ${response?.message}`
               );
               return {
                 ...user,
@@ -269,27 +265,10 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
 
         // Fetch both skills and task categories
         const [skillsResponse, categoriesResponse] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
+          apiClient.get<any>('/skill/all'),
+          apiClient.get<any>('/taskCategory/all'),
         ]);
-
-        if (!skillsResponse.ok) throw new Error('Failed to fetch skills');
-        if (!categoriesResponse.ok) throw new Error('Failed to fetch task categories');
-
-        const skillsData = await skillsResponse.json();
-        const categoriesData = await categoriesResponse.json();
-
-        if (skillsData.length === 0) {
+        if (skillsResponse.length === 0) {
           toast({
             variant: 'destructive',
             title: 'No skills found',
@@ -297,11 +276,11 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
             icon: <CircleX size={40} />,
           });
         }
-        setSkills(skillsData);
+        setSkills(skillsResponse);
 
         // Process task categories
-        setTaskCategories(categoriesData);
-        if (categoriesData.length === 0) {
+        setTaskCategories(categoriesResponse);
+        if (categoriesResponse.length === 0) {
           toast({
             variant: 'destructive',
             title: 'No Task Categories Found',
@@ -319,7 +298,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
           });
         } else {
           // Set default task category if available
-          const defaultCategory = categoriesData[0]?.categoryName || 'General Tasks';
+          const defaultCategory = categoriesResponse[0]?.categoryName || 'General Tasks';
           form.setValue('taskCategoryName', defaultCategory);
         }
 
@@ -433,7 +412,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       if (response.success) {
         toast({
           title: 'Task Created Successfully',
-          description: `Task: ${response.task?.title} is created successfully${
+          description: `Task: ${response.data?.title} is created successfully${
             trimmedData.initialComment ? ' with initial comment' : ''
           }`,
           variant: 'success',

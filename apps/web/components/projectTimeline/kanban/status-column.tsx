@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { AlertCircle, CircleX, Loader2, PlusIcon } from 'lucide-react';
@@ -6,9 +7,7 @@ import TaskBox from './task';
 import { TaskTable } from '@/utils/validationSchemas';
 import { useDroppable } from '@dnd-kit/core';
 import { CreatorType, Roles, TaskStatusEnum } from '@prisma/client';
-import { useEffect, useRef, useState } from 'react';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@radix-ui/react-toast';
 import { useCreatedTask } from '@/store/useTaskStore';
@@ -17,6 +16,7 @@ import { UserState } from '@/utils/user';
 import { CreateTaskContainer } from '@/components/tasks/CreateTaskContainer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { apiClient } from '@/lib/apiClient';
 type StatusColumnProps = {
   name: string;
   color: string;
@@ -86,9 +86,9 @@ const StatusColumn = ({
       user ? user.id : '',
       user?.role?.name ?? Roles.SUPER_USER
     );
-    if (response.success) {
+    if (response.success && response.data) {
       dismiss();
-      setCreatedTask(response.task);
+      setCreatedTask(response.data);
       setOpen(true);
     } else {
       toast({
@@ -127,33 +127,21 @@ const StatusColumn = ({
   useEffect(() => {
     const checkPrerequisites = async () => {
       try {
-        const [skillsResponse, categoriesResponse] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
+        const [skillsData, categoriesData] = await Promise.all([
+          apiClient.get<any>('/skill/all'),
+          apiClient.get<any>('/taskCategory/all'),
         ]);
         // Handle skill API errors
-        if (!skillsResponse.ok) {
-          const errorText = await skillsResponse.text();
-          throw new Error(`Skills API error: ${skillsResponse.status} ${errorText}`);
+        if (!skillsData) {
+          const errorText = 'No data received from skills API';
+          throw new Error(`Skills API error: ${errorText}`);
         }
 
         // Handle category API errors
-        if (!categoriesResponse.ok) {
-          const errorText = await categoriesResponse.text();
-          throw new Error(`Categories API error: ${categoriesResponse.status} ${errorText}`);
+        if (!categoriesData) {
+          const errorText = 'No data received from categories API';
+          throw new Error(`Categories API error: ${errorText}`);
         }
-        const skillsData = await skillsResponse.json();
-        const categoriesData = await categoriesResponse.json();
 
         setHasSkills(skillsData.length > 0);
         setHasTaskCategories(categoriesData.length > 0);

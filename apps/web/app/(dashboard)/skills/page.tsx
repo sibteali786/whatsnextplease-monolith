@@ -1,11 +1,10 @@
-// Replace the entire file content
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { SkillsList } from '@/components/skills/SkillsList';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { Skeleton } from '@/components/ui/skeleton';
+import { apiClient } from '@/lib/apiClient';
 
 type SkillData = {
   id: string;
@@ -24,19 +23,8 @@ export default function Skills() {
   const fetchSkills = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch skills');
-      }
-
-      const skillsData = await response.json();
-      setData(skillsData);
+      const response = await apiClient.get<any>('/skillCategory/all');
+      setData(response);
     } catch (err) {
       console.error('Error fetching skills:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');

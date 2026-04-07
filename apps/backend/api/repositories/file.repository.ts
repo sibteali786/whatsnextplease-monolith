@@ -100,39 +100,79 @@ export class FileRepository {
     });
   }
 
-  async getFilesByUser(userId: string, options: { cursor?: string; limit?: number } = {}) {
-    const { cursor, limit = 10 } = options;
+  async getFilesByUser(
+    userId: string,
+    options: { cursor?: string; limit?: number; entityType?: string } = {}
+  ) {
+    const { cursor, limit = 10, entityType } = options;
 
     const files = await prisma.file.findMany({
-      where: { ownerUserId: userId },
+      where: entityType === 'client' ? { ownerClientId: userId } : { ownerUserId: userId },
       take: limit + 1, // Get one extra to check if there are more
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       orderBy: { createdAt: 'desc' },
-      include: {
-        tasks: {
-          include: {
-            task: {
-              select: {
-                id: true,
-                title: true,
-              },
+      select: {
+        id: true,
+        fileName: true,
+        fileSize: true,
+        uploadedAt: true,
+        updatedAt: true,
+        ...(entityType === 'client' && {
+          ownerClient: {
+            select: {
+              contactName: true,
+              companyName: true,
             },
           },
-        },
+        }),
+        ...(entityType !== 'client' && {
+          ownerUser: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        }),
       },
     });
 
-    const hasNextPage = files.length > limit;
-    if (hasNextPage) {
+    const hasNextCursor = files.length > limit;
+    if (hasNextCursor) {
       files.pop(); // Remove the extra file
     }
 
-    const nextCursor = hasNextPage ? files[files.length - 1]?.id : null;
+    const nextCursor = hasNextCursor ? files[files.length - 1]?.id : null;
+
+    const totalCount = await prisma.file.count({
+      where: entityType === 'client' ? { ownerClientId: userId } : { ownerUserId: userId },
+    });
 
     return {
-      files,
-      hasNextPage,
+      files: files.map(file => ({
+        ...file,
+        fileSize: file.fileSize.toString(),
+        dateUploaded: file.uploadedAt,
+        lastUpdated: file.updatedAt,
+        uploadedBy:
+          entityType === 'client'
+            ? (file.ownerClient?.companyName ?? 'Unknown Client')
+            : `${file.ownerUser?.firstName ?? ''} ${file.ownerUser?.lastName ?? ''}`.trim() ||
+              'Unknown User',
+      })),
+      hasNextCursor,
       nextCursor,
+      totalCount,
+    };
+  }
+
+  async getFileIdsByUserId(userId: string, entityType?: string) {
+    const files = await prisma.file.findMany({
+      where: entityType === 'client' ? { ownerClientId: userId } : { ownerUserId: userId },
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
+    return {
+      fileIds: files.map(file => file.id),
     };
   }
 

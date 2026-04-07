@@ -436,4 +436,15 @@ export class FileService {
       };
     }
   }
+
+  async getFilesByUserId(
+    userId: string,
+    options?: { cursor?: string; limit?: number; entityType?: string }
+  ) {
+    return await this.fileRepository.getFilesByUser(userId, options);
+  }
+
+  async getFileIdsByUserId(userId: string, entityType?: string) {
+    return await this.fileRepository.getFileIdsByUserId(userId, entityType);
+  }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,14 +18,13 @@ import { skillIconMap } from './SkillsList';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SkillAddForm } from './SkillAddForm';
 import { DynamicBreadcrumb } from './DynamicBreadcrumb';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { useForm } from 'react-hook-form';
 import { SkillCategoryCreateSchema } from '@wnp/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { toast } from '@/hooks/use-toast';
+import { apiClient } from '@/lib/apiClient';
 
 interface AddSkillDialogProps {
   skills: SkillCategory[];
@@ -76,19 +76,12 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
 
       setLoading(true);
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/skillCategory/search?q=${encodeURIComponent(debouncedSearchTerm)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        const response = await apiClient.get<any>(`/skillCategory/search`, {
+          params: { q: searchTerm },
+        });
 
-        if (response.ok) {
-          const result = await response.json();
-          setFilteredSkills(result);
+        if (response) {
+          setFilteredSkills(response);
         } else {
           setFilteredSkills(skills);
         }
@@ -128,16 +121,8 @@ export const AddSkillDialog: React.FC<AddSkillDialogProps> = ({
   };
   const handleSkillSubmit = async (data: z.infer<typeof SkillCategoryCreateSchema>) => {
     setIsSubmitting(true);
-    const token = getCookie(COOKIE_NAME);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await apiClient.post<any>('/skillCategory/create', data);
       const createdSkill = await response.json();
       if (createdSkill) {
         toast({

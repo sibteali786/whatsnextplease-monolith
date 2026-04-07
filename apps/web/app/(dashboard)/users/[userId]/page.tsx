@@ -9,8 +9,12 @@ import UserSkillsList from '@/components/users/UserSkillsList';
 import UserTaskList from '@/components/users/UserTaskList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { fetchUserData, fetchTaskStats } from '@/actions/userActions'; // Import the skeleton
 import { UserProfileSkeleton } from '@/components/common/LoadingStates';
+import { apiClient } from '@/lib/apiClient';
+import {
+  GetTaskAgentsWithCountsResponse,
+  GetUserProfileResponse,
+} from '@/types/tasks/api-response';
 
 const UserProfile = ({ params }: { params: { userId: string } }) => {
   const [user, setUser] = useState<any>(null);
@@ -22,7 +26,9 @@ const UserProfile = ({ params }: { params: { userId: string } }) => {
   // Function to refresh task statistics
   const refreshTaskStats = async () => {
     try {
-      const { taskStats: stats, success } = await fetchTaskStats(params.userId);
+      const { data: stats, success } = await apiClient.get<GetTaskAgentsWithCountsResponse>(
+        `/taskAgents/${params.userId}`
+      );
       if (success && stats) {
         setTaskStats(stats);
         setIsAvailable(stats.newTasksCount === 0 && stats.inProgressTasksCount === 0);
@@ -38,7 +44,11 @@ const UserProfile = ({ params }: { params: { userId: string } }) => {
       setLoading(true);
       setError(null);
       try {
-        const { user: userData, success, message } = await fetchUserData(params.userId);
+        const {
+          data: userData,
+          success,
+          message,
+        } = await apiClient.get<GetUserProfileResponse>(`/user/${params.userId}`);
         if (success && userData) {
           setUser(userData);
           await refreshTaskStats();

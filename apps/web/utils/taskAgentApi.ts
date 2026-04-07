@@ -1,7 +1,7 @@
 'use client';
 
-import { COOKIE_NAME } from '@/utils/constant';
-import { getCookie } from '@/utils/utils';
+import { apiClient } from '@/lib/apiClient';
+import { TaskAgentIdsResponse, TaskAgentsResponse } from '@/types/tasks/api-response';
 
 // Updated interface to match backend response
 export interface TaskAgent {
@@ -17,20 +17,13 @@ export interface TaskAgent {
 
 export async function getTaskAgentIds() {
   try {
-    const token = getCookie(COOKIE_NAME);
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskAgents/ids`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.get<TaskAgentIdsResponse>('/taskAgents/ids');
 
-    if (!response.ok) {
+    if (!response.success) {
       throw new Error('Failed to fetch task agent IDs');
     }
-
-    const data = await response.json();
     // Fixed: backend returns 'ids', not 'taskAgentIds'
-    return data.ids || [];
+    return response.data || [];
   } catch (error) {
     console.error('Error fetching task agent IDs:', error);
     return [];
@@ -44,8 +37,6 @@ export async function getTaskAgents(
   searchTerm: string = ''
 ) {
   try {
-    const token = getCookie(COOKIE_NAME);
-
     // Build query string
     const queryParams = new URLSearchParams();
     if (cursor) queryParams.append('cursor', cursor);
@@ -55,29 +46,19 @@ export async function getTaskAgents(
     // Add search parameter if provided
     if (searchTerm) queryParams.append('search', searchTerm);
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/taskAgents?${queryParams.toString()}`;
-
-    console.log('Fetching task agents from:', url); // Debug log
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+    const response = await apiClient.get<TaskAgentsResponse>('/taskAgents', {
+      params: { cursor: cursor ?? undefined, pageSize, status, search: searchTerm },
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      throw new Error(`Failed to fetch task agents: ${response.status} ${response.statusText}`);
+    console.log('API Response:', response);
+    if (!response.success) {
+      console.error('API Error Response:', response);
+      throw new Error(`Failed to fetch task agents: ${response.message || 'Unknown error'}`);
     }
-
-    const data = await response.json();
     return {
-      taskAgents: data.taskAgents as TaskAgent[],
-      nextCursor: data.nextCursor,
-      totalCount: data.totalCount,
-      hasMore: data.hasMore,
+      taskAgents: response.data as TaskAgent[],
+      nextCursor: response.nextCursor,
+      totalCount: response.totalCount,
+      hasMore: response.hasMore,
       success: true,
     };
   } catch (error) {

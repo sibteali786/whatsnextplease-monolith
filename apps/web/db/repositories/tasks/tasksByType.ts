@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { DurationEnum } from '@/types';
 import { handleError } from '@/utils/errorHandler';
@@ -73,10 +74,10 @@ export const tasksByType = async (
     if (response.success) {
       return {
         success: true,
-        tasks: response.tasks,
-        hasNextCursor: response.hasNextCursor,
-        nextCursor: response.nextCursor,
-        totalCount: response.totalCount,
+        data: response.data || [],
+        hasNextCursor: response.hasNextCursor || false,
+        nextCursor: response?.nextCursor || null,
+        totalCount: response.totalCount || 0,
       };
     } else {
       throw new Error(response.message || 'Failed to fetch tasks');

@@ -28,6 +28,9 @@ router.post('/send-verification-email', authController.sendVerificationEmail);
 // GET /auth/me - Get current user (supports legacy JWT and IDP tokens)
 router.get('/me', authController.me);
 
+// Protected — requires valid session token
+router.get('/sse-token', verifyTokenHybrid, authController.issueSseToken);
+
 // ============================================
 // PROTECTED ROUTES (Authentication required)
 // ============================================

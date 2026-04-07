@@ -55,20 +55,11 @@ const TaskSummaryPage = () => {
           return null;
         }
         const response = await taskApiClient.getTasksCount(user.id, 'taskAssignmentStatus');
-
         if (response.success) {
-          // Define type for count item
-          type CountItem = {
-            statusName: string;
-            count: number;
-          };
-
           // Transform backend response to match expected format
           const taskCounts = {
-            UnassignedTasks:
-              response.counts?.find((c: CountItem) => c.statusName === 'Unassigned')?.count || 0,
-            AssignedTasks:
-              response.counts?.find((c: CountItem) => c.statusName === 'Assigned')?.count || 0,
+            UnassignedTasks: response.data?.unassigned || 0,
+            AssignedTasks: response.data?.assigned || 0,
           };
 
           setTasks(taskCounts);

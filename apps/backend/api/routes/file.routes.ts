@@ -24,6 +24,8 @@ router.post(
 
 // Delete file by ID
 router.delete('/:id', authMiddleware, controller.deleteFileById);
+router.get('/user/:userId', authMiddleware, controller.getFilesByUserId);
+router.get('/user/:userId/ids', authMiddleware, controller.getFileIdsByUserId);
 
 // Generate download URL by file ID
 router.get('/:id/download', authMiddleware, controller.generateDownloadUrl);

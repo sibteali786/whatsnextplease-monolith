@@ -6,14 +6,16 @@ import { UserState } from '@/utils/user';
 
 export interface UserWithRole extends Omit<User, 'passwordHash'> {
   role: {
+    id: string;
     name: Roles;
-  };
+  } | null;
 }
 
 export interface ClientWithRole extends Omit<Client, 'passwordHash'> {
   role: {
+    id: string;
     name: Roles;
-  };
+  } | null;
 }
 
 export interface ProfileFormProps {

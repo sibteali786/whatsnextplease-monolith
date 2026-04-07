@@ -20,8 +20,6 @@ import {
 import { SkillCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, CircleX } from 'lucide-react';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { DynamicBreadcrumb } from './DynamicBreadcrumb';
 import { skillIconMap } from './SkillsList';
+import { apiClient } from '@/lib/apiClient';
 
 // Schema for skill validation
 const skillSchema = z.object({
@@ -78,22 +77,15 @@ export const SkillEditForm: React.FC<SkillFormProps> = ({
 
       const cleanedName = data.name.trim();
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/edit`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: cleanedName,
-          description: data.description,
-          skillCategoryId: selectedCategory.id,
-          skillId: skill.id,
-        }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await apiClient.put<any>('/skill/edit', {
+        name: cleanedName,
+        description: data.description,
+        skillCategoryId: selectedCategory.id,
+        skillId: skill.id,
       });
-      const result = await response.json();
 
-      if (response.ok && result.success) {
+      if (response.success) {
         toast({
           title: 'Skill Updated Successfully',
           description: `"${data.name}" has been updated in ${selectedCategory.categoryName}`,
@@ -103,7 +95,7 @@ export const SkillEditForm: React.FC<SkillFormProps> = ({
         form.reset();
         onSuccess();
       } else {
-        form.setError('root', { message: result.message });
+        form.setError('root', { message: response.message || 'Failed to update skill' });
       }
     } catch (error) {
       toast({

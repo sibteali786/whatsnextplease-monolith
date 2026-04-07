@@ -6,7 +6,7 @@ import { TaskAgentChart } from '@/components/tasks/ChartTasks';
 import { Card } from '@/components/ui/card';
 import { getCurrentUser } from '@/utils/user';
 import { taskApiClient } from '@/utils/taskApi';
-import { Roles, TaskStatusEnum } from '@prisma/client';
+import { Roles } from '@prisma/client';
 import { CircleX, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChartConfig } from '@/components/ui/chart';
@@ -89,26 +89,19 @@ const TaskSummaryPage = () => {
         // Get task statistics using the new API client
         const response = await taskApiClient.getTaskStatistics(currentUser.id);
         // In your useEffect, replace the transformation logic with this:
-        if (response.success && response.statistics) {
-          const statusCounts: TaskStatusCounts = {};
+        if (response.success && response.data) {
+          let statusCounts: TaskStatusCounts = {};
 
           // First, process tasksByStatus array to create a map
-          if (response.statistics.tasksByStatus) {
-            response.statistics.tasksByStatus.forEach((statusGroup: any) => {
-              if (statusGroup.status && statusGroup._count) {
-                const statusName = statusGroup.status.statusName as TaskStatusEnum;
-                statusCounts[statusName] = statusGroup._count.id;
-              }
-            });
+          // byStatus is an object where keys are status names and values are counts, so we can directly use it
+          if (response.data?.byStatus) {
+            statusCounts = { ...response.data.byStatus } as TaskStatusCounts;
           }
 
           // FIXED: Only override OVERDUE if we don't already have OVERDUE status tasks
           // or if the calculated overdue count is higher
-          if (response.statistics.overdueTasks !== undefined) {
-            statusCounts.OVERDUE = Math.max(
-              statusCounts.OVERDUE || 0,
-              response.statistics.overdueTasks
-            );
+          if (response.data.overdueTasks !== undefined) {
+            statusCounts.OVERDUE = Math.max(statusCounts.OVERDUE || 0, response.data.overdueTasks);
           }
 
           setTasksWithStatus(statusCounts);

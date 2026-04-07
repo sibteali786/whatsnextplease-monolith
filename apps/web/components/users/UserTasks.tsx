@@ -55,10 +55,10 @@ export const UserTasks = ({
       creatorType = CreatorType.CLIENT;
     }
     const response = await createDraftTask(creatorType, userId, role);
-    if (response.success) {
+    if (response.success && response.data) {
       // hides the toast when response is succeeded
       dismiss();
-      setCreatedTask(response.task);
+      setCreatedTask(response.data);
       setOpen(true);
     } else {
       toast({
@@ -119,7 +119,7 @@ export const UserTasks = ({
         assignedToId: assignedToFilter,
       };
       const response = await taskApiClient.getTasksByUserId(userId, params);
-      const { taskIds, success } = await taskApiClient.getTaskIds({
+      const { data, success } = await taskApiClient.getTaskIds({
         userId,
         search: searchTerm,
         duration,
@@ -128,8 +128,8 @@ export const UserTasks = ({
       });
 
       if (response.success && success) {
-        setTaskIDs(taskIds);
-        setData(response.tasks || []);
+        setTaskIDs(data ?? []);
+        setData(response.data || []);
         setTotalCount(response.totalCount);
         setError(null);
       } else {

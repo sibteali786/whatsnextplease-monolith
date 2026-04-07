@@ -125,6 +125,7 @@ export const UpdateProfileSchema = z.object({
   zipCode: z.string().optional(),
   designation: z.string().optional(),
   role: z.object({
+    id: z.string(),
     name: z.nativeEnum(Roles),
   }),
 });
@@ -159,6 +160,7 @@ export const UpdateClientProfileSchema = z.object({
   address1: z.string().optional(),
   address2: z.string().optional(),
   role: z.object({
+    id: z.string(),
     name: z.nativeEnum(Roles),
   }),
 });
