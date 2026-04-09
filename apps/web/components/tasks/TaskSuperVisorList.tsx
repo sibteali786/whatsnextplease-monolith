@@ -17,8 +17,6 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSearchParams } from 'next/navigation';
 
 import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
-import { apiClient } from '@/lib/apiClient';
-
 export const TaskSuperVisorList = ({
   userId,
   role,
@@ -139,7 +137,7 @@ export const TaskSuperVisorList = ({
         );
 
         if (response?.success && responseIds?.success) {
-          setData(response.tasks);
+          setData(response.data);
           setTaskIds(responseIds.taskIds);
           setTotalCount(response.totalCount);
         } else {

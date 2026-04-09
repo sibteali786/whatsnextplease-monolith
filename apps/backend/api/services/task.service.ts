@@ -1771,7 +1771,7 @@ export class TaskService {
 
       return {
         success: true,
-        tasks: tasksByStatus,
+        data: tasksByStatus,
         hasNextCursor: result.hasNextCursor,
         nextCursor: result.nextCursor,
         query: {
@@ -1784,7 +1784,7 @@ export class TaskService {
     if (query.view === 'list') {
       return {
         success: true,
-        tasks: result.tasks.map(task => ({
+        data: result.tasks.map(task => ({
           ...task,
           taskSkills: task.taskSkills.map(ts => ts.skill.name),
         })),

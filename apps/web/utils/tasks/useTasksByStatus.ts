@@ -145,19 +145,21 @@ export function useTasksByStatus(
       }));
 
       const result = await fetchTasksFromApi([status], { [status]: cursor }, PAGE_SIZE);
-      setData(prev => ({
-        ...prev,
-        [status]: {
-          ...prev[status],
-          tasks: [...prev[status].tasks, ...result[status].tasks],
-          count: result[status].count,
-        },
-      }));
+      if (result?.data?.[status]) {
+        setData(prev => ({
+          ...prev,
+          [status]: {
+            ...prev[status],
+            tasks: [...prev[status].tasks, ...result.data![status].tasks],
+            count: result.data![status].count,
+          },
+        }));
 
-      // update cursor AFTER fetching new tasks
-      const newCursor = result[status].tasks[result[status].tasks.length - 1]?.id;
-      if (newCursor) {
-        setCursors(prev => ({ ...prev, [status]: newCursor }));
+        // update cursor AFTER fetching new tasks
+        const newCursor = result.data[status].tasks[result.data[status].tasks.length - 1]?.id;
+        if (newCursor) {
+          setCursors(prev => ({ ...prev, [status]: newCursor }));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -206,8 +208,8 @@ export function useTasksByStatus(
             const newData = { ...prev };
             statuses.forEach(status => {
               newData[status] = {
-                tasks: result[status].tasks,
-                count: result[status].count,
+                tasks: result.data![status].tasks,
+                count: result.data![status].count,
               };
             });
             return newData;
@@ -218,7 +220,7 @@ export function useTasksByStatus(
             Object.fromEntries(
               statuses.map(status => [
                 status,
-                result[status].tasks[result[status].tasks.length - 1]?.id,
+                result.data![status].tasks[result.data![status].tasks.length - 1]?.id,
               ])
             ) as Record<TaskStatusEnum, string | undefined>
           );
