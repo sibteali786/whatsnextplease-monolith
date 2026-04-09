@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -22,10 +23,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Settings, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { apiClient } from '@/lib/apiClient';
+import { AvailableRolesResponse } from '@/types/tasks/api-response';
 
 interface UserWithRole {
   id: string;
@@ -115,32 +116,22 @@ export default function PermissionsClient() {
     ) => {
       setTableLoading(true);
       try {
-        const params = new URLSearchParams({
-          page: page.toString(),
-          limit: limit.toString(),
-          ...(search && { search }),
-          ...(role && { role }),
+        const response = await apiClient.get<any>('/user/permissions/roles', {
+          params: {
+            page,
+            limit,
+            ...(search && { search }),
+            ...(role && { role }),
+          },
         });
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/permissions/roles?${params}`,
-          {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-            },
-          }
-        );
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
+        if (!response.success) {
+          throw new Error(
+            'Failed to fetch users' + response.message ? `: ${response.message}` : ''
+          );
         }
-
-        const result = await response.json();
-        if (result.success) {
-          setUsers(result.data);
-          setPagination(result.pagination);
-        } else {
-          throw new Error(result.message);
-        }
+        setUsers(response.data);
+        setPagination(response.pagination);
       } catch (error) {
         toast({
           title: 'Error',
@@ -172,22 +163,12 @@ export default function PermissionsClient() {
   };
   const fetchAvailableRoles = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/available-roles`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-        },
-      });
+      const response = await apiClient.get<AvailableRolesResponse>('/user/available-roles');
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch roles');
+      if (!response.success) {
+        throw new Error('Failed to fetch roles' + response.message ? `: ${response.message}` : '');
       }
-
-      const result = await response.json();
-      if (result.success) {
-        setAvailableRoles(result.data);
-      } else {
-        throw new Error(result.message);
-      }
+      setAvailableRoles(response.data ?? []);
     } catch (error) {
       toast({
         title: 'Error',
@@ -202,22 +183,13 @@ export default function PermissionsClient() {
     setUpdatingUserId(userId);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-        },
-        body: JSON.stringify({ roleId: newRoleId }),
-      });
+      const response = await apiClient.put<any>(`/user/${userId}/role`, { roleId: newRoleId });
 
-      const result = await response.json();
-
-      if (result.success) {
+      if (response.success) {
         // Update the specific user in local state with fresh data from server
         setUsers(prevUsers =>
           prevUsers.map(user =>
-            user.id === userId ? { ...user, roleId: newRoleId, role: result.data.role } : user
+            user.id === userId ? { ...user, roleId: newRoleId, role: response.data.role } : user
           )
         );
 
@@ -226,7 +198,7 @@ export default function PermissionsClient() {
           description: 'User role updated successfully',
         });
       } else {
-        throw new Error(result.message);
+        throw new Error(response.message);
       }
     } catch (error) {
       toast({

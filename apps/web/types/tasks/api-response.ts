@@ -1,6 +1,6 @@
 import { TaskSchema, TaskTable } from '@/utils/validationSchemas';
 import { PaginatedApiResponse, StandardApiResponse } from '../api';
-import { TaskPriorityEnum, TaskStatusEnum, TaskViewFilter } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum, TaskViewFilter } from '@prisma/client';
 import z from 'zod';
 import { ClientWithRole, UserWithRole } from '@/components/settings/types';
 import { TaskLink } from '../tasks';
@@ -231,6 +231,12 @@ export interface CreateSkill {
   updatedAt: Date;
 }
 
+export type AvailableRoles = {
+  id: string;
+  name: Roles;
+  description: string;
+};
+
 export type FileType = z.infer<typeof FileSchema>;
 export type FilesByUserId = PaginatedApiResponse<FileType[]>;
 export type FileIdsByUserId = StandardApiResponse<string[]>;
@@ -279,3 +285,4 @@ export type CreateTaskCategoryResponse = StandardApiResponse<TaskCategoryCreate>
 export type CreateSkillResponse = StandardApiResponse<CreateSkill>;
 export type TaskLinksGetResponse = StandardApiResponse<TaskLink[]>;
 export type CreateTaskLinkResponse = StandardApiResponse<TaskLink>;
+export type AvailableRolesResponse = StandardApiResponse<AvailableRoles[]>;
