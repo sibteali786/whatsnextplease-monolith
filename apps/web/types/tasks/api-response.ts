@@ -4,6 +4,7 @@ import { Roles, TaskPriorityEnum, TaskStatusEnum, TaskViewFilter } from '@prisma
 import z from 'zod';
 import { ClientWithRole, UserWithRole } from '@/components/settings/types';
 import { TaskLink } from '../tasks';
+import { ErrorResponse } from '@wnp/types';
 
 // Task data types
 export interface TaskData extends z.infer<typeof TaskSchema> {}
@@ -286,3 +287,15 @@ export type CreateSkillResponse = StandardApiResponse<CreateSkill>;
 export type TaskLinksGetResponse = StandardApiResponse<TaskLink[]>;
 export type CreateTaskLinkResponse = StandardApiResponse<TaskLink>;
 export type AvailableRolesResponse = StandardApiResponse<AvailableRoles[]>;
+
+// ----------------- Embedded Chat Api Responses -------------------------
+export type ChatInitToken =
+  | {
+      success: boolean;
+      token: string;
+      chatUrl: string;
+      signature: string;
+    }
+  | ErrorResponse;
+
+export type ChatInitTokenResponse = ChatInitToken;
