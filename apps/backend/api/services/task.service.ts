@@ -211,7 +211,7 @@ export class TaskService {
 
     return {
       success: true,
-      tasks: formattedTasks,
+      data: formattedTasks,
       hasNextCursor: taskResult.hasNextCursor,
       nextCursor: taskResult.nextCursor,
       totalCount,
@@ -235,7 +235,7 @@ export class TaskService {
 
     return {
       success: true,
-      task: {
+      data: {
         ...task,
         taskSkills: task.taskSkills.map(ts => ts.skill.name),
       },
@@ -306,7 +306,7 @@ export class TaskService {
 
     return {
       success: true,
-      taskIds,
+      data: taskIds,
       message: 'Successfully retrieved task IDs',
     };
   }
@@ -399,7 +399,9 @@ export class TaskService {
     return {
       success: true,
       message: `Successfully updated ${updatedTasks.length} tasks`,
-      updatedTasks,
+      data: {
+        updatedTasks,
+      },
     };
   }
 
@@ -430,10 +432,12 @@ export class TaskService {
     return {
       success: true,
       message: `Successfully deleted ${deleteResult.count} tasks`,
-      deletedTasks: existingTasks.map(task => ({
-        id: task.id,
-        title: task.title,
-      })),
+      data: {
+        deletedTasks: existingTasks.map(task => ({
+          id: task.id,
+          title: task.title,
+        })),
+      },
     };
   }
 
@@ -487,7 +491,7 @@ export class TaskService {
 
     return {
       success: true,
-      tasks: formattedTasks,
+      data: formattedTasks,
       hasNextCursor: taskResult.hasNextCursor,
       nextCursor: taskResult.nextCursor,
       totalCount,
@@ -518,7 +522,7 @@ export class TaskService {
     }));
     return {
       success: true,
-      tasks: formattedTasks,
+      data: formattedTasks,
       hasNextCursor: taskResult.hasNextCursor,
       nextCursor: taskResult.nextCursor,
       totalCount,
@@ -614,7 +618,7 @@ export class TaskService {
     return {
       success: true,
       message: `Successfully updated task ${field}`,
-      task: {
+      data: {
         ...updatedTask,
         taskSkills: updatedTask?.taskSkills.map(ts => ts.skill.name) || [],
       },
@@ -760,7 +764,7 @@ export class TaskService {
     }));
     return {
       success: true,
-      tasks: formattedTasks,
+      data: formattedTasks,
       hasNextCursor: taskResult.hasNextCursor,
       nextCursor: taskResult.nextCursor,
       totalCount,
@@ -845,7 +849,7 @@ export class TaskService {
       })
     );
 
-    return tasksByStatus;
+    return { success: true, data: tasksByStatus };
   }
 
   /**
@@ -909,7 +913,7 @@ export class TaskService {
 
     return {
       success: true,
-      task: { id: task.id },
+      data: { id: task.id },
     };
   }
 
@@ -1333,7 +1337,7 @@ export class TaskService {
 
     return {
       success: true,
-      task: {
+      data: {
         ...updatedTask,
         statusName: status.statusName,
         priorityName: priority.priorityName,
@@ -1669,7 +1673,7 @@ export class TaskService {
 
     return {
       success: true,
-      task: { id: taskId },
+      data: { id: taskId },
       message: `Task with ID: ${taskId} deleted successfully`,
     };
   }
@@ -1686,7 +1690,7 @@ export class TaskService {
 
     return {
       success: true,
-      tasks,
+      data: { tasks },
     };
   }
 
@@ -1767,7 +1771,7 @@ export class TaskService {
 
       return {
         success: true,
-        tasks: tasksByStatus,
+        data: tasksByStatus,
         hasNextCursor: result.hasNextCursor,
         nextCursor: result.nextCursor,
         query: {
@@ -1780,7 +1784,7 @@ export class TaskService {
     if (query.view === 'list') {
       return {
         success: true,
-        tasks: result.tasks.map(task => ({
+        data: result.tasks.map(task => ({
           ...task,
           taskSkills: task.taskSkills.map(ts => ts.skill.name),
         })),
@@ -1802,7 +1806,7 @@ export class TaskService {
 
     return {
       success: true,
-      tasks: formattedTasks,
+      data: formattedTasks,
       hasNextCursor: result.hasNextCursor,
       nextCursor: result.nextCursor,
       query: {

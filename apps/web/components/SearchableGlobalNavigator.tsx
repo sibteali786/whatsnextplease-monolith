@@ -71,7 +71,7 @@ export function SearchableGlobalNavigator({ role }: { role?: SearchableRoles }) 
         );
 
         if (response.success) {
-          const newTasksArray = Array.isArray(response.tasks) ? response.tasks : [];
+          const newTasksArray = Array.isArray(response.data) ? response.data : [];
 
           if (reset) {
             setTasks(newTasksArray);

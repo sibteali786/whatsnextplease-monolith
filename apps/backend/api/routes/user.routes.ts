@@ -40,6 +40,8 @@ router.get('/available-roles', permissionMiddleware, controller.getAvailableRole
  * Only accessible by SUPER_USER
  */
 router.get('/permissions/roles', permissionMiddleware, controller.getUsersWithRolesHandler);
+
+router.post('/create', controller.createUser);
 router.delete(
   '/:id',
   verifyTokenHybrid,
@@ -49,6 +51,7 @@ router.delete(
 router.get('/me', verifyTokenHybrid, controller.getCurrentUser);
 
 router.patch('/:id', permissionMiddleware, controller.updateUserById);
+router.get('/:id', verifyTokenHybrid, controller.getUserProfileById);
 
 router.get('/skills/:userId', verifyTokenHybrid, controller.getUserSkills);
 /**

@@ -160,14 +160,14 @@ export function useAdvancedFilter({
 
       const result = await taskApiClient.advancedSearch(query);
 
-      if (result.success) {
-        setSearchResults(result.tasks);
-        setHasNextCursor(result.hasNextCursor);
-        setNextCursor(result.nextCursor);
+      if (result.success && result.data) {
+        setSearchResults(result.data || []);
+        setHasNextCursor(result.hasNextCursor ?? false);
+        setNextCursor(result.nextCursor ?? null);
 
-        const totalTasks = Array.isArray(result.tasks)
-          ? result.tasks.length
-          : Object.values(result.tasks as Record<string, { count?: number }>).reduce(
+        const totalTasks = Array.isArray(result.data)
+          ? result.data.length
+          : Object.values(result.data as Record<string, { count?: number }>).reduce(
               (sum, column) => sum + (column.count ?? 0),
               0
             );
@@ -218,17 +218,17 @@ export function useAdvancedFilter({
         };
         const result = await taskApiClient.advancedSearch(query);
 
-        if (result.success) {
+        if (result.success && result.data) {
           /*      setSearchResults(prev => [...(prev || []), ...result.tasks]); */
 
           setSearchResults(prev => {
             if (viewTemp === 'kanban') {
-              return mergeKanbanColumns(prev, result.tasks, extra?.status);
+              return mergeKanbanColumns(prev, result.data, extra?.status);
             }
-            return [...(prev || []), ...result.tasks];
+            return [...(prev || []), ...(result.data ?? [])];
           });
-          setHasNextCursor(result.hasNextCursor);
-          setNextCursor(result.nextCursor);
+          setHasNextCursor(result.hasNextCursor ?? false);
+          setNextCursor(result.nextCursor ?? null);
         }
       } catch (error) {
         console.error('Load more failed:', error);

@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { DurationEnum, DurationEnumList } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { getCookie, transformEnumValue } from '@/utils/utils';
+import { transformEnumValue } from '@/utils/utils';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Button } from './ui/button';
 import {
@@ -18,7 +19,6 @@ import {
 
 import { Bookmark, CheckCircle, Dot, Filter, Plus, UserRoundX, UserX } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { COOKIE_NAME } from '@/utils/constant';
 import { Roles, SortDirection, TaskSortField, TaskViewFilter } from '@prisma/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar';
 import { usersList } from '@/db/repositories/users/usersList';
@@ -28,6 +28,8 @@ import { Separator } from './ui/separator';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { TasksByStatusFilters } from '@/utils/tasks/useTasksByStatus';
+import { apiClient } from '@/lib/apiClient';
+import { ApplyTaskViewFilterResponse } from '@/types/tasks/api-response';
 
 const SORT_FIELDS = [
   { label: 'Start Date', value: TaskSortField.START_DATE },
@@ -156,33 +158,29 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
         sortDirection: order || undefined,
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/preference/task-view-filter`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await apiClient.post<ApplyTaskViewFilterResponse>(
+        '/preference/task-view-filter',
+        body
+      );
 
-      if (!res.ok) {
-        const errorData = await res.json();
+      if (!response.success) {
+        const errorData = response?.error;
         console.log('errorData', errorData);
-        throw new Error(errorData.details.error || 'Failed to save view');
+        throw new Error(errorData || 'Failed to save view');
       }
-
-      const data = await res.json();
-      setViews(prev => [...prev, data.filter]);
-      setCurrentViewFilter(data.filter);
-      setViewId(data.filter.id);
-      saveViewIdToStorage(data.filter.id);
-      setNewViewName('');
-      toast({
-        title: 'View Saved Successfully',
-        description: `View: ${data.filter?.name} has been created.`,
-        variant: 'success',
-        icon: <CheckCircle size={40} />,
-      });
+      if (response?.data) {
+        setViews(prev => [...prev, response.data as TaskViewFilter]);
+        setCurrentViewFilter(response.data);
+        setViewId(response.data.id);
+        saveViewIdToStorage(response.data.id);
+        setNewViewName('');
+        toast({
+          title: 'View Saved Successfully',
+          description: `View: ${response.data.name} has been created.`,
+          variant: 'success',
+          icon: <CheckCircle size={40} />,
+        });
+      }
     } catch (err) {
       console.error('Failed to create task view filter:', err);
       const errorMessage =
@@ -200,20 +198,11 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
 
   const fetchViews = async () => {
     try {
-      const viewResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/preference/task-view-filter`,
-        {
-          headers: {
-            Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      if (!viewResponse.ok) {
+      const viewsData = await apiClient.get<any>('/preference/task-view-filter');
+      if (!viewsData) {
         throw new Error('Failed to fetch views');
       }
-      const viewsData = await viewResponse.json();
-      setViews(viewsData.filters);
+      setViews(viewsData.data);
     } catch (err) {
       console.error('Error fetching views:', err);
     }
@@ -222,17 +211,8 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
   useEffect(() => {
     /* Fetch categories */
     const fetchCategories = async () => {
-      const categoriesResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`,
-        {
-          headers: {
-            Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      if (!categoriesResponse.ok) throw new Error('Failed to fetch task categories');
-      const categoriesData = await categoriesResponse.json();
+      const categoriesData = await apiClient.get<any>('/taskCategory/all');
+      if (!categoriesData) throw new Error('Failed to fetch task categories');
       setTaskCategories(categoriesData);
     };
     /* Fetch users */

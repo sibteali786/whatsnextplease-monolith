@@ -15,9 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, CheckCircle, CircleX, Edit2 } from 'lucide-react';
 import { useState } from 'react';
-import { COOKIE_NAME } from '@/utils/constant';
-import { getCookie } from '@/utils/utils';
 import { toast } from '@/hooks/use-toast';
+import { apiClient } from '@/lib/apiClient';
 
 export const SkillCategoryEditForm = ({
   dropdownItem = false,
@@ -48,21 +47,13 @@ export const SkillCategoryEditForm = ({
       setLoading(true);
 
       const cleanedName = data.categoryName.trim();
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/edit`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          categoryName: cleanedName,
-          id: data.id,
-        }),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await apiClient.put<any>('/skillCategory/edit', {
+        categoryName: cleanedName,
+        id: data.id,
       });
-      const result = await response.json();
 
-      if (response.ok && result.success) {
+      if (response.success) {
         toast({
           title: 'Skill Category Updated Successfully',
           description: `"${data.categoryName}" has been updated successfully.`,
@@ -76,13 +67,13 @@ export const SkillCategoryEditForm = ({
         toast({
           variant: 'destructive',
           title: 'Update Failed',
-          description: result?.message || 'Unable to update skill category',
+          description: response.message || 'Unable to update skill category',
           icon: <CircleX size={40} />,
         });
 
         // Optional: still set form error if you want inline feedback
         form.setError('root', {
-          message: result?.message || 'Something went wrong',
+          message: response.message || 'Something went wrong',
         });
       }
     } catch (error) {

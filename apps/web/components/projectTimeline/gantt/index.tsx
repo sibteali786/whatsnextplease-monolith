@@ -178,8 +178,8 @@ const Gantt = ({
         );
       }
 
-      if (response?.success && response.tasks) {
-        const ganttTasks = response.tasks
+      if (response?.success && response.data) {
+        const ganttTasks = response.data
           .map(mapTaskToGantt)
           .filter((t): t is GanttTask => t !== null);
 

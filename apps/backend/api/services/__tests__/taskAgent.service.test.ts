@@ -145,7 +145,7 @@ describe('TaskAgentService', () => {
 
       expect(result.hasMore).toBe(true);
       expect(result.nextCursor).toBe('agent10');
-      expect(result.taskAgents.length).toBe(10);
+      expect(result.data.length).toBe(10);
     });
 
     it('should filter by status correctly', async () => {
@@ -189,8 +189,8 @@ describe('TaskAgentService', () => {
 
       // Test 'available' filter
       const availableResult = await service.getTaskAgents(null, 10, 'available');
-      expect(availableResult.taskAgents.length).toBe(1);
-      expect(availableResult.taskAgents[0].id).toBe('agent2');
+      expect(availableResult.data.length).toBe(1);
+      expect(availableResult.data[0].id).toBe('agent2');
 
       // Reset mocks for next test
       jest.clearAllMocks();
@@ -224,8 +224,8 @@ describe('TaskAgentService', () => {
 
       // Test 'working' filter
       const workingResult = await service.getTaskAgents(null, 10, 'working');
-      expect(workingResult.taskAgents.length).toBe(1);
-      expect(workingResult.taskAgents[0].id).toBe('agent1');
+      expect(workingResult.data.length).toBe(1);
+      expect(workingResult.data[0].id).toBe('agent1');
     });
 
     it('should handle empty results', async () => {
@@ -234,7 +234,7 @@ describe('TaskAgentService', () => {
 
       const result = await service.getTaskAgents();
 
-      expect(result.taskAgents).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });

@@ -14,7 +14,7 @@ export default function ProfileForm({ initialData, token, user }: ProfileFormPro
 
   return (
     <div className="space-y-6">
-      <ProfileFormUser initialData={initialData as UserWithRole} token={token} />
+      <ProfileFormUser initialData={initialData as UserWithRole} />
       {user?.id && <UserSkillsSection userId={user.id} />}
     </div>
   );

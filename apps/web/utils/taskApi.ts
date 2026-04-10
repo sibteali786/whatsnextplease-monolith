@@ -1,8 +1,21 @@
-// utils/taskApi.ts
-import { TaskStatusEnum, TaskPriorityEnum } from '@prisma/client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { TaskStatusEnum, TaskPriorityEnum, Roles } from '@prisma/client';
 import { DurationEnum } from '@/types';
 import { USER_CREATED_TASKS_CONTEXT } from './commonUtils/taskPermissions';
 import { TasksByStatusFilters } from './tasks/useTasksByStatus';
+import { apiClient } from '@/lib/apiClient';
+import {
+  GetTasksResponse,
+  GetTaskIdsResponse,
+  GetTaskStatisticsResponse,
+  GetTaskCountsResponse,
+  GetTaskMetadataResponse,
+  BatchUpdateTasksResponse,
+  BatchDeleteTasksResponse,
+  GetTaskByIdResponse,
+  GetTasksByStatusResponse,
+} from '@/types/tasks/api-response';
+
 interface BatchUpdateRequest {
   taskIds: string[];
   updates: {
@@ -32,202 +45,109 @@ interface TaskQueryParams {
   clientId?: string;
   sortBy?: string;
   context?: USER_CREATED_TASKS_CONTEXT;
+  role?: Roles;
 }
 
 class TaskApiClient {
-  private baseUrl: string;
-  private getAuthHeaders: () => Record<string, string>;
-
-  constructor() {
-    // Use Next.js API proxy instead of direct backend calls
-    this.baseUrl = '/api/proxy';
-    this.getAuthHeaders = () => ({
-      'Content-Type': 'application/json',
-    });
-  }
-
   /**
    * Get tasks with filtering and pagination
    */
-  async getTasks(params: TaskQueryParams = {}) {
-    const searchParams = new URLSearchParams();
+  async getTasks(params: TaskQueryParams = {}): Promise<GetTasksResponse> {
+    const queryParams: Record<string, string> = {};
 
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, String(value));
+        queryParams[key] = String(value);
       }
     });
 
-    const response = await fetch(`${this.baseUrl}/tasks?${searchParams.toString()}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch tasks: ${response.statusText}`);
-    }
-
-    return response.json();
+    return apiClient.get<GetTasksResponse>('/tasks', { params: queryParams });
   }
 
   /**
    * Get task by ID
    */
-  async getTaskById(taskId: string) {
-    const response = await fetch(`${this.baseUrl}/tasks/${taskId}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch task: ${response.statusText}`);
-    }
-
-    return response.json();
+  async getTaskById(taskId: string): Promise<GetTaskByIdResponse> {
+    return apiClient.get<GetTaskByIdResponse>(`/tasks/${taskId}`);
   }
 
   /**
    * Get task IDs for pagination
    */
-  async getTaskIds(params: TaskQueryParams = {}) {
-    const searchParams = new URLSearchParams();
+  async getTaskIds(params: TaskQueryParams = {}): Promise<GetTaskIdsResponse> {
+    const queryParams: Record<string, string> = {};
 
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, String(value));
+        queryParams[key] = String(value);
       }
     });
 
-    const response = await fetch(`${this.baseUrl}/tasks/ids?${searchParams.toString()}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch task IDs: ${response.statusText}`);
-    }
-
-    return response.json();
+    return apiClient.get<GetTaskIdsResponse>('/tasks/ids', { params: queryParams });
   }
 
   /**
    * Get task statistics
    */
-  async getTaskStatistics(userId?: string) {
-    const searchParams = new URLSearchParams();
-    if (userId) {
-      searchParams.append('userId', userId);
-    }
-
-    const response = await fetch(`${this.baseUrl}/tasks/statistics?${searchParams.toString()}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch task statistics: ${response.statusText}`);
-    }
-
-    return response.json();
+  async getTaskStatistics(userId?: string): Promise<GetTaskStatisticsResponse> {
+    const params = userId ? { userId } : undefined;
+    return apiClient.get<GetTaskStatisticsResponse>('/tasks/statistics', { params });
   }
 
   /**
    * Get unassigned tasks
    */
-  async getUnassignedTasks(cursor?: string, pageSize = 10) {
-    const searchParams = new URLSearchParams();
-    if (cursor) searchParams.append('cursor', cursor);
-    searchParams.append('pageSize', String(pageSize));
+  async getUnassignedTasks(cursor?: string, pageSize = 10): Promise<GetTasksResponse> {
+    const params: Record<string, string> = {
+      pageSize: String(pageSize),
+    };
 
-    const response = await fetch(`${this.baseUrl}/tasks/unassigned?${searchParams.toString()}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch unassigned tasks: ${response.statusText}`);
+    if (cursor) {
+      params.cursor = cursor;
     }
 
-    return response.json();
+    return apiClient.get<GetTasksResponse>('/tasks/unassigned', { params });
   }
 
   /**
    * Get task counts by status (legacy endpoint)
    */
-  async getTasksCount(userId?: string, query?: string) {
-    const searchParams = new URLSearchParams();
+  async getTasksCount(userId?: string, query?: string): Promise<GetTaskCountsResponse> {
+    const params: Record<string, string> = {};
+
     if (userId) {
-      searchParams.append('userId', userId);
+      params.userId = userId;
     }
     if (query === 'taskAssignmentStatus') {
-      searchParams.append('taskAssignmentStatus', query);
-    }
-    const response = await fetch(`${this.baseUrl}/tasks/counts?${searchParams.toString()}`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch task counts: ${response.statusText}`);
+      params.taskAssignmentStatus = query;
     }
 
-    return response.json();
+    return apiClient.get<GetTaskCountsResponse>('/tasks/counts', { params });
   }
 
   /**
    * Batch update tasks
    */
-  async batchUpdateTasks(request: BatchUpdateRequest) {
-    const response = await fetch(`${this.baseUrl}/tasks/batch/update`, {
-      method: 'PATCH',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to update tasks: ${response.statusText}`);
-    }
-
-    return response.json();
+  async batchUpdateTasks(request: BatchUpdateRequest): Promise<BatchUpdateTasksResponse> {
+    return apiClient.patch<BatchUpdateTasksResponse>('/tasks/batch/update', request);
   }
 
   /**
    * Batch delete tasks
    */
-  async batchDeleteTasks(request: BatchDeleteRequest) {
-    const response = await fetch(`${this.baseUrl}/tasks/batch/delete`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to delete tasks: ${response.statusText}`);
-    }
-
-    return response.json();
+  async batchDeleteTasks(request: BatchDeleteRequest): Promise<BatchDeleteTasksResponse> {
+    return apiClient.delete<BatchDeleteTasksResponse>('/tasks/batch/delete', request);
   }
 
   /**
-   * NEW: Get all available task statuses and priorities for dropdowns
+   * Get all available task statuses and priorities for dropdowns
    */
-  async getTaskMetadata() {
-    const response = await fetch(`${this.baseUrl}/tasks/metadata`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch task metadata: ${response.statusText}`);
-    }
-
-    return response.json();
+  async getTaskMetadata(): Promise<GetTaskMetadataResponse> {
+    return apiClient.get<GetTaskMetadataResponse>('/tasks/metadata');
   }
 
   /**
-   * NEW: Get tasks by priority level (critical, high, medium, low, hold)
+   * Get tasks by priority level (critical, high, medium, low, hold)
    */
   async getTasksByPriorityLevel(
     level: TaskPriorityEnum,
@@ -241,34 +161,22 @@ class TaskApiClient {
       categoryId?: string;
       userId?: string;
     }
-  ) {
-    const searchParams = new URLSearchParams();
+  ): Promise<GetTasksResponse> {
+    const queryParams: Record<string, string> = {};
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          searchParams.append(key, value.toString());
+          queryParams[key] = String(value);
         }
       });
     }
 
-    const queryString = searchParams.toString();
-    const url = `${this.baseUrl}/tasks/priority/${level}${queryString ? `?${queryString}` : ''}`;
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch tasks by priority level: ${response.statusText}`);
-    }
-
-    return response.json();
+    return apiClient.get<GetTasksResponse>(`/tasks/priority/${level}`, { params: queryParams });
   }
 
   /**
-   * NEW: Get tasks by statuses (multiple statuses)
+   * Get tasks by statuses (multiple statuses)
    */
   async getTasksByStatus(
     statuses: TaskStatusEnum[],
@@ -283,7 +191,7 @@ class TaskApiClient {
       pageSize?: number;
       cursors?: Partial<Record<TaskStatusEnum, string | undefined>>;
     }
-  ) {
+  ): Promise<GetTasksByStatusResponse> {
     const payload: any = {
       statuses: statuses.join(','),
       taskOffering,
@@ -292,62 +200,28 @@ class TaskApiClient {
       ...filters,
     };
 
-    // No need to check object, sortBy is always string
-    // if (filters?.sortBy && typeof filters.sortBy === 'object') { ... } <-- remove
-
-    const response = await fetch(`${this.baseUrl}/tasks/by-status`, {
-      method: 'POST',
-      headers: {
-        ...this.getAuthHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch tasks by statuses');
-    }
-
-    return response.json();
+    return apiClient.post<GetTasksByStatusResponse>('/tasks/by-status', payload);
   }
 
   /**
-   * NEW: Update task status with workflow validation
+   * Update task status with workflow validation
    */
-  async updateTaskStatusWithValidation(taskId: string, status: TaskStatusEnum) {
-    const response = await fetch(`${this.baseUrl}/tasks/${taskId}/status-transition`, {
-      method: 'PATCH',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ status }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to update task status: ${response.statusText}`);
-    }
-
-    return response.json();
+  async updateTaskStatusWithValidation(
+    taskId: string,
+    status: TaskStatusEnum
+  ): Promise<GetTaskByIdResponse> {
+    return apiClient.patch<GetTaskByIdResponse>(`/tasks/${taskId}/status-transition`, { status });
   }
+
   /**
-   * UPDATED: Enhanced updateTaskField method
+   * Enhanced updateTaskField method
    */
   async updateTaskField(
     taskId: string,
     field: 'status' | 'priority' | 'taskCategory',
     value: string
-  ) {
-    const response = await fetch(`${this.baseUrl}/tasks/${taskId}/field`, {
-      method: 'PATCH',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify({ field, value }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to update task field: ${response.statusText}`);
-    }
-
-    return response.json();
+  ): Promise<GetTaskByIdResponse> {
+    return apiClient.patch<GetTaskByIdResponse>(`/tasks/${taskId}/field`, { field, value });
   }
 
   /**
@@ -364,18 +238,20 @@ class TaskApiClient {
       priority?: TaskPriorityEnum[];
       context: USER_CREATED_TASKS_CONTEXT;
       assignedToId?: string;
+      role?: Roles;
     }
-  ) {
+  ): Promise<GetTasksResponse> {
     return this.getTasks({
       userId,
       cursor: params.cursor,
       pageSize: params.pageSize,
       search: params.search,
       duration: params.duration,
-      status: params.status, // getTasks expects single value, not array
-      priority: params.priority, // getTasks expects single value, not array
+      status: params.status,
+      priority: params.priority,
       context: params.context,
       assignedToId: params.assignedToId,
+      role: params.role,
     });
   }
 
@@ -397,19 +273,8 @@ class TaskApiClient {
     };
     view?: 'list' | 'timeline' | 'kanban';
     status?: TaskStatusEnum;
-  }) {
-    const response = await fetch(`${this.baseUrl}/tasks/advanced-search`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(query),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Advanced search failed: ${response.statusText}`);
-    }
-
-    return response.json();
+  }): Promise<GetTasksResponse> {
+    return apiClient.post<GetTasksResponse>('/tasks/advanced-search', query);
   }
 }
 
@@ -425,7 +290,7 @@ export const getTasksByUserId = async (
   searchTerm = '',
   duration: DurationEnum = DurationEnum.ALL,
   context?: any
-) => {
+): Promise<GetTasksResponse> => {
   return taskApiClient.getTasks({
     userId,
     cursor: cursor || undefined,
@@ -441,27 +306,23 @@ export const getTaskIdsByUserId = async (
   duration: DurationEnum = DurationEnum.ALL,
   role: any,
   context: USER_CREATED_TASKS_CONTEXT = USER_CREATED_TASKS_CONTEXT.GENERAL
-) => {
-  const result = await taskApiClient.getTaskIds({
+): Promise<GetTaskIdsResponse> => {
+  return taskApiClient.getTaskIds({
     userId,
     search: searchTerm,
     duration,
     context,
   });
-
-  return {
-    success: result.success,
-    taskIds: result.taskIds,
-    message: result.message,
-  };
 };
 
 // Updated batch operation functions
-export const batchUpdateTasks = async (updates: BatchUpdateRequest) => {
+export const batchUpdateTasks = async (
+  updates: BatchUpdateRequest
+): Promise<BatchUpdateTasksResponse> => {
   return taskApiClient.batchUpdateTasks(updates);
 };
 
-export const batchDeleteTasks = async (taskIds: string[]) => {
+export const batchDeleteTasks = async (taskIds: string[]): Promise<BatchDeleteTasksResponse> => {
   return taskApiClient.batchDeleteTasks({ taskIds });
 };
 

@@ -56,7 +56,7 @@ const RecentUnassignedTasksPage = () => {
           );
 
           if (response && response.success) {
-            setTasks(response.tasks);
+            setTasks(response.data);
           } else {
             throw new Error(response.message || 'Failed to fetch unassigned tasks');
           }

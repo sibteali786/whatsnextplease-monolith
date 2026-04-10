@@ -6,7 +6,6 @@ import { markAsReadNotification } from '@/db/repositories/notifications/markAsRe
 import { NotificationStatus } from '@prisma/client';
 import { useToast } from '@/hooks/use-toast';
 import { markAllAsReadNotifications } from '@/db/repositories/notifications/markAllRead';
-import { COOKIE_NAME } from '@/utils/constant';
 
 interface NotificationContextType {
   notifications: NotificationResponse[];
@@ -44,6 +43,19 @@ const generateTabId = (): string => {
   return tabId;
 };
 
+const fetchSseToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/sse-token', { cache: 'no-store' });
+    const data = await response.json();
+    if (data.success && data.sseToken) {
+      return data.sseToken;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export const NotificationProvider = ({ children, userId, role }: NotificationProviderProps) => {
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -73,12 +85,6 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     const count = notifications.filter(n => n.status === NotificationStatus.UNREAD).length;
     setUnreadCount(count);
   }, [notifications]);
-
-  const getCookie = useCallback((name: string) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift();
-  }, []);
 
   // Refresh notifications from API
   const refreshNotifications = useCallback(async () => {
@@ -112,7 +118,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
   }, []);
 
   // Create SSE connection with multi-tab support
-  const createSSEConnection = useCallback(() => {
+  const createSSEConnection = useCallback(async () => {
     if (!userId || !isPageVisible.current) {
       return;
     }
@@ -121,10 +127,9 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
     if (retryCount.current >= maxRetries) {
       return;
     }
-
-    const token = getCookie(COOKIE_NAME);
-    if (!token) {
-      console.error(`[Tab:${tabId.current}] No authentication token found`);
+    const sseToken = await fetchSseToken();
+    if (!sseToken) {
+      console.error(`[Tab:${tabId.current}] Failed to obtain SSE token`);
       return;
     }
 
@@ -132,7 +137,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
 
     try {
       // Include tabId in SSE URL for backend identification
-      const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?token=${token}&tabId=${tabId.current}`;
+      const sseUrl = `${process.env.NEXT_PUBLIC_API_URL}/notifications/subscribe/${userId}?sseToken=${sseToken}&tabId=${tabId.current}`;
       const eventSource = new EventSource(sseUrl);
       eventSourceRef.current = eventSource;
 
@@ -233,7 +238,7 @@ export const NotificationProvider = ({ children, userId, role }: NotificationPro
       console.error(`[Tab:${tabId.current}] Error creating SSE connection:`, err);
       setSseConnected(false);
     }
-  }, [userId, getCookie, cleanupSSE, toast]);
+  }, [userId, cleanupSSE, toast]);
 
   // Handle page visibility changes with improved tab management
   useEffect(() => {

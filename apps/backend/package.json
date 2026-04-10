@@ -18,7 +18,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@HillCountryCoder/auth-client": "^1.1.0",
+    "@HillCountryCoder/auth-client": "^1.2.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.965.0",
     "@aws-sdk/client-s3": "^3.899.0",
     "@aws-sdk/client-secrets-manager": "^3.899.0",

@@ -48,7 +48,7 @@ const IncomingTasksPage = () => {
           );
 
           if (response.success) {
-            setTasks(response.tasks || []);
+            setTasks(response.data || []);
             setError(null);
           } else {
             setError(response.message || 'Failed to fetch tasks');

@@ -29,6 +29,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { DeleteProfileSection } from './DeleteProfileSection';
+import {
+  ClientProfileType,
+  GetClientProfileResponse,
+  UpdateClientProfilePictureResponse,
+  UpdateClientProfileResponse,
+} from '@/types/tasks/api-response';
+import { apiClient } from '@/lib/apiClient';
 
 const clientProfileSchema = z.object({
   personalInfo: z.object({
@@ -54,7 +61,7 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
   const [isPasswordEditing, setIsPasswordEditing] = useState(false);
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [originalClient, setOriginalClient] = useState<ClientWithRole | null>(null);
+  const [originalClient, setOriginalClient] = useState<ClientProfileType | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
@@ -91,18 +98,14 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
   useEffect(() => {
     const fetchClientProfile = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/client/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const client: ClientWithRole | ErrorResponse = await response.json();
+        const response = await apiClient.get<GetClientProfileResponse>('/client/profile');
 
-        if (!response.ok && client instanceof Error) {
-          throw new Error(client.message || 'Failed to fetch profile');
+        if (!response.success || !response.data) {
+          throw new Error(response.message || 'Failed to fetch profile');
         }
 
-        if (client instanceof Object && 'contactName' in client) {
+        const client: ClientWithRole | ErrorResponse = response.data;
+        if (client) {
           setOriginalClient(client);
           form.reset({
             personalInfo: {
@@ -213,36 +216,24 @@ export function ProfileFormClient({ initialData, token }: ProfileFormProps) {
         const formData = new FormData();
         formData.append('file', avatarFile);
 
-        const uploadResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/client/profilePicture`,
-          {
-            method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          }
+        const uploadResponse = await apiClient.patch<UpdateClientProfilePictureResponse>(
+          '/client/profilePicture',
+          formData
         );
 
-        if (!uploadResponse.ok) {
+        if (!uploadResponse.success) {
           throw new Error('Failed to upload avatar');
         }
       }
 
       // Update profile if there are changes
       if (Object.keys(changes).length > 0) {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/client/profile`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(changes),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
+        const response = await apiClient.patch<UpdateClientProfileResponse>(
+          '/client/profile',
+          changes
+        );
+        if (!response.success) {
+          throw new Error('Failed to update profile');
         }
 
         setOriginalClient(prev => (prev ? { ...prev, ...changes } : prev));

@@ -1,7 +1,7 @@
 // /middleware.ts
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
-import { COOKIE_NAME } from './utils/constant';
+import { COOKIE_NAME, ID_TOKEN_COOKIE_NAME } from './utils/constant';
 import { ROLE_PERMISSIONS } from './utils/commonUtils/rolePermissions';
 import { Roles } from '@prisma/client';
 
@@ -22,33 +22,28 @@ const decodeJWT = (token: string) => {
  * Handles both legacy JWT and IDP tokens (Keycloak/Cognito)
  */
 const extractRole = (payload: any): Roles | null => {
-  // Legacy JWT format: { id, username, role: "SUPER_USER" }
+  // Legacy JWT format
   if (payload.role && typeof payload.role === 'string') {
     return payload.role as Roles;
   }
 
-  // Keycloak format: { realm_access: { roles: ["WnpInternalUsers", "..."] } }
-  // Cognito format: { "cognito:groups": ["WnpInternalUsers"] }
+  // IDP token: wnp_role custom attribute (set for all WNP users)
+  if (payload.wnp_role && typeof payload.wnp_role === 'string') {
+    return payload.wnp_role as Roles;
+  }
+
+  // Cognito: custom:wnp_role attribute (set for all WNP users)
+  if (payload['custom:wnp_role'] && typeof payload['custom:wnp_role'] === 'string') {
+    return payload['custom:wnp_role'] as Roles;
+  }
+
+  // Safety net fallback: infer from groups if wnp_role missing
   const groups: string[] =
     payload.realm_access?.roles || payload['cognito:groups'] || payload.groups || [];
 
-  // Map IDP groups to roles
-  if (groups.includes('WnpExternalClients')) {
-    return Roles.CLIENT;
-  }
-
-  // For internal users, we need to check the database
-  // But for now, default to TASK_AGENT for WnpInternalUsers
-  if (groups.includes('WnpInternalUsers')) {
-    // TODO: We can't determine exact role from IDP token alone
-    // Options:
-    // 1. Default to TASK_AGENT (safest, least permissions)
-    // 2. Make an API call to backend to get user role
-    // 3. Store role in custom claims in IDP
-
-    // For now, let's allow access and let protected routes handle specifics
-    return Roles.TASK_AGENT; // Default to least privileged internal role
-  }
+  if (groups.includes('WnpExternalClients')) return Roles.CLIENT;
+  if (groups.includes('HccUsers')) return Roles.CLIENT; // HCC default
+  if (groups.includes('WnpInternalUsers')) return Roles.TASK_AGENT; // safest default
 
   return null;
 };
@@ -66,7 +61,9 @@ export function middleware(request: NextRequest) {
   }
 
   // Check if the required cookie is missing
-  const token = request.cookies.get(COOKIE_NAME);
+  const accessToken = request.cookies.get(COOKIE_NAME);
+  const idToken = request.cookies.get(ID_TOKEN_COOKIE_NAME);
+  const token = idToken || accessToken;
   if (!token) {
     // Redirect to /signin if not authenticated
     return NextResponse.redirect(new URL('/signin', request.url));

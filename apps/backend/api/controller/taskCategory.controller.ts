@@ -31,7 +31,7 @@ export class TaskCategoryController {
       const newTaskCategory = await this.taskCategoryService.createTaskCategory({
         categoryName: parsedInput.categoryName,
       });
-      res.status(201).json(newTaskCategory);
+      res.status(201).json({ success: true, data: newTaskCategory });
     } catch (error) {
       next(error);
     }

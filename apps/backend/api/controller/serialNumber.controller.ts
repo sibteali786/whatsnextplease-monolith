@@ -18,7 +18,6 @@ const taskRepository = new TaskRepository();
  */
 export const suggestPrefix = asyncHandler(async (req: Request, res: Response) => {
   const { categoryId } = req.query;
-  console.log('Received categoryId:', req.query);
 
   if (!categoryId || typeof categoryId !== 'string') {
     throw new BadRequestError('categoryId query parameter is required');

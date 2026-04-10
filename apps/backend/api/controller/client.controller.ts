@@ -1,6 +1,6 @@
 import { NextFunction, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { ClientService } from '../services/client.service';
+import { ClientService, CreateClientSchema } from '../services/client.service';
 import { S3BucketService } from '../services/s3Service';
 import {
   BadRequestError,
@@ -74,7 +74,10 @@ export class ClientController {
           await this.s3Service.deleteFile(oldFileKey);
           logger.info(`Successfully deleted old profile picture: ${oldFileKey}`);
         }
-        res.status(200).json(updatedClient);
+        res.status(200).json({
+          success: true,
+          data: updatedClient,
+        });
       } catch (dbError) {
         if (fileKey) {
           try {
@@ -121,7 +124,10 @@ export class ClientController {
       if (!client) {
         throw new NotFoundError('Client not found');
       }
-      res.status(200).json(client);
+      res.status(200).json({
+        success: true,
+        data: client,
+      });
     } catch (error) {
       next(error);
     }
@@ -135,7 +141,7 @@ export class ClientController {
     try {
       const clientId = req.user?.id;
       if (!clientId) {
-        throw new BadRequestError('Client Id is required');
+        throw new BadRequestError('Client ID is required');
       }
       await checkIfClientExists(clientId);
       const parsedClient =
@@ -154,7 +160,10 @@ export class ClientController {
         ...updateData,
         id: clientId,
       });
-      res.status(200).json(updatedClient);
+      res.status(200).json({
+        success: true,
+        data: updatedClient,
+      });
     } catch (error) {
       next(error);
     }
@@ -229,7 +238,33 @@ export class ClientController {
       res.status(200).json({
         success: true,
         message: `Client ${id} updated successfully`,
-        client: updatedClient,
+        data: updatedClient,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private handleCreateClient = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const data = req.body;
+      console.log('Received client creation request with data:', data);
+      const parsedData = CreateClientSchema.parse(data);
+
+      const hashPassword = await hashPW(parsedData.passwordHash);
+      const clientDataWithHashedPassword = {
+        ...parsedData,
+        passwordHash: hashPassword,
+      };
+      const response = await this.clientService.createClient(clientDataWithHashedPassword);
+
+      res.status(201).json({
+        success: true,
+        data: response,
       });
     } catch (error) {
       next(error);
@@ -241,4 +276,5 @@ export class ClientController {
   updateProfile = asyncHandler(this.handleUpdateProfile);
   deleteClient = asyncHandler(this.handleDeleteClient);
   updateClientById = asyncHandler(this.handleUpdateClientById);
+  createClient = asyncHandler(this.handleCreateClient);
 }

@@ -21,10 +21,11 @@ import { Eye, EyeOff, Loader2, RefreshCw } from 'lucide-react';
 import { isValidPhoneNumber } from 'react-phone-number-input';
 import { useState, useEffect, MutableRefObject } from 'react';
 import { User } from '@/app/(dashboard)/users/columns';
-import { getCookie, getPasswordStrength } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+import { getPasswordStrength } from '@/utils/utils';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Separator } from '@/components/ui/separator';
+import { apiClient } from '@/lib/apiClient';
+import { PatchUserProfileById } from '@/types/tasks/api-response';
 
 const editUserSchema = z
   .object({
@@ -206,20 +207,13 @@ export function EditUserModal({
         onClose();
         return;
       }
+      const response = await apiClient.patch<PatchUserProfileById>(
+        `/user/${user.id}`,
+        changedFields
+      );
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${user.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify(changedFields),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update user');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update user');
       }
 
       toast({

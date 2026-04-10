@@ -144,6 +144,7 @@ export class TaskController {
       const categoryId = req.query.categoryId as string;
       const sortBy = req.query.sortBy as string;
       const fetchAll = req.query.fetchAll === 'true';
+      const role = (req.query.role as Roles) || req.user?.role;
 
       const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
 
@@ -180,7 +181,7 @@ export class TaskController {
 
       const result = await this.taskService.getTasks({
         userId,
-        role: req.user.role,
+        role,
         cursor: processedCursor,
         pageSize,
         searchTerm,
@@ -245,6 +246,7 @@ export class TaskController {
       const assignedToId = req.query.assignedToId as string;
       const categoryId = req.query.categoryId as string;
       const context = req.query.context as USER_CREATED_TASKS_CONTEXT;
+      const role = (req.query.role as Roles) || req.user?.role;
 
       if (!req.user) {
         throw new BadRequestError('User authentication required');
@@ -262,7 +264,7 @@ export class TaskController {
       }
       const result = await this.taskService.getTaskIds({
         userId,
-        role: req.user.role,
+        role,
         searchTerm,
         duration,
         status,
@@ -292,7 +294,34 @@ export class TaskController {
         throw new BadRequestError('User authentication required');
       }
       const result = await this.taskService.getTaskStatistics(userId, req.user.role);
-      res.status(200).json(result);
+      // transform result to send succes and data property which has each taskByStatus and its count as key value pair
+      const taskByStatusCounts =
+        result.statistics?.tasksByStatus?.reduce((acc: Record<string, number>, stat) => {
+          if (stat.status && stat._count) {
+            const statusName = stat.status.statusName;
+            acc[statusName] = stat._count.id;
+          }
+          return acc;
+        }, {}) || {};
+      const taskByPriorityCounts =
+        result.statistics?.tasksByPriority?.reduce((acc: Record<string, number>, stat) => {
+          if (stat.priority && stat._count) {
+            const priorityName = stat.priority.priorityName;
+            acc[priorityName] = stat._count.id;
+          }
+          return acc;
+        }, {}) || {};
+      const transformedResult = {
+        success: result.success,
+        data: {
+          total: result.statistics?.totalTasks || 0,
+          byStatus: taskByStatusCounts,
+          byPriority: taskByPriorityCounts,
+          overdueTasks: result.statistics?.overdueTasks || 0,
+          tasksCreatedToday: result.statistics?.tasksCreatedToday || 0,
+        },
+      };
+      res.status(200).json(transformedResult);
     } catch (error) {
       next(error);
     }
@@ -348,7 +377,6 @@ export class TaskController {
   ) => {
     try {
       const batchRequest: BatchDeleteRequest = req.body;
-
       if (!batchRequest.taskIds || batchRequest.taskIds.length === 0) {
         throw new BadRequestError('Task IDs are required');
       }
@@ -418,10 +446,10 @@ export class TaskController {
         const result = await this.taskService.getTaskAssignmentStatusCounts(userId, req.user.role);
         const countsResponse = {
           success: true,
-          counts: [
-            { statusName: 'Unassigned', count: result.counts.UnassignedTasks },
-            { statusName: 'Assigned', count: result.counts.AssignedTasks },
-          ],
+          data: {
+            assigned: result.counts.AssignedTasks,
+            unassigned: result.counts.UnassignedTasks,
+          },
         };
         return res.status(200).json(countsResponse);
       } else {
@@ -430,12 +458,14 @@ export class TaskController {
         // Transform to match existing API format
         const countsResponse = {
           success: true,
-          counts:
-            result?.statistics?.tasksByStatus?.map(stat => ({
-              statusId: stat.statusId,
-              statusName: stat.status?.statusName,
-              count: stat._count.id,
-            })) || [],
+          // make sure data is an object with a each statusName followed by its count
+          data: result.statistics?.tasksByStatus?.reduce((acc: Record<string, number>, stat) => {
+            if (stat.status && stat._count) {
+              const statusName = stat.status.statusName;
+              acc[statusName] = stat._count.id;
+            }
+            return acc;
+          }, {}),
         };
 
         res.status(200).json(countsResponse);

@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { UserTasksTable } from '../users/UserTaskTable';
-import { getTasksByClientId } from '@/db/repositories/clients/getTasksByClientId';
-import { getTaskIdsByClientId } from '@/utils/clientActions';
 import { SearchNFilter } from '../common/SearchNFilter';
 import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { TaskTable } from '@/utils/validationSchemas';
 import { DurationEnum, DurationEnumList } from '@/types';
 import { transformEnumValue } from '@/utils/utils';
 import { useSearchParams } from 'next/navigation';
+import { taskApiClient } from '@/utils/taskApi';
+import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 
 export default function ClientTaskList({ clientId, role }: { clientId: string; role: Roles }) {
   const searchParams = useSearchParams();
@@ -52,30 +52,34 @@ export default function ClientTaskList({ clientId, role }: { clientId: string; r
             )
             .filter(priority => priority !== null)
         : [];
-      const response = await getTasksByClientId(
-        searchTerm,
-        duration,
-        clientId,
-        cursor,
+      const params = {
+        cursor: cursor ?? undefined,
         pageSize,
-        normalizedStatus,
-        normalizedPriority,
-        assignedToFilter
-      );
-      const responseIds = await getTaskIdsByClientId(
-        searchTerm,
+        search: searchTerm,
         duration,
+        status: normalizedStatus,
+        priority: normalizedPriority,
+        context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+        assignedToId: assignedToFilter,
+        role: Roles.CLIENT,
+      };
+      const response = await taskApiClient.getTasksByUserId(clientId, params);
+      const responseIds = await taskApiClient.getTaskIds({
         clientId,
-        assignedToFilter
-      );
+        search: searchTerm,
+        duration,
+        context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+        assignedToId: assignedToFilter,
+        role: Roles.CLIENT,
+      });
 
-      if (response.success && responseIds.success && response.tasks) {
-        /*         const filteredTasks = response.tasks.filter(task => task.status.statusName !== 'COMPLETED'); */
-        setData(response.tasks || []);
+      if (response.success && responseIds.success && response.data) {
+        /*         const filteredTasks = response.data.filter(task => task.status.statusName !== 'COMPLETED'); */
+        setData(response.data || []);
         if (response.totalCount) {
           setTotalCount(response.totalCount);
         }
-        setTaskIds(responseIds.taskIds ?? []);
+        setTaskIds(responseIds.data ?? []);
       }
     } catch (error) {
       console.error('Failed to fetch tasks:', error);

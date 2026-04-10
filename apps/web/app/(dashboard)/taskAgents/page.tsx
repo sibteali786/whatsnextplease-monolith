@@ -14,7 +14,12 @@ export default function TaskAgentsPage() {
   useEffect(() => {
     const fetchAgentIds = async () => {
       const ids = await getTaskAgentIds();
-      setAgentIds(ids);
+      if (Array.isArray(ids)) {
+        if (ids.length === 0) {
+          console.warn('No task agent IDs found');
+        }
+        setAgentIds(ids);
+      }
     };
     fetchAgentIds();
   }, []);
@@ -34,7 +39,7 @@ export default function TaskAgentsPage() {
         return {
           taskAgents: response.taskAgents,
           nextCursor: response.nextCursor,
-          totalCount: response.totalCount,
+          totalCount: response.totalCount ?? 0,
         };
       } else {
         console.error('Error fetching task agents:', response);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DurationEnum } from '@/types';
@@ -12,12 +13,10 @@ import { Button } from '../ui/button';
 
 import { State } from '../DataState';
 import { CallToAction } from '../CallToAction';
-
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useSearchParams } from 'next/navigation';
 
 import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
-
 export const TaskSuperVisorList = ({
   userId,
   role,
@@ -138,7 +137,7 @@ export const TaskSuperVisorList = ({
         );
 
         if (response?.success && responseIds?.success) {
-          setData(response.tasks);
+          setData(response.data);
           setTaskIds(responseIds.taskIds);
           setTotalCount(response.totalCount);
         } else {

@@ -183,16 +183,10 @@ export const CellAction: React.FC<CellActionProps> = ({ row, onPreviewFile, tabl
     try {
       const result = await fileAPI.generateDownloadUrl(file.id, {
         forceDownload: true,
+        openInNewTab: true,
       });
 
       if (result.success && result.data?.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = result.data.downloadUrl;
-        link.setAttribute('download', file.fileName);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
         toast({
           title: 'Download Started',
           description: `Downloading ${file.fileName}`,

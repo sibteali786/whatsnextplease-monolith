@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { State } from '@/components/DataState';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,6 @@ import { CircleX, Info, Loader2, Plus } from 'lucide-react';
 import { DataTable } from './data-table';
 import { ErrorResponse, SkillCategories, TaskCategories } from '@wnp/types';
 import { useEffect, useState } from 'react';
-import { COOKIE_NAME } from '@/utils/constant';
-import { getCookie } from '@/utils/utils';
 import { PicklistContainer } from '@/components/picklists/PicklistContainer';
 import { generateTaskCategoryColumns } from './columns-task-category';
 import TaskDetailsDialog from '@/components/tasks/TaskDetailsDialog';
@@ -16,6 +15,7 @@ import { useSelectedTaskId } from '@/store/useTaskStore';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { generateSkillCategoryColumns } from './columns-skill-category';
 import { useSelectedSkillCategory } from '@/store/useSkillCategoryStore';
+import { apiClient } from '@/lib/apiClient';
 
 export default function Picklists() {
   const [isError, setIsError] = useState(false);
@@ -32,26 +32,11 @@ export default function Picklists() {
 
   const fetchDetails = async () => {
     setIsLoading(true);
-    const token = getCookie(COOKIE_NAME);
     try {
-      const [skillResponse, taskResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/all`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-        }),
+      const [skillData, taskData] = await Promise.all([
+        await apiClient.get<any>('/skillCategory/all'),
+        await apiClient.get<any>('/taskCategory/all'),
       ]);
-
-      const [skillData, taskData] = await Promise.all([skillResponse.json(), taskResponse.json()]);
 
       if ('code' in skillData || 'code' in taskData) {
         setIsError(true);

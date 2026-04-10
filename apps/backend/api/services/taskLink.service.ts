@@ -71,7 +71,7 @@ export class TaskLinkService {
       });
       return {
         success: true,
-        link,
+        data: link,
         message: 'Link added successfully',
       };
     } catch {
@@ -89,7 +89,7 @@ export class TaskLinkService {
 
       return {
         success: true,
-        link,
+        data: link,
         message: 'Link added successfully (metadata fetch failed)',
       };
     }
@@ -125,7 +125,7 @@ export class TaskLinkService {
 
     return {
       success: true,
-      links,
+      data: links,
       count,
       message: 'Links retrieved successfully',
     };

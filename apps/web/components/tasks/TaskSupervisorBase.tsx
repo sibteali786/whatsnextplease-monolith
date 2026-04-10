@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { DurationEnum, DurationEnumList } from '@/types';
@@ -8,8 +9,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { DynamicBreadcrumb } from '../skills/DynamicBreadcrumb';
 import { Button } from '../ui/button';
 import { AlertCircle, ChevronDown, ChevronUp, CircleX, Loader2, Plus } from 'lucide-react';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { CreateTaskContainer } from './CreateTaskContainer';
 import { ToastAction } from '../ui/toast';
 import { createDraftTask } from '@/db/repositories/tasks/createDraftTask';
@@ -22,6 +21,7 @@ import Gantt from '../projectTimeline/gantt';
 import { UserState } from '@/utils/user';
 import { useAdvancedFilterContext } from '@/contexts/AdvancedFilterContext';
 import { TaskTable } from '@/utils/validationSchemas';
+import { apiClient } from '@/lib/apiClient';
 
 const TaskSupervisorBase = ({
   user,
@@ -93,9 +93,9 @@ const TaskSupervisorBase = ({
     });
 
     const response = await createDraftTask(CreatorType.USER, userId, role);
-    if (response.success) {
+    if (response.success && response.data) {
       dismiss();
-      setCreatedTask(response.task);
+      setCreatedTask(response.data);
       setOpen(true);
     } else {
       toast({
@@ -116,23 +116,22 @@ const TaskSupervisorBase = ({
     const checkPrerequisites = async () => {
       setCheckingPrerequisites(true);
       try {
-        const [skillsResponse, categoriesResponse] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
+        const [skillsData, categoriesData] = await Promise.all([
+          apiClient.get<any>('/skill/all'),
+          apiClient.get<any>('/taskCategory/all'),
         ]);
 
-        const skillsData = await skillsResponse.json();
-        const categoriesData = await categoriesResponse.json();
+        // Handle skill API errors
+        if (!skillsData) {
+          const errorText = 'No data received from skills API';
+          throw new Error(`Skills API error: ${errorText}`);
+        }
+
+        // Handle category API errors
+        if (!categoriesData) {
+          const errorText = 'No data received from categories API';
+          throw new Error(`Categories API error: ${errorText}`);
+        }
 
         setHasSkills(skillsData.length > 0);
         setHasTaskCategories(categoriesData.length > 0);

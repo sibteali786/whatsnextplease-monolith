@@ -1,4 +1,4 @@
-// components/users/UserTasksTable.tsx (Updated with Batch Operations)
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import {
@@ -39,11 +39,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { BatchOperationsDropdown } from '@/components/tasks/BatchOperationsDropdown';
 import { batchUpdateTasks, batchDeleteTasks, BatchUpdateRequest } from '@/utils/taskApi';
 import { UserDropdownMenuContent } from '../tasks/BatchUpdateDialog';
+import { apiClient } from '@/lib/apiClient';
+import { GetTaskCategoryAll, GetTaskCategoryAllResponse } from '@/types/tasks/api-response';
 
 interface UserTasksTableProps {
   data: TaskTable[];
@@ -86,7 +86,7 @@ export function UserTasksTable({
 }: UserTasksTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [taskCategories, setTaskCategories] = useState<{ id: string; categoryName: string }[]>([]);
+  const [taskCategories, setTaskCategories] = useState<GetTaskCategoryAll[]>([]);
   const [users, setUsers] = useState<UserDropdownMenuContent[]>([]);
   const { setSelectedTask, selectedTask } = useSelectedTask();
   const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
@@ -296,16 +296,10 @@ export function UserTasksTable({
 
   const fetchTaskCategories = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskCategory/all`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const categoriesData = await apiClient.get<GetTaskCategoryAllResponse>('/taskCategory/all');
 
-      if (response.ok) {
-        const categoriesData = await response.json();
-        setTaskCategories(categoriesData);
+      if (categoriesData) {
+        setTaskCategories(categoriesData ?? []);
       }
     } catch (error) {
       console.error('Error fetching task categories:', error);
@@ -314,48 +308,32 @@ export function UserTasksTable({
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/taskAgents/list`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get<any>('/taskAgents/list');
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          // Fetch workload for each user
-          const usersWithWorkload = await Promise.all(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            result.users.map(async (user: any) => {
-              try {
-                const workloadResponse = await fetch(
-                  `${process.env.NEXT_PUBLIC_API_URL}/taskAgents/${user.id}`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-                      'Content-Type': 'application/json',
-                    },
-                  }
-                );
+      if (response.success) {
+        // Fetch workload for each user
+        const usersWithWorkload = await Promise.all(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          response.users.map(async (user: any) => {
+            try {
+              const workloadResponse = await apiClient.get<any>(`/taskAgents/${user.id}`);
 
-                if (workloadResponse.ok) {
-                  const workloadData = await workloadResponse.json();
-                  return {
-                    ...user,
-                    currentTasksCount:
-                      (workloadData.newTasksCount || 0) + (workloadData.inProgressTasksCount || 0),
-                  };
-                }
-                return { ...user, currentTasksCount: 0 };
-              } catch (error) {
-                console.error(`Error fetching workload for user ${user.id}:`, error);
-                return { ...user, currentTasksCount: 0 };
+              if (workloadResponse) {
+                return {
+                  ...user,
+                  currentTasksCount:
+                    (workloadResponse.newTasksCount || 0) +
+                    (workloadResponse.inProgressTasksCount || 0),
+                };
               }
-            })
-          );
-          setUsers(usersWithWorkload);
-        }
+              return { ...user, currentTasksCount: 0 };
+            } catch (error) {
+              console.error(`Error fetching workload for user ${user.id}:`, error);
+              return { ...user, currentTasksCount: 0 };
+            }
+          })
+        );
+        setUsers(usersWithWorkload);
       }
     } catch (error) {
       console.error('Error fetching users:', error);

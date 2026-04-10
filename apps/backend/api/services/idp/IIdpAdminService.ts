@@ -8,6 +8,20 @@ export interface CreateUserRequest {
   lastName?: string;
   password?: string;
   groups: UserGroup[];
+  role: Roles;
+}
+export interface UpdateUserRequest {
+  password?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  role?: Roles;
+}
+
+export interface UpdateUserResponse {
+  success: boolean;
+  skippedFields?: string[]; // fields that couldn't be updated (e.g. username on Cognito)
+  error?: string;
 }
 
 export interface CreateUserResponse {
@@ -36,4 +50,10 @@ export interface IIdpAdminService {
    * Map application role to IDP group
    */
   mapRoleToGroup(role: Roles): UserGroup;
+
+  updateUser(
+    sub: string,
+    username: string,
+    updates: UpdateUserRequest
+  ): Promise<UpdateUserResponse>;
 }

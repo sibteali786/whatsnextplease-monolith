@@ -1,5 +1,5 @@
 'use server';
-import { COOKIE_NAME } from '@/utils/constant';
+import { COOKIE_NAME, ID_TOKEN_COOKIE_NAME, REFRESH_COOKIE_NAME } from '@/utils/constant';
 import { registerSchema, signInSchema } from '@/utils/validationSchemas';
 import { Roles } from '@prisma/client';
 import { cookies } from 'next/headers';
@@ -52,12 +52,31 @@ export const registerUser = async (formData: FormData) => {
 
     // Set authentication token in cookie
     if (result.token) {
-      cookies().set(COOKIE_NAME, result.token, {
-        httpOnly: false,
+      const cookieStore = cookies();
+      cookieStore.set(COOKIE_NAME, result.token, {
+        httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 12, // 12 hours
+        maxAge: result.expiresIn || 60 * 60 * 12,
       });
+
+      if (result.idToken) {
+        cookieStore.set(ID_TOKEN_COOKIE_NAME, result.idToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: result.expiresIn || 60 * 60 * 12,
+        });
+      }
+
+      if (result.refreshToken) {
+        cookieStore.set(REFRESH_COOKIE_NAME, result.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: result.refreshExpiresIn || 60 * 60 * 24 * 7, // 30 days
+        });
+      }
     }
 
     return {
@@ -101,15 +120,36 @@ export const signinUser = async (formData: FormData) => {
         message: result.message || 'Invalid username or password',
       };
     }
-
     // Set authentication token in cookie
     if (result.token) {
-      cookies().set(COOKIE_NAME, result.token, {
-        httpOnly: false,
+      const cookieStore = cookies();
+
+      // Set access token
+      cookieStore.set(COOKIE_NAME, result.token, {
+        httpOnly: true, // CHANGED TO TRUE for security
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 12, // 12 hours
+        maxAge: result.expiresIn || 60 * 60 * 12, // Use returned expiry or default 12 hours
       });
+
+      // Set refresh token if provided
+      if (result.refreshToken) {
+        cookieStore.set(REFRESH_COOKIE_NAME, result.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+      }
+
+      if (result.idToken) {
+        cookieStore.set(ID_TOKEN_COOKIE_NAME, result.idToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: result.expiresIn || 60 * 60 * 12,
+        });
+      }
     }
 
     // Check if user was migrated
@@ -133,6 +173,31 @@ export const signinUser = async (formData: FormData) => {
     return {
       success: false,
       message: e instanceof Error ? e.message : 'An unexpected error occurred while signing you in',
+    };
+  }
+};
+
+/**
+ * Signout - Clear all auth cookies
+ */
+export const signoutUser = async () => {
+  try {
+    const cookieStore = cookies();
+
+    // Clear both tokens
+    cookieStore.delete(COOKIE_NAME);
+    cookieStore.delete(REFRESH_COOKIE_NAME);
+    cookieStore.delete(ID_TOKEN_COOKIE_NAME);
+
+    return {
+      success: true,
+      message: 'Signed out successfully',
+    };
+  } catch (error) {
+    console.error('Signout error:', error);
+    return {
+      success: false,
+      message: 'Failed to sign out',
     };
   }
 };
