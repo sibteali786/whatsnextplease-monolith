@@ -76,7 +76,7 @@ export class MigrationController {
         });
       }
       // 4. Determine IDP group based on role
-      const role = entityType === 'client' ? Roles.CLIENT : entity.role?.name;
+      const role = entityType === 'client' ? Roles.CLIENT : (entity.role?.name ?? Roles.TASK_AGENT);
       const idpGroups = [idpAdmin.mapRoleToGroup(role)];
 
       // 5. Create user in IDP (Keycloak or Cognito)
@@ -91,6 +91,7 @@ export class MigrationController {
         lastName: lastName ?? undefined,
         password, // Use their existing password
         groups: idpGroups,
+        role, // Pass the role to set appropriate attributes/groups in IDP
       });
 
       if (!createResult.success) {

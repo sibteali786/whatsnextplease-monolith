@@ -25,8 +25,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useState, useEffect, MutableRefObject } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { deleteEntity } from '@/utils/entityActions';
 import { EditUserModal } from '@/components/users/EditUserModal';
+import { apiClient } from '@/lib/apiClient';
+import { StandardApiResponse } from '@/types/api';
 
 export const UserSchema = z.object({
   id: z.string(),
@@ -140,7 +141,7 @@ const UserActionCell = ({
   }, [showDeleteDialog, showEditModal, modalStateRef]);
 
   const handleDeleteUser = async () => {
-    await deleteEntity('user', user.id);
+    await apiClient.delete<StandardApiResponse>(`/entity/user/${user.id}`);
     await refreshData();
   };
 

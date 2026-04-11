@@ -31,7 +31,7 @@ export class SkillCategoryController {
       const newSkillCategory = await this.skillCategoryService.createSkillCategory({
         categoryName: parsedInput.categoryName,
       });
-      res.status(201).json(newSkillCategory);
+      res.status(201).json({ success: true, data: newSkillCategory });
     } catch (error) {
       next(error);
     }
@@ -62,6 +62,7 @@ export class SkillCategoryController {
       const { q } = req.query;
       const searchTerm = typeof q === 'string' ? q : '';
       const skillCategories = await this.skillCategoryService.searchSkillCategories(searchTerm);
+      console.log('Search term:', searchTerm, 'Found skill categories:', skillCategories);
       res.status(200).json(skillCategories);
     } catch (error) {
       next(error);

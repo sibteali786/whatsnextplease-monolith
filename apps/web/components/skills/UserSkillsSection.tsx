@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,10 +6,10 @@ import { MultiSelect } from '@/components/ui/multi-select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
 import { CheckCircle, CircleX, Loader2 } from 'lucide-react';
 import { SkillType } from '@/types';
+import { apiClient } from '@/lib/apiClient';
+import { SkillAssignToUserResponse } from '@/types/tasks/api-response';
 
 interface Skill {
   id: string;
@@ -57,28 +58,17 @@ export function UserSkillsSection({ userId }: UserSkillsSectionProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [skillsResponse, userSkillsResponse] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/skills/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-              'Content-Type': 'application/json',
-            },
-          }),
+        const [skillsData, userSkillsResponse] = await Promise.all([
+          apiClient.get<any>('/skill/all'),
+          apiClient.get<any>(`/user/skills/${userId}`),
         ]);
 
-        if (skillsResponse.ok) {
-          const skillsData = await skillsResponse.json();
+        if (skillsData) {
           setAllSkills(skillsData);
         }
 
-        if (userSkillsResponse.ok) {
-          const { success, skills } = await userSkillsResponse.json();
+        if (userSkillsResponse.success) {
+          const { success, skills } = userSkillsResponse;
           if (success) {
             if (skills.length === 0) {
               setUserSkills([]);
@@ -109,18 +99,11 @@ export function UserSkillsSection({ userId }: UserSkillsSectionProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/user/assign`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ skillNames: selectedSkills }),
+      const response = await apiClient.put<SkillAssignToUserResponse>('/skill/user/assign', {
+        skillNames: selectedSkills,
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.success) {
         setUserSkills(selectedSkills);
         toast({
           title: 'Skills Updated',
@@ -129,7 +112,7 @@ export function UserSkillsSection({ userId }: UserSkillsSectionProps) {
           icon: <CheckCircle size={40} />,
         });
       } else {
-        throw new Error(data.message || 'Failed to update skills');
+        throw new Error(response.message || 'Failed to update skills');
       }
     } catch (error) {
       console.error('Error updating skills:', error);

@@ -15,14 +15,14 @@ export interface TaskAgentWithCounts {
 }
 
 export interface TaskAgentsResponse {
-  taskAgents: TaskAgentWithCounts[];
+  data: TaskAgentWithCounts[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number;
 }
 
 export interface TaskAgentIdsResponse {
-  ids: string[];
+  data: string[];
   totalCount: number;
 }
 
@@ -87,7 +87,7 @@ export class TaskAgentService {
       });
 
       return {
-        ids: users.map(user => user.id),
+        data: users.map(user => user.id),
         totalCount: users.length,
       };
     } catch (error) {
@@ -169,7 +169,7 @@ export class TaskAgentService {
 
       if (userIds.length === 0) {
         return {
-          taskAgents: [],
+          data: [],
           nextCursor: null,
           hasMore: false,
           totalCount,
@@ -301,7 +301,7 @@ export class TaskAgentService {
       }
 
       return {
-        taskAgents,
+        data: taskAgents,
         nextCursor,
         hasMore,
         totalCount,

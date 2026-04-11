@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { COOKIE_NAME } from '@/utils/constant';
-import { getCookie } from '@/utils/utils';
+import { apiClient } from '@/lib/apiClient';
+import { StandardApiResponse } from '@/types/api';
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -55,16 +55,18 @@ export const usePushNotification = () => {
       });
 
       if (newSubscription) {
-        const token = getCookie(COOKIE_NAME);
+        const response = await apiClient.post<StandardApiResponse>(
+          '/notifications/push-subscription',
+          {
+            subscription: newSubscription,
+          }
+        );
 
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/push-subscription`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ subscription: newSubscription }),
-        });
+        if (!response.success) {
+          throw new Error(
+            'Failed to save subscription, try again or check network tab for more info'
+          );
+        }
 
         setSubscription(newSubscription);
       }
@@ -78,18 +80,19 @@ export const usePushNotification = () => {
     try {
       if (subscription) {
         await subscription.unsubscribe();
-
-        const token = getCookie(COOKIE_NAME);
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/push-subscription`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-        });
-
-        setSubscription(null);
+        const response = await apiClient.delete<StandardApiResponse>(
+          '/notifications/push-subscription',
+          {
+            endpoint: subscription.endpoint,
+          }
+        );
+        if (response.success) {
+          setSubscription(null);
+        } else {
+          throw new Error(
+            'Failed to remove subscription, try again or check network tab for more info'
+          );
+        }
       }
     } catch (error) {
       console.error('Error unsubscribing:', error);

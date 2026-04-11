@@ -97,7 +97,7 @@ export class SkillService {
 
     return {
       success: true,
-      skills: foundSkills,
+      data: foundSkills,
       message: `Successfully updated skills for user`,
     };
   }

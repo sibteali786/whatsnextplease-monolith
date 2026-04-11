@@ -199,6 +199,7 @@ export function FilePreviewModal({ isOpen, onClose, files, initialIndex }: FileP
     try {
       const result = await fileAPI.generateDownloadUrl(currentFile.id, {
         forceDownload: true,
+        openInNewTab: true,
       });
 
       if (result.success) {

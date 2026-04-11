@@ -30,7 +30,6 @@ import {
   transformEnumValue,
   trimWhitespace,
   formatOriginalEstimate,
-  getCookie,
 } from '@/utils/utils';
 import {
   Select,
@@ -49,7 +48,6 @@ import { FileSchemaType, TaskFile, TaskTable, UserAssigneeSchema } from '@/utils
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { FileAttachmentsList } from '../files/FileAttachmentList';
 import { fileAPI } from '@/utils/fileAPI';
-import { COOKIE_NAME } from '@/utils/constant';
 import { MultiSelect } from '../ui/multi-select';
 import { Badge } from '@/components/ui/badge';
 import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
@@ -60,6 +58,8 @@ import { AddSkillDialog } from '../skills/AddSkillDialog';
 import { SearchableDropdown } from '../ui/searchable-dropdown';
 import { SearchableClient } from '../clients/SearchableClients';
 import { SerialNumberBadge } from '../tasks/SerialNumberBadge';
+import { apiClient } from '@/lib/apiClient';
+import { GetTaskCountForUserByIdResponse } from '@/types/tasks/api-response';
 
 // Extended schema with `overTime`, similar to `timeForTask`
 const editTaskSchema = z.object({
@@ -213,20 +213,14 @@ export default function EditTaskDialog({
         usersList.map(async user => {
           try {
             // Call the backend to get current task count for this user
-            const response = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/tasks/user/${user.id}/count`,
-              {
-                headers: {
-                  Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-                  'Content-Type': 'application/json',
-                },
-              }
+
+            const response = await apiClient.get<GetTaskCountForUserByIdResponse>(
+              `/tasks/user/${user.id}/count`
             );
 
-            if (response.ok) {
-              const responseData = await response.json();
+            if (response) {
               // Extract the active task count from the nested structure
-              const activeTasksCount = responseData?.data?.taskCounts?.activeTasksCount || 0;
+              const activeTasksCount = response?.data?.taskCounts?.activeTasksCount || 0;
 
               return {
                 ...user,
@@ -234,9 +228,7 @@ export default function EditTaskDialog({
               };
             } else {
               // If API fails, return user without count
-              console.warn(
-                `Failed to fetch task count for user ${user.id}. Status: ${response.status}`
-              );
+              console.warn(`Failed to fetch task count for user ${user.id}`);
               return {
                 ...user,
                 currentTasksCount: 0,
@@ -271,7 +263,7 @@ export default function EditTaskDialog({
 
       const metadataResponse = await taskApiClient.getTaskMetadata();
 
-      if (metadataResponse.success) {
+      if (metadataResponse.success && metadataResponse.data) {
         setMetadata(metadataResponse.data);
       } else {
         throw new Error(metadataResponse.message || 'Failed to fetch task metadata');
@@ -294,15 +286,10 @@ export default function EditTaskDialog({
 
   const fetchSkills = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skill/all`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const skillsData = await apiClient.get<any>('/skill/all');
 
-      if (response.ok) {
-        const skillsData = await response.json();
+      if (skillsData) {
         setSkills(skillsData);
       }
     } catch (error) {
@@ -484,7 +471,7 @@ export default function EditTaskDialog({
           await handleCommentDataChange();
           toast({
             title: 'File Deleted Successfully',
-            description: `File with id: ${fileId} deleted successfully`,
+            description: `File deleted successfully`,
             variant: 'success',
             icon: <CheckCircle size={40} />,
           });
@@ -588,7 +575,7 @@ export default function EditTaskDialog({
       if (response.success) {
         toast({
           title: 'Task Updated Successfully',
-          description: `Task: ${response.task?.title} updated successfully`,
+          description: `Task: ${response.data?.title} updated successfully`,
           variant: 'success',
           icon: <CheckCircle size={40} />,
         });
@@ -661,13 +648,7 @@ export default function EditTaskDialog({
   };
   const fetchSkillsCategory = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/search`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
+      const response = await apiClient.get<Response>('/skillCategory/search');
       if (response.ok) {
         const skillsData = await response.json();
         setSkillsCategory(skillsData);

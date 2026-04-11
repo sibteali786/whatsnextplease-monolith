@@ -6,6 +6,7 @@ export interface TokenResponse {
   id_token?: string;
   refresh_token?: string;
   expires_in: number;
+  refresh_expires_in?: number;
   token_type: string;
 }
 
@@ -172,7 +173,9 @@ export class TokenExchangeService {
         tokens,
       };
     } catch (error) {
-      logger.error('Cognito token exchange failed:', error);
+      logger.error(
+        `Cognito token exchange failed: ${error instanceof Error ? error.message : String(error)}`
+      );
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Cognito token exchange failed',

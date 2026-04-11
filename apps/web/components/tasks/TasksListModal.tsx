@@ -47,8 +47,8 @@ export default function TasksListModal({ open, setOpen, priority }: TasksListMod
       });
       const responseIds = await getTaskIdsByPriority(priority);
 
-      if (response.success && responseIds && response.tasks) {
-        setData(response.tasks);
+      if (response.success && responseIds && response.data) {
+        setData(response.data);
         if (responseIds.taskIds) {
           setTaskIds(responseIds.taskIds);
         }

@@ -1,4 +1,10 @@
-import { IIdpAdminService, CreateUserRequest, CreateUserResponse } from './IIdpAdminService';
+import {
+  IIdpAdminService,
+  CreateUserRequest,
+  CreateUserResponse,
+  UpdateUserResponse,
+  UpdateUserRequest,
+} from './IIdpAdminService';
 import { UserGroup } from '@HillCountryCoder/auth-client';
 import { Roles } from '@prisma/client';
 import { logger } from '../../utils/logger';
@@ -86,6 +92,12 @@ export class KeycloakAdminService implements IIdpAdminService {
             credentials: request.password
               ? [{ type: 'password', value: request.password, temporary: false }]
               : [],
+            // Set wnp_role attribute if role is provided (WNP users only)
+            ...(request.role && {
+              attributes: {
+                wnp_role: [request.role],
+              },
+            }),
           }),
         }
       );
@@ -206,5 +218,110 @@ export class KeycloakAdminService implements IIdpAdminService {
     }
     // All internal users go to WnpInternalUsers
     return UserGroup.WnpInternalUsers;
+  }
+
+  async updateUser(
+    sub: string,
+    username: string,
+    updates: UpdateUserRequest
+  ): Promise<UpdateUserResponse> {
+    try {
+      const token = await this.getAdminToken();
+      const skippedFields: string[] = [];
+
+      const profileUpdates: Record<string, unknown> = {};
+      if (updates.email !== undefined) profileUpdates.email = updates.email;
+      if (updates.firstName !== undefined) profileUpdates.firstName = updates.firstName;
+      if (updates.lastName !== undefined) profileUpdates.lastName = updates.lastName;
+
+      if (Object.keys(profileUpdates).length > 0) {
+        const response = await fetch(
+          `${this.keycloakUrl}/admin/realms/${this.realm}/users/${sub}`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(profileUpdates),
+          }
+        );
+        if (!response.ok) {
+          const error = await response.text();
+          logger.error(`Failed to update Keycloak profile for ${sub}: ${error}`);
+          return { success: false, error: `Profile update failed: ${error}` };
+        }
+        logger.info(`Updated Keycloak profile fields for user: ${sub}`);
+      }
+
+      // 2. Update password (separate endpoint)
+      if (updates.password) {
+        const response = await fetch(
+          `${this.keycloakUrl}/admin/realms/${this.realm}/users/${sub}/reset-password`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ type: 'password', value: updates.password, temporary: false }),
+          }
+        );
+        if (!response.ok) {
+          const error = await response.text();
+          logger.error(`Failed to update Keycloak password for ${sub}: ${error}`);
+          return { success: false, error: `Password update failed: ${error}` };
+        }
+        logger.info(`Updated Keycloak password for user: ${sub}`);
+      }
+
+      // 3. Update group if role changed
+      if (updates.role !== undefined) {
+        const newGroupName = this.mapRoleToGroup(updates.role);
+
+        // Get all groups in realm to find IDs
+        const groupsResponse = await fetch(
+          `${this.keycloakUrl}/admin/realms/${this.realm}/groups`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const allGroups: KeycloakGroup[] = await groupsResponse.json();
+
+        // Get user's current groups
+        const userGroupsResponse = await fetch(
+          `${this.keycloakUrl}/admin/realms/${this.realm}/users/${sub}/groups`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const currentGroups: KeycloakGroup[] = await userGroupsResponse.json();
+
+        // Remove existing WNP groups
+        for (const group of currentGroups) {
+          await fetch(
+            `${this.keycloakUrl}/admin/realms/${this.realm}/users/${sub}/groups/${group.id}`,
+            { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+
+        // Add new group
+        const newGroup = allGroups.find(g => g.name === newGroupName);
+        if (newGroup) {
+          await fetch(
+            `${this.keycloakUrl}/admin/realms/${this.realm}/users/${sub}/groups/${newGroup.id}`,
+            { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }
+          );
+          logger.info(`Reassigned Keycloak user ${sub} to group: ${newGroupName}`);
+        } else {
+          logger.warn(`Group ${newGroupName} not found in Keycloak during role update`);
+          skippedFields.push('role');
+        }
+      }
+
+      return { success: true, skippedFields: skippedFields.length ? skippedFields : undefined };
+    } catch (error) {
+      logger.error(`Keycloak updateUser error for ${sub}: ${error}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 }

@@ -22,7 +22,7 @@ export class TaskAgentController {
   private handleGetTaskAgentIds = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const taskAgentIds = await this.taskAgentService.getTaskAgentIds();
-      res.status(200).json(taskAgentIds);
+      res.status(200).json({ ...taskAgentIds, success: true });
     } catch (error) {
       next(error);
     }
@@ -49,7 +49,7 @@ export class TaskAgentController {
         searchTerm
       );
 
-      res.status(200).json(taskAgents);
+      res.status(200).json({ ...taskAgents, success: true });
     } catch (error) {
       next(error);
     }
@@ -70,11 +70,12 @@ export class TaskAgentController {
 
       if (!taskAgent) {
         return res.status(404).json({
+          success: false,
           message: 'Task agent not found',
         });
       }
 
-      res.status(200).json(taskAgent);
+      res.status(200).json({ success: true, data: taskAgent });
     } catch (error) {
       next(error);
     }

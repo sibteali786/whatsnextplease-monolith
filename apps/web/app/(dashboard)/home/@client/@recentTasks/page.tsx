@@ -26,7 +26,7 @@ const RecentTasksPage = async () => {
   if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
-  const { tasks }: TaskByUserIdResponse = await taskApiServer.getTasksByUserId({
+  const { data }: TaskByUserIdResponse = await taskApiServer.getTasksByUserId({
     userId: user.id,
     pageSize: 5,
     search: '',
@@ -43,7 +43,7 @@ const RecentTasksPage = async () => {
       </CardHeader>
 
       <CardContent>
-        {tasks && tasks?.length === 0 ? (
+        {data && data?.length === 0 ? (
           <CallToAction
             title="No tasks found"
             link="/taskOfferings"
@@ -66,8 +66,8 @@ const RecentTasksPage = async () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks &&
-                tasks.map(task => (
+              {data &&
+                data.map(task => (
                   <TableRow
                     key={task.id}
                     className="hover:bg-muted/30 cursor-pointer transition-colors"
@@ -105,7 +105,7 @@ const RecentTasksPage = async () => {
         )}
       </CardContent>
 
-      {tasks && tasks.length > 0 && (
+      {data && data.length > 0 && (
         <CardFooter className="pt-1 pb-4 flex justify-end">
           <LinkButton
             href="/taskOfferings"

@@ -1,5 +1,4 @@
 'use client';
-'use client';
 
 import { Button } from '@/components/ui/button';
 import { ColumnDef } from '@tanstack/react-table';
@@ -26,8 +25,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useState, useEffect, MutableRefObject } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { deleteEntity } from '@/utils/entityActions';
 import { EditClientModal } from '@/components/clients/EditClientModal';
+import { apiClient } from '@/lib/apiClient';
+import { StandardApiResponse } from '@/types/api';
 
 // ------------------------------
 // Schema Definition
@@ -149,7 +149,7 @@ const ClientActionCell = ({
   }, [showDeleteDialog, showEditModal, modalStateRef]);
 
   const handleDeleteClient = async () => {
-    await deleteEntity('client', client.id);
+    await apiClient.delete<StandardApiResponse>(`/entity/client/${client.id}`);
     await refreshData();
   };
 

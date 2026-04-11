@@ -94,6 +94,7 @@ export class SkillCategoryService {
         categoryName: 'asc',
       },
     });
+    console.log('Raw categories from DB:', categories);
 
     return this.formatCategories(categories);
   }

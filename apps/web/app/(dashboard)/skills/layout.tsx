@@ -3,8 +3,7 @@
 
 import React, { ReactNode, useCallback, useEffect, useState } from 'react';
 import { AddSkillDialog } from '@/components/skills/AddSkillDialog';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+import { apiClient } from '@/lib/apiClient';
 
 interface SkillCategory {
   id: string;
@@ -18,12 +17,7 @@ const SkillsLayout = ({ children }: { children: ReactNode }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const fetchSkills = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/skillCategory/search`, {
-        headers: {
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiClient.get<Response>('/skillCategory/search');
 
       if (response.ok) {
         const skillsData = await response.json();

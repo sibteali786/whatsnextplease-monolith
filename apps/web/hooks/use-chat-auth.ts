@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getCookie } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+import { apiClient } from '@/lib/apiClient';
 
 const CHAT_BASE_URL = (process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000').replace(
   /\/embed\/?$/,
@@ -40,7 +39,6 @@ function notifyListeners() {
 
 export function useChatAuth() {
   const [state, setState] = useState<ChatAuthState>(sharedAuthState);
-  const token = getCookie(COOKIE_NAME);
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -74,39 +72,31 @@ export function useChatAuth() {
       isMounted.current = false;
       listeners.delete(setState);
     };
-  }, [token]);
+  }, []);
 
   const fetchChatToken = async () => {
-    if (sharedAuthState.isLoading || !token) return;
+    if (sharedAuthState.isLoading) return;
 
     try {
       sharedAuthState = { ...sharedAuthState, isLoading: true, error: null };
       notifyListeners();
 
       console.log('[Chat Auth] Fetching token...');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/init-token`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await apiClient.get<any>('/chat/init-token');
 
-      if (!response.ok) {
+      if (!response.success) {
         throw new Error('Failed to get chat token');
       }
 
-      const data = await response.json();
-
       // In fetchChatToken, after the fetch call
-      if (!response.ok) {
-        const data = await response.json();
+      if (!response.success) {
         let errorMessage = 'Failed to get chat token';
 
         if (response.status === 403) {
           errorMessage =
             'Chat integration not activated. Please complete setup in Settings → Integrations.';
-        } else if (data.error) {
-          errorMessage = data.error;
+        } else if (response.error) {
+          errorMessage = response.error;
         }
 
         throw new Error(errorMessage);
@@ -116,13 +106,13 @@ export function useChatAuth() {
 
       // Create iframe URL with token
       const url = new URL(CHAT_EMBED_URL);
-      url.searchParams.set('ssoToken', data.token);
-      url.searchParams.set('ssoSignature', data.signature);
+      url.searchParams.set('ssoToken', response.token);
+      url.searchParams.set('ssoSignature', response.signature);
       url.searchParams.set('t', Date.now().toString());
 
       sharedAuthState = {
-        token: data.token,
-        signature: data.signature,
+        token: response.token,
+        signature: response.signature,
         iframeUrl: url.toString(),
         isLoading: false,
         error: null,

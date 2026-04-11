@@ -29,6 +29,13 @@ import { isValidPhoneNumber } from 'react-phone-number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { UserWithRole } from './types';
 import { DeleteProfileSection } from './DeleteProfileSection';
+import {
+  GetUserProfileResponse,
+  UpdateClientProfilePictureResponse,
+  UpdateUserProfileResponse,
+  UserProfileType,
+} from '@/types/tasks/api-response';
+import { apiClient } from '@/lib/apiClient';
 
 export const commonProfileSchemaFields = {
   email: z.string().email('Invalid email address'),
@@ -108,17 +115,16 @@ const profileSchema = z.object({
 });
 interface ProfileFormProps {
   initialData: UserWithRole;
-  token: string;
 }
 type UserProfileFormValues = z.infer<typeof profileSchema>;
-export default function ProfileFormUser({ initialData, token }: ProfileFormProps) {
+export default function ProfileFormUser({ initialData }: ProfileFormProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isPersonalEditing, setIsPersonalEditing] = useState(false);
   const [isPasswordEditing, setIsPasswordEditing] = useState(false);
   const [isAddressEditing, setIsAddressEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [originalUser, setOriginalUser] = useState<UserWithRole | null>(null);
+  const [originalUser, setOriginalUser] = useState<UserProfileType | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { imageUrl, isLoading: isAvatarLoading } = useSecureAvatar(
     avatarFile ? null : initialData.avatarUrl,
@@ -167,19 +173,13 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const user: UserWithRole | ErrorResponse = await response.json();
-        if (!response.ok && user instanceof Error) {
-          throw new Error(user.message || 'Failed to fetch profile');
-        }
+        const response = await apiClient.get<GetUserProfileResponse>('/user/profile');
 
-        // Set form default values with fetched data
-        if (user instanceof Object && 'firstName' in user) {
+        if (!response.success || !response.data) {
+          throw new Error(response.message || 'Failed to fetch profile');
+        }
+        const user: UserWithRole | ErrorResponse = response.data;
+        if (user) {
           setOriginalUser(user);
           form.reset({
             personalInfo: {
@@ -277,36 +277,25 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
         const formData = new FormData();
         formData.append('file', avatarFile);
 
-        const uploadResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/profilePicture`,
-          {
-            method: 'PATCH',
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          }
+        const uploadResponse = await apiClient.patch<UpdateClientProfilePictureResponse>(
+          '/user/profilePicture',
+          formData
         );
 
-        if (!uploadResponse.ok) {
+        if (!uploadResponse.success) {
           throw new Error('Failed to upload avatar');
         }
       }
       // Prepare profile update data
       // Only send update request if there are changesInOriginalUser
       if (Object.keys(changesInOriginalUser).length > 0) {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/profile`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(changesInOriginalUser),
-        });
+        const response = await apiClient.patch<UpdateUserProfileResponse>(
+          '/user/profile',
+          changesInOriginalUser
+        );
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to update profile');
         }
 
         // Update original data with new values
@@ -410,7 +399,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                     {initialData.firstName} {initialData.lastName}
                   </p>
                   <p className="text-muted-foreground">
-                    {transformEnumValue(initialData?.role?.name)}
+                    {transformEnumValue(initialData?.role?.name || 'UNKNOWN')}
                   </p>
                   <p className="text-muted-foreground text-sm">
                     {initialData?.city && initialData?.country
@@ -488,7 +477,7 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                 />
                 <FormField
                   control={form.control}
-                  disabled={!isPersonalEditing}
+                  disabled={true}
                   name="personalInfo.username"
                   render={({ field }) => (
                     <FormItem>
@@ -497,6 +486,9 @@ export default function ProfileFormUser({ initialData, token }: ProfileFormProps
                         <Input {...field} type="text" readOnly={!isPersonalEditing} />
                       </FormControl>
                       <FormMessage />
+                      <FormDescription>
+                        Username is immutable after creation (Contact Admins for editing)
+                      </FormDescription>
                     </FormItem>
                   )}
                 />

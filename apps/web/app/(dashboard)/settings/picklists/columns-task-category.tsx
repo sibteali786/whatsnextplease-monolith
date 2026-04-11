@@ -66,7 +66,7 @@ export const generateTaskCategoryColumns = (
                 Copy ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.replace('/taskOfferings')}>
                 <Plus className="w-3 h-3" /> Add New Task
               </DropdownMenuItem>
             </DropdownMenuContent>

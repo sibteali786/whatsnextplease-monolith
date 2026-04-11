@@ -1,10 +1,15 @@
 // utils/clientUserUtils.ts
 import { useState, useEffect } from 'react';
-import { UserState } from '@/app/api/auth/current-user/route';
+import { apiClient, ApiError } from '@/lib/apiClient';
+import {
+  ClientProfileType,
+  GetUserProfileStateResponse,
+  UserProfileType,
+} from '@/types/tasks/api-response';
 
 export interface CurrentUserResponse {
   success: boolean;
-  user?: UserState;
+  user?: UserProfileType | ClientProfileType;
   error?: string;
 }
 
@@ -14,27 +19,22 @@ export interface CurrentUserResponse {
  */
 export const getCurrentUserClient = async (): Promise<CurrentUserResponse> => {
   try {
-    const response = await fetch('/api/auth/current-user', {
-      method: 'GET',
-      credentials: 'include', // Include cookies
-      cache: 'no-store', // Ensure fresh data
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || `Request failed with status ${response.status}`,
-      };
+    const { success, data } = await apiClient.get<GetUserProfileStateResponse>('/auth/me');
+    if (!success || !data) {
+      return { success: false, error: 'Failed to fetch user data' };
     }
-	console.log('Current User Data:', data.user);
-    return data;
+    const entity = data.user ?? data.client;
+
+    if (!entity) {
+      return { success: false, error: 'User not found' };
+    }
+
+    return { success: true, user: entity };
   } catch (error) {
-    console.error('Error fetching current user:', error);
+    const apiError = error as ApiError;
     return {
       success: false,
-      error: 'Network error occurred while fetching user data',
+      error: apiError.message || 'Failed to fetch user data',
     };
   }
 };
@@ -44,7 +44,7 @@ export const getCurrentUserClient = async (): Promise<CurrentUserResponse> => {
  * @returns Object containing user data, loading state, error, and retry function
  */
 export const useCurrentUser = () => {
-  const [user, setUser] = useState<UserState | null>(null);
+  const [user, setUser] = useState<UserProfileType | ClientProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -111,7 +111,10 @@ export const useCurrentUser = () => {
  * @param user - Current user object
  * @param requiredRole - Role to check against
  */
-export const hasRole = (user: UserState | undefined, requiredRole: string): boolean => {
+export const hasRole = (
+  user: UserProfileType | ClientProfileType | undefined,
+  requiredRole: string
+): boolean => {
   return user?.role?.name === requiredRole;
 };
 
@@ -120,6 +123,9 @@ export const hasRole = (user: UserState | undefined, requiredRole: string): bool
  * @param user - Current user object
  * @param roles - Array of roles to check against
  */
-export const hasAnyRole = (user: UserState | undefined, roles: string[]): boolean => {
+export const hasAnyRole = (
+  user: UserProfileType | ClientProfileType | undefined,
+  roles: string[]
+): boolean => {
   return roles.includes(user?.role?.name as string);
 };

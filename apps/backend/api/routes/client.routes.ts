@@ -29,4 +29,5 @@ router.delete(
   controller.deleteClient
 );
 router.patch('/:id', verifyTokenHybrid, controller.updateClientById);
+router.post('/create', controller.createClient);
 export const clientRoutes = router;

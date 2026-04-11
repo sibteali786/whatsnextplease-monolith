@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { UserTasksTable } from '../users/UserTaskTable';
-import { getTasksByClientId } from '@/db/repositories/clients/getTasksByClientId';
-import { getTaskIdsByClientId } from '@/utils/clientActions';
 import { SearchNFilter } from '../common/SearchNFilter';
 import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
 import { TaskTable } from '@/utils/validationSchemas';
 import { useSearchParams } from 'next/navigation';
 import { DurationEnum, DurationEnumList } from '@/types';
 import { transformEnumValue } from '@/utils/utils';
+import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
+import { taskApiClient } from '@/utils/taskApi';
 
 export default function ClientHistoryList({ clientId, role }: { clientId: string; role: Roles }) {
   const searchParams = useSearchParams();
@@ -56,26 +56,30 @@ export default function ClientHistoryList({ clientId, role }: { clientId: string
             )
             .filter(priority => priority !== null)
         : [];
-      const response = await getTasksByClientId(
-        searchTerm,
-        duration,
-        clientId,
-        cursor,
+      const params = {
+        cursor: cursor ?? undefined,
         pageSize,
-        normalizedStatus,
-        normalizedPriority,
-        assignedToFilter
-      );
-      const { taskIds } = await getTaskIdsByClientId(
-        searchTerm,
+        search: searchTerm,
         duration,
+        status: normalizedStatus,
+        priority: normalizedPriority,
+        context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+        assignedToId: assignedToFilter,
+        role: Roles.CLIENT,
+      };
+      const response = await taskApiClient.getTasksByUserId(clientId, params);
+      const responseIds = await taskApiClient.getTaskIds({
         clientId,
-        assignedToFilter
-      );
+        search: searchTerm,
+        duration,
+        context: USER_CREATED_TASKS_CONTEXT.GENERAL,
+        assignedToId: assignedToFilter,
+        role: Roles.CLIENT,
+      });
 
-      if (response.success && response.tasks) {
+      if (response.success && responseIds.success && response.data) {
         /*   const filteredTasks = response.tasks.filter(task => task.status.statusName === 'COMPLETED'); */
-        setData(response.tasks || []);
+        setData(response.data || []);
         if (response.totalCount) {
           setTotalCount(response.totalCount);
         }

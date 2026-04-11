@@ -41,8 +41,8 @@ export default function TaskLinks({ taskId }: TaskLinksProps) {
       setLoading(true);
       const result = await taskLinkAPI.getTaskLinks(taskId);
 
-      if (result.success) {
-        setLinks(result.links || []);
+      if (result.success && result.data) {
+        setLinks(result.data || []);
       } else {
         toast({
           title: 'Failed to load links',

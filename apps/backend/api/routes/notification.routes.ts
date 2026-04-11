@@ -1,6 +1,6 @@
 import { Response, Router } from 'express';
 import { NotificationController } from '../controller/notification.controller';
-import { AuthenticatedRequest, verifyTokenHybrid, verifyTokenFromQuery } from '../middleware/auth';
+import { AuthenticatedRequest, verifyTokenHybrid, verifySseToken } from '../middleware/auth';
 import { Roles } from '@prisma/client';
 import { pushNotificationService } from '../services/pushNotification.service';
 
@@ -8,7 +8,7 @@ const router = Router();
 const controller = new NotificationController();
 
 // SSE endpoint with query token verification
-router.get('/subscribe/:userId', verifyTokenFromQuery, controller.subscribe);
+router.get('/subscribe/:userId', verifySseToken, controller.subscribe);
 
 // Other routes with regular token verification
 router.post('/', verifyTokenHybrid, controller.create);
@@ -25,10 +25,12 @@ router.post(
     const clientId = req.user?.role === Roles.CLIENT ? (req.user?.id ?? null) : null;
     try {
       await pushNotificationService.saveSubscription(userId, clientId, subscription);
-      res.status(201).json({ message: 'Push subscription saved' });
+      res.status(201).json({ message: 'Push subscription saved', success: true });
     } catch (error) {
       if (error instanceof Error) {
-        res.status(500).json({ error: 'Failed to save push subscription: ' + error.message });
+        res
+          .status(500)
+          .json({ error: 'Failed to save push subscription: ' + error.message, success: false });
       }
     }
   }
@@ -45,10 +47,12 @@ router.delete(
     }
     try {
       await pushNotificationService.deleteSubscription(endpoint);
-      res.status(200).json({ message: 'Push subscription removed' });
+      res.status(200).json({ message: 'Push subscription removed', success: true });
     } catch (error) {
       if (error instanceof Error) {
-        res.status(500).json({ error: 'Failed to remove push subscription: ' + error.message });
+        res
+          .status(500)
+          .json({ error: 'Failed to remove push subscription: ' + error.message, success: false });
       }
     }
   }

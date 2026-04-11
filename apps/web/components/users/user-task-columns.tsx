@@ -24,6 +24,7 @@ import { updateTaskField } from '@/utils/tasks/taskInlineUpdates';
 import { TaskNotificationService } from '@/utils/notifications/taskNotifications';
 import { SerialNumberBadge } from '../tasks/SerialNumberBadge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { GetTaskCategoryAll } from '@/types/tasks/api-response';
 
 type TaskAssignees = {
   firstName: string;
@@ -36,7 +37,7 @@ export const generateUserTaskColumns = (
   onEditTask?: (task: TaskTable) => void,
   deleteTask?: (taskId: string) => void,
   onTaskUpdate?: () => Promise<void>,
-  taskCategories?: { id: string; categoryName: string }[],
+  taskCategories?: GetTaskCategoryAll[],
   role?: Roles,
   copiedTaskId?: string | null,
   setCopiedTaskId?: React.Dispatch<React.SetStateAction<string | null>>

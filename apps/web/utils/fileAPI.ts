@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { COOKIE_NAME } from '@/utils/constant';
+import { apiClient, ApiError } from '@/lib/apiClient';
 
 interface APIResponse {
   success: boolean;
@@ -8,124 +8,68 @@ interface APIResponse {
   data?: any;
 }
 
+interface DownloadResult {
+  downloadUrl: string;
+  fileName: string;
+  openedInNewTab?: boolean;
+}
+
+const VIEWABLE_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt', 'html', 'htm']);
+
 class FileAPIClient {
-  private baseURL: string;
-
-  constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || '';
-  }
-
-  private getAuthToken(): string | undefined {
-    if (typeof window !== 'undefined') {
-      return document.cookie
-        .split('; ')
-        .find(row => row.startsWith(`${COOKIE_NAME}=`))
-        ?.split('=')[1];
-    }
-    return undefined;
-  }
-
-  private getAuthHeaders(): Record<string, string> {
-    const token = this.getAuthToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
+  /**
+   * Upload a file. Used for both task attachments and comment files.
+   * Previously duplicated as uploadFile + uploadCommentFile — consolidated.
+   */
   async uploadFile(formData: FormData): Promise<APIResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/files/upload-and-save`, {
-        method: 'POST',
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
+      const result = await apiClient.post<APIResponse>('/files/upload-and-save', formData);
       return result;
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      return this.handleError(error);
     }
   }
 
   async deleteFile(fileId: string): Promise<APIResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/files/${fileId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.getAuthHeaders(),
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
-      return result;
+      return await apiClient.delete<APIResponse>(`/files/${fileId}`);
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      return this.handleError(error);
     }
   }
 
+  async getFileDetails(fileId: string): Promise<APIResponse> {
+    try {
+      return await apiClient.get<APIResponse>(`/files/${fileId}`);
+    } catch (error) {
+      return this.handleError(error);
+    }
+  }
+
+  /**
+   * Fetches a signed download URL and triggers download/open based on file type.
+   * Pass forceDownload=true to always download, openInNewTab=true to always open in tab.
+   */
   async generateDownloadUrl(
     fileId: string,
-    options?: {
-      forceDownload?: boolean;
-      openInNewTab?: boolean;
-    }
+    options?: { forceDownload?: boolean; openInNewTab?: boolean }
   ): Promise<APIResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/files/${fileId}/download`, {
-        method: 'GET',
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-      });
+      const result = await apiClient.get<{
+        success: boolean;
+        downloadUrl?: string;
+        fileName?: string;
+      }>(`/files/${fileId}/download`);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
-      // Enhanced download handling
       if (result.success && result.downloadUrl) {
         const fileName = result.fileName || 'download';
-        const fileExtension = fileName.split('.').pop()?.toLowerCase();
-
-        // File types that should open in new tab instead of downloading
-        const viewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt', 'html', 'htm'];
+        const ext = fileName.split('.').pop()?.toLowerCase() || '';
         const shouldOpenInNewTab =
-          options?.openInNewTab ||
-          (!options?.forceDownload && viewableTypes.includes(fileExtension || ''));
+          options?.openInNewTab || (!options?.forceDownload && VIEWABLE_EXTENSIONS.has(ext));
 
         if (shouldOpenInNewTab) {
-          // Open in new tab for viewable files
           window.open(result.downloadUrl, '_blank');
         } else {
-          // Force download for other files
           const link = document.createElement('a');
           link.href = result.downloadUrl;
           link.setAttribute('download', fileName);
@@ -139,170 +83,76 @@ class FileAPIClient {
           success: true,
           data: {
             downloadUrl: result.downloadUrl,
-            fileName: result.fileName,
+            fileName,
             openedInNewTab: shouldOpenInNewTab,
-          },
+          } satisfies DownloadResult,
         };
       }
 
-      return result;
+      return { success: false, error: 'No download URL returned' };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      return this.handleError(error);
     }
   }
 
-  async getFileDetails(fileId: string): Promise<APIResponse> {
+  /**
+   * Same endpoint as generateDownloadUrl but returns URL only — no side effects.
+   * Used for in-app preview (e.g. image/PDF viewer).
+   */
+  async generatePreviewUrl(fileId: string): Promise<APIResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/files/${fileId}`, {
-        method: 'GET',
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-      });
+      const result = await apiClient.get<{
+        success: boolean;
+        downloadUrl?: string;
+        fileName?: string;
+      }>(`/files/${fileId}/download`);
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (result.success && result.downloadUrl) {
+        const fileName = result.fileName || 'download';
         return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
+          success: true,
+          data: { downloadUrl: result.downloadUrl, fileName } satisfies Omit<
+            DownloadResult,
+            'openedInNewTab'
+          >,
         };
       }
 
-      return result;
+      return { success: false, error: 'No preview URL returned' };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
-    }
-  }
-
-  // Add these methods to the existing FileAPIClient class
-
-  async uploadCommentFile(formData: FormData): Promise<APIResponse> {
-    try {
-      const response = await fetch(`${this.baseURL}/files/upload-and-save`, {
-        method: 'POST',
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
-      return result;
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      return this.handleError(error);
     }
   }
 
   async addFilesToComment(commentId: string, fileIds: string[]): Promise<APIResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/comments/${commentId}/files`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.getAuthHeaders(),
-        },
-        body: JSON.stringify({ fileIds }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
-      return result;
+      return await apiClient.post<APIResponse>(`/comments/${commentId}/files`, { fileIds });
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      return this.handleError(error);
     }
   }
 
   async removeFileFromComment(commentId: string, fileId: string): Promise<APIResponse> {
     try {
-      const response = await fetch(`${this.baseURL}/comments/${commentId}/files/${fileId}`, {
-        method: 'DELETE',
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
-      return result;
+      return await apiClient.delete<APIResponse>(`/comments/${commentId}/files/${fileId}`);
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
+      return this.handleError(error);
     }
   }
 
-  async generatePreviewUrl(fileId: string): Promise<APIResponse> {
-    try {
-      const response = await fetch(`${this.baseURL}/files/${fileId}/download`, {
-        method: 'GET',
-        headers: {
-          ...this.getAuthHeaders(),
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || `HTTP ${response.status}`,
-        };
-      }
-
-      // Return URL without any automatic download/opening behavior
-      if (result.success && result.downloadUrl) {
-        return {
-          success: true,
-          data: {
-            downloadUrl: result.downloadUrl,
-            fileName: result.fileName,
-          },
-        };
-      }
-
-      return result;
-    } catch (error) {
+  /**
+   * Centralised error handler — maps ApiError (from apiClient) to APIResponse shape.
+   * Keeps consumers from having to handle thrown errors.
+   */
+  private handleError(error: unknown): APIResponse {
+    if (error instanceof Error) {
+      const apiError = error as ApiError;
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Network error',
+        error: apiError.message || 'An unexpected error occurred',
       };
     }
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 

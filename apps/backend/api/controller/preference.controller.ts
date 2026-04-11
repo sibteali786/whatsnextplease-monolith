@@ -67,7 +67,7 @@ export class PreferenceController {
 
       const filter = await this.preferenceService.createTaskViewFilter(userId, parsedInput);
 
-      res.status(201).json({ success: true, filter });
+      res.status(201).json({ success: true, data: filter });
     } catch (error) {
       next(error);
     }
@@ -87,7 +87,7 @@ export class PreferenceController {
 
       const filters = await this.preferenceService.getTaskViewFilters(userId);
 
-      res.status(200).json({ success: true, filters });
+      res.status(200).json({ success: true, data: filters });
     } catch (error) {
       next(error);
     }

@@ -2,23 +2,14 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { signout } from '@/utils/user';
+import { handleLogout } from '@/utils/auth/logout';
 import { LogOut } from 'lucide-react';
 import React from 'react';
 
 export function LogoutButton() {
-  const handleLogout = async () => {
-    // Clear client-side storage first
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Then call server action
-    await signout();
-  };
-
   return (
     <Button
-      onClick={handleLogout}
+      onClick={() => handleLogout('User initiated logout')}
       variant="ghost"
       className={`flex items-center gap-3 text-textPrimary`}
     >

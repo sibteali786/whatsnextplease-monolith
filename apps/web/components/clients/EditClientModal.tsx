@@ -19,11 +19,12 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState, MutableRefObject } from 'react';
-import { getCookie, getPasswordStrength } from '@/utils/utils';
-import { COOKIE_NAME } from '@/utils/constant';
+import { getPasswordStrength } from '@/utils/utils';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { Separator } from '@/components/ui/separator';
 import { Client } from '@/app/(dashboard)/clients/columns';
+import { apiClient } from '@/lib/apiClient';
+import { PatchClientProfileById } from '@/types/tasks/api-response';
 
 // ---------------- Schema ----------------
 const editClientSchema = z
@@ -190,19 +191,13 @@ export function EditClientModal({
         onClose();
         return;
       }
+      const response = await apiClient.patch<PatchClientProfileById>(
+        `/client/${client.id}`,
+        changedFields
+      );
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/client/${client.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getCookie(COOKIE_NAME)}`,
-        },
-        body: JSON.stringify(changedFields),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || 'Failed to update client');
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to update client');
       }
 
       toast({

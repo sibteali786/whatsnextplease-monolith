@@ -42,7 +42,6 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
         cache: 'no-store',
       }
     );
-
     const result = await response.json();
 
     if (!response.ok || !result.success) {
@@ -50,7 +49,7 @@ export const getUserFromToken = async (token: { name: string; value: string }) =
       return null;
     }
 
-    return result.user ?? result.client ?? null;
+    return result.data.user ?? result.data.client ?? null;
   } catch (error) {
     console.error('Token verification failed:', error);
     return null;

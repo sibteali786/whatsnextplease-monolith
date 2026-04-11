@@ -329,7 +329,7 @@ export type TaskTable = z.infer<typeof TaskTableSchema>;
 
 export const GetTasksByClientIdResponseSchema = errorSchema.merge(
   z.object({
-    tasks: z.array(TaskTableSchema).optional(),
+    data: z.array(TaskTableSchema).optional(),
     nextCursor: z.string().nullable().optional(),
     hasNextCursor: z.boolean().optional(),
     totalCount: z.number().optional(),
@@ -680,7 +680,7 @@ export const getTasksInputSchema = z.object({
 
 export const getTasksOutputSchema = errorSchema.merge(
   z.object({
-    tasks: z.array(TaskTableSchema).nullable(),
+    data: z.array(TaskTableSchema).nullable(),
     hasNextCursor: z.boolean(),
     nextCursor: z.string().nullable(),
     totalCount: z.number(),
