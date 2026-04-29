@@ -14,12 +14,14 @@ export const taskIdsByType = async (
   userId?: string,
   status?: TaskStatusEnum | TaskStatusEnum[],
   priority?: TaskPriorityEnum | TaskPriorityEnum[],
-  assignedToFilter?: string
+  assignedToFilter?: string,
+  taskType?: string
 ): Promise<GetTaskIdsSchema> => {
   try {
     const queryParams: any = {
       search: searchTerm,
       duration,
+      taskType,
     };
     // Determine assignedToId based on both type and explicit filter
 

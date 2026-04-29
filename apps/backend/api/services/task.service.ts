@@ -6,6 +6,7 @@ import {
   CreatorType,
   Prisma,
   TaskSortField,
+  TaskType,
   SortDirection,
 } from '@prisma/client';
 import { BadRequestError, NotFoundError, ForbiddenError } from '@wnp/types';
@@ -70,6 +71,7 @@ export interface TaskQueryParams {
   status?: TaskStatusEnum;
   priority?: TaskPriorityEnum;
   assignedToId?: string | null | { not: null };
+  taskType?: TaskType;
   categoryId?: string;
   context?: USER_CREATED_TASKS_CONTEXT;
   sortBy?: {
@@ -139,6 +141,7 @@ export class TaskService {
       status,
       priority,
       assignedToId,
+      taskType,
       clientId,
       categoryId,
       context = USER_CREATED_TASKS_CONTEXT.GENERAL,
@@ -185,6 +188,7 @@ export class TaskService {
       status: normalizedStatus.length ? normalizedStatus : undefined,
       priority: normalizedPriority.length ? normalizedPriority : undefined,
       assignedToId,
+      taskType,
       clientId,
       categoryId,
     };
@@ -782,6 +786,7 @@ export class TaskService {
       pageSize,
       searchTerm,
       assignedToId,
+      taskType,
       categoryId,
       duration,
       clientId,
@@ -801,6 +806,7 @@ export class TaskService {
       ...(userId ? getTaskFilterCondition(userId, role) : {}),
       ...getDateFilter(duration || DurationEnum.ALL),
       ...(assignedToId !== undefined && { assignedToId }),
+      ...(taskType && { type: taskType }),
       ...(categoryId && { taskCategoryId: categoryId }),
 
       ...(priorityFilter && {

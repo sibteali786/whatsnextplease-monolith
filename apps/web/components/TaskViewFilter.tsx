@@ -278,6 +278,28 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
           Filters
         </DropdownMenuTrigger>
         <DropdownMenuContent>
+          {/* Task Type */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Type</DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-[200px] overflow-y-auto">
+              {['Internal', 'External'].map((type, index) => {
+                const textColor = type === 'External' ? 'text-primary' : 'text-blue-500';
+                return (
+                  <DropdownMenuItem
+                    key={index}
+                    onSelect={() => updateFilter('taskType', type.toUpperCase())}
+                    className={cn(
+                      filters.taskType === type.toUpperCase() && 'bg-accent',
+                      textColor
+                    )}
+                  >
+                    {type}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+
           {/* Category Filter */}
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>Category</DropdownMenuSubTrigger>

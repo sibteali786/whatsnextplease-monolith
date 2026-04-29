@@ -49,6 +49,7 @@ const Kanban = ({
   taskOffering,
   advancedFilterData,
   advancedFilterLoading,
+  newTaskReload,
 }: {
   user: UserState | null;
   searchTerm?: string;
@@ -57,6 +58,7 @@ const Kanban = ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   advancedFilterData?: any;
   advancedFilterLoading?: boolean;
+  newTaskReload?: boolean;
 }) => {
   const [activeTask, setActiveTask] = useState<TaskTable | null>(null);
   const [activeTaskStatus, setActiveTaskStatus] = useState<TaskStatusEnum | null>(null);
@@ -75,7 +77,8 @@ const Kanban = ({
     searchTerm ?? '',
     duration ?? DurationEnum.ALL,
     taskOffering,
-    filtersCleared
+    filtersCleared,
+    newTaskReload
   );
   const [kanbanData, setKanbanData] = useState(data);
 

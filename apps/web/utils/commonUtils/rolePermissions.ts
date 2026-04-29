@@ -5,7 +5,7 @@ import { Roles } from '@prisma/client';
 export const ROLE_PERMISSIONS: Record<Roles, string[]> = {
   [Roles.SUPER_USER]: ['/*'], // Full access including permissions page
   [Roles.TASK_AGENT]: ['/home', '/settings/myprofile', '/settings/notifications', '/taskOfferings'],
-  [Roles.CLIENT]: ['/home', '/settings/myprofile', '/settings/notifications', '/settings/billing'],
+  [Roles.CLIENT]: ['/home', '/settings/myprofile', '/settings/notifications'],
   [Roles.DISTRICT_MANAGER]: [
     '/home',
     '/clients/:path*',

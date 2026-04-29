@@ -5,19 +5,22 @@ import { MultiSelect } from '../ui/multi-select';
 import { TaskStatusEnum, TaskPriorityEnum, Roles } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { usersList } from '@/db/repositories/users/usersList';
 import { Input } from '../ui/input';
-import { Search, UserRoundX } from 'lucide-react';
+import { ChevronDown, Search, UserRoundX } from 'lucide-react';
 import { Button } from '../ui/button';
+import { cn } from '@/lib/utils';
+
 export default function TableFilter({
   role,
   statusFilter,
@@ -41,10 +44,10 @@ export default function TableFilter({
     Array<{ id: string; name: string; avatarUrl: string }>
   >([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [hasMore, setHasMore] = useState<boolean | undefined>(true);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const taskType = searchParams.get('taskType');
   const assignedToValue = searchParams.get('assignedTo') || 'all';
   const isSpecificUserSelected =
     assignedToValue !== 'all' &&
@@ -62,6 +65,17 @@ export default function TableFilter({
     }
 
     router.push(`${pathname}?${currentParams.toString()}`);
+  };
+
+  const getAssignedLabel = () => {
+    if (assignedToValue === 'my-tasks') return 'My Tasks';
+    if (assignedToValue === 'null') return 'Unassigned';
+    if (assignedToValue === 'not-null') return 'Assigned';
+
+    const selectedUser = filteredUsers.find(u => u.id === assignedToValue);
+    if (selectedUser) return selectedUser.name;
+
+    return 'All Tasks';
   };
 
   // handle Status change
@@ -139,39 +153,107 @@ export default function TableFilter({
       )}
       {/* Assigned To Filter - Only for non-clients */}
       {
-        <Select
-          onValueChange={value => {
-            const currentParams = new URLSearchParams(searchParams.toString());
-            if (value === 'all') {
-              currentParams.delete('assignedTo');
-            } else {
-              currentParams.set('assignedTo', value);
-            }
-            router.push(`${pathname}?${currentParams.toString()}`);
-          }}
-          value={searchParams.get('assignedTo') || 'all'}
-          onOpenChange={open => {
-            if (open) {
-              requestAnimationFrame(() => {
-                searchInputRef.current?.focus();
-              });
-            }
-          }}
-        >
-          <SelectTrigger className="h-[40px] px-4 flex justify-between items-center gap-3 w-fit">
-            <SelectValue placeholder="Assigned To" />
-          </SelectTrigger>
-          <SelectContent onKeyDownCapture={e => e.stopPropagation()}>
-            <SelectItem value="all">All Tasks</SelectItem>
-            {role !== Roles.CLIENT && !userId && <SelectItem value="my-tasks">My Tasks</SelectItem>}
-            <SelectItem value="null">Unassigned</SelectItem>
-            <SelectItem value="not-null">Assigned</SelectItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                'flex h-10 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 w-fit gap-2'
+              )}
+            >
+              {/* Avatar (only if specific user selected) */}
+              {isSpecificUserSelected && (
+                <Avatar className="h-5 w-5">
+                  <AvatarImage
+                    src={
+                      filteredUsers.find(u => u.id === assignedToValue)?.avatarUrl ||
+                      'https://github.com/shadcn.png'
+                    }
+                  />
+                  <AvatarFallback className="text-xs">
+                    {filteredUsers.find(u => u.id === assignedToValue)?.name}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+
+              <span className="truncate">{getAssignedLabel()}</span>
+
+              <ChevronDown className="h-4 w-4 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            className={cn(
+              'relative z-50 w-64 rounded-md border bg-popover text-popover-foreground shadow-md p-1 max-h-[385px] overflow-y-auto'
+            )}
+            align="start"
+          >
+            <div className="flex flex-col gap-0.5">
+              <DropdownMenuCheckboxItem
+                checked={taskType === 'INTERNAL'}
+                onCheckedChange={() =>
+                  updateParams('taskType', taskType === 'INTERNAL' ? '' : 'INTERNAL')
+                }
+                className={`text-blue-500 ${taskType === 'INTERNAL' ? 'bg-accent text-accent-foreground' : ''}`}
+              >
+                Internal
+              </DropdownMenuCheckboxItem>
+
+              <DropdownMenuCheckboxItem
+                checked={taskType === 'EXTERNAL'}
+                onCheckedChange={() =>
+                  updateParams('taskType', taskType === 'EXTERNAL' ? '' : 'EXTERNAL')
+                }
+                className={`text-primary ${taskType === 'EXTERNAL' ? 'bg-accent text-accent-foreground' : ''}`}
+              >
+                External
+              </DropdownMenuCheckboxItem>
+            </div>
+            <DropdownMenuSeparator />
+
+            {/* ASSIGNED TO */}
+            <div className="flex flex-col gap-0.5">
+              <DropdownMenuCheckboxItem
+                checked={assignedToValue === 'all'}
+                onCheckedChange={() => updateParams('assignedTo', '')}
+                className={`${assignedToValue === 'all' ? 'bg-accent text-accent-foreground' : ''}`}
+              >
+                All Tasks
+              </DropdownMenuCheckboxItem>
+
+              {role !== Roles.CLIENT && !userId && (
+                <DropdownMenuCheckboxItem
+                  checked={assignedToValue === 'my-tasks'}
+                  onCheckedChange={() => updateParams('assignedTo', 'my-tasks')}
+                  className={`${assignedToValue === 'my-tasks' ? 'bg-accent text-accent-foreground' : ''}`}
+                >
+                  My Tasks
+                </DropdownMenuCheckboxItem>
+              )}
+
+              <DropdownMenuCheckboxItem
+                checked={assignedToValue === 'null'}
+                onCheckedChange={() => updateParams('assignedTo', 'null')}
+                className={`${assignedToValue === 'null' ? 'bg-accent text-accent-foreground' : ''}`}
+              >
+                Unassigned
+              </DropdownMenuCheckboxItem>
+
+              <DropdownMenuCheckboxItem
+                checked={assignedToValue === 'not-null'}
+                onCheckedChange={() => updateParams('assignedTo', 'not-null')}
+                className={`${assignedToValue === 'not-null' ? 'bg-accent text-accent-foreground' : ''}`}
+              >
+                Assigned
+              </DropdownMenuCheckboxItem>
+            </div>
+            {/* USERS */}
             {role !== Roles.CLIENT && role !== Roles.TASK_AGENT && (
               <>
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1 pt-2">
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2">
                   Specific Users
                 </div>
-                <div className="relative w-[200px]">
+
+                <div className="relative w-full mb-1">
                   <Input
                     value={searchQuery}
                     placeholder="Search users"
@@ -184,19 +266,17 @@ export default function TableFilter({
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4" />
                 </div>
-              </>
-            )}
 
-            {role !== Roles.CLIENT &&
-              role !== Roles.TASK_AGENT &&
-              (loadingUsers ? (
-                <SelectItem value="loading" disabled>
-                  Loading users...
-                </SelectItem>
-              ) : filteredUsers.length > 0 ? (
-                <>
-                  {filteredUsers.map(user => (
-                    <SelectItem key={user.id} value={user.id} className="pl-4">
+                {loadingUsers ? (
+                  <div className="px-2 py-1 text-sm">Loading users...</div>
+                ) : filteredUsers.length > 0 ? (
+                  filteredUsers.map(user => (
+                    <DropdownMenuCheckboxItem
+                      key={user.id}
+                      checked={assignedToValue === user.id}
+                      onCheckedChange={() => updateParams('assignedTo', user.id)}
+                      className={`px-4 ${assignedToValue === user.id ? 'bg-accent text-accent-foreground pl-8' : ''}`}
+                    >
                       <div className="flex flex-row items-start gap-2">
                         <Avatar className="h-6 w-6 rounded-lg">
                           <AvatarImage
@@ -210,19 +290,18 @@ export default function TableFilter({
                         </Avatar>
                         {user.name}
                       </div>
-                    </SelectItem>
-                  ))}
-                </>
-              ) : (
-                <SelectItem value="no-results" disabled>
-                  <div className="flex items-center gap-2">
+                    </DropdownMenuCheckboxItem>
+                  ))
+                ) : (
+                  <div className="px-2 py-1 text-sm flex items-center gap-2">
                     <UserRoundX className="h-4 w-4" />
                     No users found
                   </div>
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+                )}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
 
       {/* Status Filter */}

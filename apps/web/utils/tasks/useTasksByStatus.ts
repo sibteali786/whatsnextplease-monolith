@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { TasksByStatusData } from '@/types/tasks/api-response';
 
 export interface TasksByStatusFilters {
+  taskType?: string;
   duration?: DurationEnum;
   assignedToId?: string;
   categoryId?: string;
@@ -39,7 +40,8 @@ export function useTasksByStatus(
   searchTerm?: string,
   duration?: DurationEnum,
   taskOffering = false,
-  filtersCleared?: boolean
+  filtersCleared?: boolean,
+  newTaskReload?: boolean
 ) {
   const searchParams = useSearchParams();
   const [reload, setReload] = useState(false);
@@ -81,6 +83,7 @@ export function useTasksByStatus(
 
   const priorityFilter = searchParams.get('priority');
   const assignedToFilter = searchParams.get('assignedTo') || undefined;
+  const taskType = searchParams.get('taskType') || undefined;
 
   // Persist filters to sessionStorage whenever they change
   const onReload = useCallback(() => setReload(prevState => !prevState), []);
@@ -113,9 +116,10 @@ export function useTasksByStatus(
         assignedToId = assignedToFilter;
       }
 
-      return taskApiClient.getTasksByStatus(statusesToFetch, filters, true, {
+      return taskApiClient.getTasksByStatus(statusesToFetch, undefined, true, {
         normalizedPriority,
         assignedToFilter: assignedToId,
+        taskType,
         searchTerm,
         duration,
         ...(cursorsPerColumn ? { cursors: cursorsPerColumn } : {}), // only add cursors if present
@@ -125,6 +129,7 @@ export function useTasksByStatus(
 
     return taskApiClient.getTasksByStatus(statusesToFetch, filters, false, {
       searchTerm,
+      taskType,
       duration,
       ...(cursorsPerColumn ? { cursors: cursorsPerColumn } : {}),
       pageSize,
@@ -247,10 +252,12 @@ export function useTasksByStatus(
     statuses.join(','),
     filtersUpdate,
     reload,
+    newTaskReload,
     searchTerm,
     duration,
     priorityFilter,
     assignedToFilter,
+    taskType,
     filtersCleared,
   ]);
 

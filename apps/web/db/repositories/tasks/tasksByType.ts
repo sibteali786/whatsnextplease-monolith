@@ -18,6 +18,7 @@ export const tasksByType = async (
   status?: TaskStatusEnum | TaskStatusEnum[],
   priority?: TaskPriorityEnum | TaskPriorityEnum[],
   assignedToFilter?: string,
+  taskType?: string,
   clientId?: string,
   categoryId?: string,
   sortBy?: string,
@@ -33,6 +34,7 @@ export const tasksByType = async (
       clientId,
       sortBy,
       fetchAll,
+      taskType,
     };
 
     // Explicit assignedTo filter takes precedence over type

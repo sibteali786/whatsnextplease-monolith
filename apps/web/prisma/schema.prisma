@@ -227,6 +227,11 @@ model TaskSequence {
     @@index([prefix])
 }
 
+enum TaskType {
+  INTERNAL
+  EXTERNAL
+}
+
 // TODO: Task can be created by Client / Super User / Task SuperVisor, modify schema to reflect this, A
 // TODO: Also add ability to attach files with a task, overtime, time to complete a task, required hours to complete task.
 // Updated Task model
@@ -234,6 +239,7 @@ model Task {
     id                  String        @id @default(uuid())
     title               String
     description         String
+    type                TaskType?  // not optional unless you really need it
     priorityId          String
     priority            TaskPriority  @relation(fields: [priorityId], references: [id])
     statusId            String

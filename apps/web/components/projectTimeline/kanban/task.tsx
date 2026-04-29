@@ -19,11 +19,12 @@ import {
 import { Button } from '../../ui/button';
 import { useState } from 'react';
 import EditTaskDialog from '../../common/EditTaskDialog';
-import { Roles } from '@prisma/client';
+import { Roles, TaskType } from '@prisma/client';
 import DeleteTaskDialog from './delete-task';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TooltipArrow, TooltipPortal } from '@radix-ui/react-tooltip';
+import { SerialNumberBadge } from '@/components/tasks/SerialNumberBadge';
 const DateComponent = ({ dateString }: { dateString?: Date | null }) => {
   const date = dateString ? new Date(dateString) : null;
   const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -72,7 +73,7 @@ const TaskBox = ({
     backgroundColor: isDragOverlay ? 'rgba(109,40,217,0.1)' : undefined,
     boxShadow: isDragOverlay ? '0 10px 30px rgba(0,0,0,0.25)' : undefined,
   };
-
+  console.log('TaskBox rendered with task:', task);
   return (
     <div className="flex flex-col p-1 relative min-w-[300px] md:min-w-full rounded-[16px]">
       <EditTaskDialog
@@ -108,15 +109,28 @@ const TaskBox = ({
           className="flex flex-col gap-4 p-4 cursor-pointer hover:bg-primary/10 transition-colors duration-300"
           onClick={() => router.push(`/taskOfferings/${task.id}`)}
         >
-          <div className="flex justify-between align-center items-center">
+          <div className="flex align-center items-center gap-2">
+            {task.serialNumber && (
+              <SerialNumberBadge
+                serialNumber={task.serialNumber}
+                showCopy={false}
+                size="md"
+                className={`text-xs py-1 ${
+                  task.type === TaskType.EXTERNAL
+                    ? 'bg-primary '
+                    : task.type === TaskType.INTERNAL
+                      ? 'bg-blue-500 hover:bg-blue-600'
+                      : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                }`}
+              />
+            )}
             <Badge
               className={`${taskPriorityColors[task?.priority?.priorityName]} py-1 px-3 text-nowrap w-fit`}
             >
               {transformEnumValue(task?.priority?.priorityName)}
             </Badge>
-
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger asChild className="ml-auto">
                 <Button variant="ghost" className="h-5 w-5 p-0 ">
                   <span className="sr-only">Open menu</span>
                   <MoreHorizontal className="h-4 w-4" />

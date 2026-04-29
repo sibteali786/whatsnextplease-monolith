@@ -4,10 +4,12 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Gantt from 'frappe-gantt';
 import { useTheme } from 'next-themes';
+import { TaskType } from '@prisma/client';
 
 export type GanttTask = {
   id: string;
   name: string;
+  type?: TaskType;
   start: string; // YYYY-MM-DD
   end: string; // YYYY-MM-DD
   progress: number; // required

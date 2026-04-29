@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Gamepad2,
   FolderClock,
-  DollarSign,
   UserCheck,
   Menu,
   ChevronLeft,
@@ -44,7 +43,6 @@ const ROLE_PERMISSIONS: Record<
   ],
   CLIENT: [
     { path: '/home', label: 'Home', Icon: Home },
-    { path: '/billing', label: 'Billing', Icon: DollarSign },
     { path: '/workhistory', label: 'Work History', Icon: FolderClock },
     { path: '/settings', label: 'Settings', Icon: Settings },
   ],
