@@ -224,6 +224,7 @@ const TaskSupervisorBase = ({
           taskOffering={true}
           advancedFilterData={searchResults}
           advancedFilterLoading={loading}
+          newTaskReload={reload}
         />
       ) : view === 'timeline' ? (
         <Gantt
@@ -233,6 +234,7 @@ const TaskSupervisorBase = ({
           taskOffering={true}
           advancedFilterLoading={loading}
           data={data}
+          reload={reload}
         />
       ) : (
         <TaskSuperVisorList

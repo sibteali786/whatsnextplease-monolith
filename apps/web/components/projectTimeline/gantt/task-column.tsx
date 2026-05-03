@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TooltipArrow, TooltipPortal } from '@radix-ui/react-tooltip';
 import { useTheme } from 'next-themes';
+import { TaskType } from '@prisma/client';
 type Props = {
   tasks: GanttTask[];
   chartRef: React.RefObject<ChartHandle>;
@@ -150,60 +151,70 @@ const TaskColumn = ({ tasks, chartRef, loadMore, hasMore }: Props) => {
         <p className="text-base font-semibold">Task Name</p>
       </div>
 
-      {tasks.map(task => (
-        <button
-          key={'gantt-task-column-' + task.id}
-          onClick={() => {
-            chartRef.current?.scrollToTask(task.id);
-          }}
-          type="button"
-          style={{
-            height: rowHeight || 50,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 12px',
+      {tasks.map(task => {
+        const type = task.type;
+        const bgColor =
+          type === TaskType.EXTERNAL
+            ? 'bg-primary'
+            : type === TaskType.INTERNAL
+              ? 'bg-blue-500 hover:bg-blue-600'
+              : 'bg-blue-100 text-blue-800 hover:bg-blue-200';
 
-            cursor: 'pointer',
-          }}
-          className="border-b w-full text-left bg-transparent hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 transition-colors duration-300"
-        >
-          <div className="flex flex-col gap-1">
-            <p className="font-medium text-sm line-clamp-1">{task?.name}</p>
-            <Badge className="py-0.5 px-1 text-[10px] w-fit">
-              {task?.categoryName ?? 'Uncategorized'}
-            </Badge>
-          </div>
-          {task?.assignedTo && (
-            <TooltipProvider>
-              <Tooltip delayDuration={250}>
-                <TooltipTrigger asChild>
-                  <Avatar className="h-6 w-6 rounded-lg">
-                    <AvatarImage
-                      src={task?.assignedTo?.avatarUrl || 'https://github.com/shadcn.png'}
-                      alt={task?.assignedTo?.firstName ?? 'avatar'}
-                      className="rounded-full"
-                    />
-                    <AvatarFallback className="rounded-full text-xs">
-                      {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent
-                    side="top"
-                    align="center"
-                    className="bg-gray-800 text-white text-xs rounded px-2 py-1 shadow-lg"
-                  >
-                    {task.assignedTo.firstName} {task.assignedTo.lastName}
-                    <TooltipArrow className="fill-gray-800" />
-                  </TooltipContent>
-                </TooltipPortal>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </button>
-      ))}
+        return (
+          <button
+            key={'gantt-task-column-' + task.id}
+            onClick={() => {
+              chartRef.current?.scrollToTask(task.id);
+            }}
+            type="button"
+            style={{
+              height: rowHeight || 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 12px',
+
+              cursor: 'pointer',
+            }}
+            className="border-b w-full text-left bg-transparent hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 transition-colors duration-300"
+          >
+            <div className="flex flex-col gap-1">
+              <p className="font-medium text-sm line-clamp-1">{task?.name}</p>
+              <Badge className={`py-0.5 px-1 text-[10px] w-fit ${bgColor}`}>
+                {task?.categoryName ?? 'Uncategorized'}
+              </Badge>
+            </div>
+            {task?.assignedTo && (
+              <TooltipProvider>
+                <Tooltip delayDuration={250}>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 rounded-lg">
+                      <AvatarImage
+                        src={task?.assignedTo?.avatarUrl || 'https://github.com/shadcn.png'}
+                        alt={task?.assignedTo?.firstName ?? 'avatar'}
+                        className="rounded-full"
+                      />
+                      <AvatarFallback className="rounded-full text-xs">
+                        {task?.assignedTo?.firstName} {task?.assignedTo?.lastName}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      side="top"
+                      align="center"
+                      className="bg-gray-800 text-white text-xs rounded px-2 py-1 shadow-lg"
+                    >
+                      {task.assignedTo.firstName} {task.assignedTo.lastName}
+                      <TooltipArrow className="fill-gray-800" />
+                    </TooltipContent>
+                  </TooltipPortal>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 };

@@ -61,14 +61,10 @@ export const TaskSuperVisorList = ({
   // Advanced filter context
   const { searchResults, conditions, loadMore, hasNextCursor } = useAdvancedFilterContext();
   const hasAdvancedFilters = conditions.length > 0;
-
+  const taskType = searchParams.get('taskType') || undefined;
   const statusFilter = searchParams.get('status');
   const priorityFilter = searchParams.get('priority');
-  const typeFilter: 'all' | 'assigned' | 'unassigned' | 'my-tasks' = searchParams.get('type') as
-    | 'all'
-    | 'assigned'
-    | 'unassigned'
-    | 'my-tasks';
+
   const assignedToFilter = searchParams.get('assignedTo') || undefined;
 
   // Reset pageIndex when pageSize changes
@@ -124,7 +120,8 @@ export const TaskSuperVisorList = ({
           userId,
           normalizedStatus,
           normalizedPriority,
-          assignedToFilter
+          assignedToFilter,
+          taskType
         );
 
         const responseIds = await taskIdsByType(
@@ -133,7 +130,8 @@ export const TaskSuperVisorList = ({
           userId,
           normalizedStatus,
           normalizedPriority,
-          assignedToFilter
+          assignedToFilter,
+          taskType
         );
 
         if (response?.success && responseIds?.success) {
@@ -149,7 +147,7 @@ export const TaskSuperVisorList = ({
         if (error instanceof Error) {
           toast({
             variant: 'destructive',
-            title: `Failed to fetch ${typeFilter ?? 'unassigned'} tasks`,
+            title: `Failed to fetch ${assignedToFilter ?? 'unassigned'} tasks`,
             description: error.message || 'Something went wrong!',
             icon: <CircleX size={40} />,
           });
@@ -166,8 +164,8 @@ export const TaskSuperVisorList = ({
       toast,
       statusFilter,
       priorityFilter,
-      typeFilter,
       assignedToFilter,
+      taskType,
       reload,
       searchResults,
     ]
@@ -185,7 +183,7 @@ export const TaskSuperVisorList = ({
       // Explicitly fetch with null cursor
       fetchNormalTasks(null);
     }
-  }, [statusFilter, priorityFilter, searchTerm, assignedToFilter, duration]);
+  }, [statusFilter, priorityFilter, searchTerm, assignedToFilter, duration, taskType, reload]);
 
   // Fetch normal tasks on initial load
   useEffect(() => {

@@ -40,6 +40,7 @@ function mapTaskToGantt(task: TaskTable): GanttTask | null {
   return {
     id: String(task.id),
     name: task.title ?? 'Untitled Task',
+    type: task.type,
     start: formatDateYYYYMMDD(task.createdAt),
     end: makeEndExclusive(task.dueDate),
     progress: 0,
@@ -70,6 +71,7 @@ const Gantt = ({
   taskOffering = false,
   advancedFilterLoading,
   data,
+  reload,
 }: {
   user: UserState | null;
   searchTerm?: string;
@@ -77,6 +79,7 @@ const Gantt = ({
   taskOffering?: boolean;
   advancedFilterLoading?: boolean;
   data?: TaskTable[] | null;
+  reload?: boolean;
 }) => {
   const searchParams = useSearchParams();
   const chartRef = useRef<ChartHandle>(null);
@@ -93,6 +96,7 @@ const Gantt = ({
   const statusFilter = searchParams.get('status');
   const priorityFilter = searchParams.get('priority');
   const assignedToFilter = searchParams.get('assignedTo') || undefined;
+  const taskType = searchParams.get('taskType') || undefined;
 
   const { loadMore: loadMoreAdvanced, hasNextCursor, filtersCleared } = useAdvancedFilterContext();
 
@@ -156,6 +160,7 @@ const Gantt = ({
           normalizedStatus,
           normalizedPriority,
           assignedToFilter,
+          taskType,
           undefined, // clientId
           undefined, // categoryId
           undefined, // sortBy
@@ -171,6 +176,7 @@ const Gantt = ({
           [],
           [],
           filters?.assignedToId,
+          filters?.taskType,
           filters?.clientId,
           filters?.categoryId,
           filters?.sortBy,
@@ -221,6 +227,7 @@ const Gantt = ({
       fetchTasks(null);
     }
   }, [
+    reload,
     filtersUpdate,
     user?.id,
     searchTerm,
@@ -228,6 +235,7 @@ const Gantt = ({
     statusFilter,
     priorityFilter,
     assignedToFilter,
+    taskType,
     filtersCleared,
   ]);
 

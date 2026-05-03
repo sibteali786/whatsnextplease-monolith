@@ -5,7 +5,7 @@ import { TaskService, BatchUpdateRequest, BatchDeleteRequest } from '../services
 import { asyncHandler } from '../utils/handlers/asyncHandler';
 import { BadRequestError, ValidationError } from '@wnp/types';
 import { DurationEnum } from '@wnp/types';
-import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType } from '@prisma/client';
+import { TaskStatusEnum, TaskPriorityEnum, Roles, CreatorType, TaskType } from '@prisma/client';
 import z from 'zod';
 import prisma from '../config/db';
 import { logger } from '../utils/logger';
@@ -140,6 +140,7 @@ export class TaskController {
       const status = req.query.status as TaskStatusEnum;
       const priority = req.query.priority as TaskPriorityEnum;
       const assignedToId = req.query.assignedToId as string;
+      const taskType = req.query.taskType as TaskType;
       const clientId = req.query.clientId as string;
       const categoryId = req.query.categoryId as string;
       const sortBy = req.query.sortBy as string;
@@ -189,6 +190,7 @@ export class TaskController {
         status,
         priority,
         assignedToId: processedAssignedToId,
+        taskType,
         clientId,
         categoryId,
         context,
@@ -601,11 +603,11 @@ export class TaskController {
       }
       const {
         pageSize,
-
         cursors: rootCursors,
         search,
         userId,
         assignedToId,
+        taskType,
         categoryId,
         duration,
         clientId,
@@ -653,6 +655,9 @@ export class TaskController {
         pageSize: pageSizeNum,
         searchTerm: search || taskOfferingFilters?.searchTerm || '',
         assignedToId: processedAssignedToId as string,
+        taskType: taskOffering
+          ? (taskOfferingFilters?.taskType as TaskType)
+          : (taskType as TaskType),
         categoryId: categoryId as string,
         duration: taskOffering ? taskOfferingFilters?.duration : (duration as DurationEnum),
         clientId: clientId as string | undefined,

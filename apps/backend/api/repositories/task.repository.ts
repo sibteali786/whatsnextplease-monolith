@@ -6,6 +6,7 @@ import {
   TaskPriorityEnum,
   CreatorType,
   Roles,
+  TaskType,
 } from '@prisma/client';
 import { USER_CREATED_TASKS_CONTEXT } from '../utils/tasks/taskPermissions';
 // import { DurationEnum } from '@wnp/types';
@@ -18,6 +19,7 @@ export interface TaskFilters {
   status?: TaskStatusEnum | TaskStatusEnum[];
   priority?: TaskPriorityEnum | TaskPriorityEnum[];
   assignedToId?: string | null | { not: null };
+  taskType?: TaskType;
   categoryId?: string;
   clientId?: string;
 }
@@ -52,6 +54,7 @@ export class TaskRepository {
       status,
       priority,
       assignedToId,
+      taskType,
       categoryId,
       clientId,
     } = filters;
@@ -68,6 +71,9 @@ export class TaskRepository {
         priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
       }),
       ...(assignedToId !== undefined && { assignedToId: assignedToId }),
+      ...(taskType && {
+        type: taskType,
+      }),
       ...(clientId && {
         OR: [{ createdByClientId: clientId }, { associatedClientId: clientId }],
       }),
@@ -111,6 +117,7 @@ export class TaskRepository {
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
+        type: true,
         associatedClient: {
           select: { id: true, companyName: true, contactName: true, avatarUrl: true },
         },
@@ -204,6 +211,7 @@ export class TaskRepository {
         associatedClient: {
           select: { id: true, companyName: true, contactName: true, avatarUrl: true },
         },
+        type: true,
         assignedToId: true,
         associatedClientId: true,
         dueDate: true,
@@ -248,6 +256,7 @@ export class TaskRepository {
       status,
       priority,
       assignedToId,
+      taskType,
       categoryId,
     } = filters;
 
@@ -259,6 +268,7 @@ export class TaskRepository {
         priority: { priorityName: { in: Array.isArray(priority) ? priority : [priority] } },
       }),
       ...(assignedToId !== undefined && { assignedToId }),
+      ...(taskType && { type: taskType }),
       /*   ...(categoryId && { categoryId }), */
       ...(categoryId && { taskCategoryId: categoryId }),
       ...(searchTerm && {

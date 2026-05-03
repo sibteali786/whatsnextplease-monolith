@@ -185,6 +185,7 @@ class TaskApiClient {
     taskOfferingFilters?: {
       normalizedPriority?: TaskPriorityEnum | TaskPriorityEnum[];
       assignedToFilter?: string;
+      taskType?: string;
       searchTerm?: string;
       duration?: DurationEnum;
       page?: number;
@@ -196,7 +197,6 @@ class TaskApiClient {
       statuses: statuses.join(','),
       taskOffering,
       taskOfferingFilters,
-
       ...filters,
     };
 

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum, TaskType } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
 import { z } from 'zod';
@@ -85,8 +85,15 @@ export const generateUserTaskColumns = (
         </Button>
       ),
       cell: ({ row }) => {
+        const type = row.original.type;
         const serialNumber: string = row.getValue('serialNumber');
-        return <SerialNumberBadge serialNumber={serialNumber} />;
+        const bgColor =
+          type === TaskType.EXTERNAL
+            ? 'bg-primary'
+            : type === TaskType.INTERNAL
+              ? 'bg-blue-500 hover:bg-blue-600'
+              : 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+        return <SerialNumberBadge className={`${bgColor}`} serialNumber={serialNumber} />;
       },
     },
     {

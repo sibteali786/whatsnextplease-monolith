@@ -1,4 +1,4 @@
-import { BadgeCheck, ChevronsUpDown, Copy, CreditCard } from 'lucide-react';
+import { BadgeCheck, ChevronsUpDown, Copy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
   DropdownMenu,
@@ -79,10 +79,6 @@ export const NavUser: React.FC<NavUserProps> = ({ user }) => {
             <DropdownMenuItem onClick={() => router.push('/settings/myprofile')}>
               <BadgeCheck className="mr-2" />
               Account
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
-              <CreditCard className="mr-2" />
-              Billing
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigator.clipboard.writeText(user.id)}>
               <Copy className="mr-2" />

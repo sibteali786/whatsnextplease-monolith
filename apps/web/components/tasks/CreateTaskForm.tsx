@@ -2,7 +2,7 @@
 
 import { UseFormReturn } from 'react-hook-form';
 import { format } from 'date-fns';
-import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum, TaskType } from '@prisma/client';
 import { transformEnumValue } from '@/utils/utils';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Input } from '@/components/ui/input';
@@ -297,6 +297,36 @@ export const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                 </div>
               )}
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        {/* Task Type */}
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Task Type</FormLabel>
+              <FormControl>
+                <div className="flex gap-2 ">
+                  <Button
+                    type="button"
+                    variant={field.value === TaskType.INTERNAL ? 'default' : 'outline'}
+                    className="h-[50px] w-[50%]"
+                    onClick={() => field.onChange(TaskType.INTERNAL)}
+                  >
+                    Internal
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={field.value === TaskType.EXTERNAL ? 'default' : 'outline'}
+                    className="h-[50px] w-[50%]"
+                    onClick={() => field.onChange(TaskType.EXTERNAL)}
+                  >
+                    External
+                  </Button>
+                </div>
+              </FormControl>
             </FormItem>
           )}
         />
