@@ -1,7 +1,7 @@
 // apps/web/app/(dashboard)/settings/layout.tsx - Updated version
 
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -13,22 +13,50 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { User2, Bell, CreditCard, List, Shield, Workflow } from 'lucide-react';
+import { User2, Bell, List, Shield, Workflow } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { LinkButton } from '@/components/ui/LinkButton';
+import { getCurrentUser, UserState } from '@/utils/user';
 
-const menuItems = [
-  { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
-  { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
-  { icon: CreditCard, label: 'Billing', href: '/settings/billing' },
-  { icon: List, label: 'Picklist', href: '/settings/picklists' },
-  { icon: Shield, label: 'Permissions', href: '/settings/permissions' },
-  { icon: Workflow, label: 'Integrations', href: '/settings/integrations' },
-];
+const menuItems = {
+  SUPER_USER: [
+    { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
+    { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
+    { icon: List, label: 'Picklist', href: '/settings/picklists' },
+    { icon: Shield, label: 'Permissions', href: '/settings/permissions' },
+    { icon: Workflow, label: 'Integrations', href: '/settings/integrations' },
+  ],
+  TASK_AGENT: [
+    { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
+    { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
+    { icon: Workflow, label: 'Integrations', href: '/settings/integrations' },
+  ],
+  CLIENT: [
+    { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
+    { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
+  ],
+  TASK_SUPERVISOR: [
+    { icon: User2, label: 'My Profile', href: '/settings/myprofile' },
+    { icon: Bell, label: 'Notifications', href: '/settings/notifications' },
+    { icon: List, label: 'Picklist', href: '/settings/picklists' },
+    { icon: Workflow, label: 'Integrations', href: '/settings/integrations' },
+  ],
+};
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  const [user, setUser] = useState<UserState | null>(null);
+
+  useEffect(() => {
+    const fetchDependencies = async () => {
+      const loggedInUser = await getCurrentUser();
+      setUser(loggedInUser);
+    };
+    fetchDependencies();
+  }, []);
+
+  const role = user?.role?.name as keyof typeof menuItems;
   return (
     <div className="min-h-screen w-full">
       <div className="p-4">
@@ -48,7 +76,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                       </SidebarGroupLabel>
                       <SidebarGroupContent>
                         <SidebarMenu className="flex flex-col items-start gap-2">
-                          {menuItems.map(item => (
+                          {menuItems[role]?.map(item => (
                             <SidebarMenuItem key={item.label}>
                               <SidebarMenuButton
                                 asChild

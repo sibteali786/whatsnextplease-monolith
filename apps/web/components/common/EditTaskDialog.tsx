@@ -24,7 +24,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum, TaskType } from '@prisma/client';
 import {
   parseOriginalEstimate,
   transformEnumValue,
@@ -70,6 +70,7 @@ const editTaskSchema = z.object({
   taskCategoryName: z.string().min(1, 'Task Category is required'),
   assignedToId: z.string().optional(),
   assignedToClientId: z.string().optional(),
+  type: z.nativeEnum(TaskType).optional(),
   skills: z.array(z.string()).optional(),
   timeForTask: z
     .string()
@@ -414,6 +415,7 @@ export default function EditTaskDialog({
         assignedToClientId: task?.associatedClient?.id || '',
         skills: task.taskSkills || [],
         timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
+        type: task.type as TaskType,
         overTime:
           task.overTime && Number(task.overTime) > 0
             ? formatOriginalEstimate(Number(task.overTime))
@@ -668,12 +670,12 @@ export default function EditTaskDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[700px] max-h-[98%] overflow-hidden px-0">
-          <DialogHeader className="px-6 flex flex-row gap-2 items-center">
+          <DialogHeader className="px-6 pr-9 flex flex-row gap-2 items-center">
             <DialogTitle>Edit Task</DialogTitle>
             {/* NEW: Serial Number Display */}
             {task.serialNumber && (
               <div className="ml-auto">
-                <SerialNumberBadge serialNumber={task.serialNumber} showCopy={true} size="md" />
+                <SerialNumberBadge serialNumber={task.serialNumber} showCopy={false} size="md" />
               </div>
             )}
           </DialogHeader>
@@ -807,7 +809,36 @@ export default function EditTaskDialog({
                   </div>
                 </FormItem>
               )}
-
+              {/* Task Type */}
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task Type</FormLabel>
+                    <FormControl>
+                      <div className="flex gap-2 ">
+                        <Button
+                          type="button"
+                          variant={field.value === TaskType.INTERNAL ? 'default' : 'outline'}
+                          className="h-[50px] w-[50%]"
+                          onClick={() => field.onChange(TaskType.INTERNAL)}
+                        >
+                          Internal
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={field.value === TaskType.EXTERNAL ? 'default' : 'outline'}
+                          className="h-[50px] w-[50%]"
+                          onClick={() => field.onChange(TaskType.EXTERNAL)}
+                        >
+                          External
+                        </Button>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               {/* Priority - Conditional editing */}
               {canEditPriority ? (
                 <FormField

@@ -1,5 +1,11 @@
 import { DurationEnum } from '@/types';
-import { Prisma, Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import {
+  Prisma,
+  Roles,
+  TaskPriorityEnum,
+  TaskStatusEnum,
+  TaskType as PrismaTaskType,
+} from '@prisma/client';
 import { z } from 'zod';
 // Shared Zod schema for registration
 export const registerSchema = z
@@ -285,6 +291,7 @@ export const TaskSchema = z.object({
       avatarUrl: z.string().nullable(),
     })
     .nullable(),
+  type: z.nativeEnum(PrismaTaskType).optional(),
   associatedClient: z
     .object({
       id: z.string(),

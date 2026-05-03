@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Roles, TaskPriorityEnum, TaskStatusEnum } from '@prisma/client';
+import { Roles, TaskPriorityEnum, TaskStatusEnum, TaskType } from '@prisma/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, CheckCircle, CircleX } from 'lucide-react';
 import { parseOriginalEstimate, trimWhitespace } from '@/utils/utils';
@@ -38,6 +38,7 @@ export const createTaskSchema = z.object({
     .optional(),
   assignedToId: z.string().optional(),
   assignedToClientId: z.string().optional(),
+  type: z.nativeEnum(TaskType).optional(),
   timeForTask: z
     .string()
     .min(1, 'Time for Task is required')
