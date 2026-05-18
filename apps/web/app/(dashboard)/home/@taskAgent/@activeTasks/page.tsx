@@ -58,7 +58,7 @@ const ActiveTasks = async () => {
 
   return (
     <div className="col-span-2">
-      <Card className="p-6 rounded-2xl shadow-m flex">
+      <Card className="p-6 rounded-2xl shadow-m flex flex-col sm:flex-row">
         {success ? (
           <div className="w-full flex flex-col gap-4">
             <CountLabel

@@ -5,12 +5,13 @@ import { CountLabel } from '@/components/common/CountLabel';
 import { TaskAgentChart } from '@/components/tasks/ChartTasks';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getCurrentUser } from '@/utils/user';
+import { getCurrentUser, UserState } from '@/utils/user';
 import { Roles } from '@prisma/client';
 import { CircleX } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { taskApiClient } from '@/utils/taskApi'; // UPDATED: Use backend API
 import { ChartConfig } from '@/components/ui/chart';
+import { getTasksCountByStatus } from '@/db/repositories/tasks/getTasksCountByStatus';
 
 const chartConfig = {
   unassignedTasks: {
@@ -21,15 +22,31 @@ const chartConfig = {
     label: 'Assigned',
     color: 'hsl(var(--chart-2))',
   },
+  progress: {
+    label: 'In-Progress',
+    color: 'hsl(var(--chart-3))',
+  },
+  review: {
+    label: 'In-Review',
+    color: 'hsl(var(--chart-4))',
+  },
 } satisfies ChartConfig;
 
 export type TasksCountType = {
   UnassignedTasks: number;
   AssignedTasks: number;
+  IN_PROGRESS?: number;
+  IN_REVIEW?: number;
+};
+
+const TaskCount = async (userId: string) => {
+  const { tasksWithStatus } = await getTasksCountByStatus(userId, Roles.TASK_SUPERVISOR);
+  return tasksWithStatus;
 };
 
 const TaskSummaryPage = () => {
   const [tasks, setTasks] = useState<TasksCountType>();
+  const [user, setUser] = useState<UserState | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const desktopData = [
@@ -43,18 +60,46 @@ const TaskSummaryPage = () => {
       desktop: tasks?.AssignedTasks ?? 0,
       fill: 'var(--color-assignedTasks)',
     },
+    {
+      type: 'progress',
+      desktop: tasks?.IN_PROGRESS ?? 0,
+      fill: 'var(--color-progress)',
+    },
+    {
+      type: 'review',
+      desktop: tasks?.IN_REVIEW ?? 0,
+      fill: 'var(--color-review)',
+    },
   ];
+
+  useEffect(() => {
+    const fetchTaskCounts = async (userId: string) => {
+      const taskCounts = await TaskCount(userId);
+
+      setTasks(prev => ({
+        UnassignedTasks: prev?.UnassignedTasks ?? 0,
+        AssignedTasks: prev?.AssignedTasks ?? 0,
+        IN_PROGRESS: taskCounts?.IN_PROGRESS ?? 0,
+        IN_REVIEW: taskCounts?.REVIEW ?? 0,
+      }));
+    };
+
+    if (user?.id) {
+      fetchTaskCounts(user.id);
+    }
+  }, [user]);
   useEffect(() => {
     const fetchTasksCount = async () => {
       try {
         setIsLoading(true);
         const user = await getCurrentUser();
-
+        setUser(user);
         // Check for authorized roles
         if (user?.role?.name !== Roles.TASK_SUPERVISOR) {
           return null;
         }
         const response = await taskApiClient.getTasksCount(user.id, 'taskAssignmentStatus');
+
         if (response.success) {
           // Transform backend response to match expected format
           const taskCounts = {
@@ -62,7 +107,12 @@ const TaskSummaryPage = () => {
             AssignedTasks: response.data?.assigned || 0,
           };
 
-          setTasks(taskCounts);
+          setTasks(prev => ({
+            UnassignedTasks: taskCounts.UnassignedTasks,
+            AssignedTasks: taskCounts.AssignedTasks,
+            IN_PROGRESS: prev?.IN_PROGRESS ?? 0,
+            IN_REVIEW: prev?.IN_REVIEW ?? 0,
+          }));
           setSuccess(true);
         } else {
           throw new Error(response.message || 'Failed to fetch task counts');
@@ -77,10 +127,9 @@ const TaskSummaryPage = () => {
 
     fetchTasksCount();
   }, []);
-
   return (
     <div className="col-span-2">
-      <Card className="p-6 rounded-2xl shadow-m flex">
+      <Card className="p-6 rounded-2xl shadow-m flex flex-col sm:flex-row">
         {isLoading ? (
           <div className="flex flex-col gap-8 w-full">
             <Skeleton className="h-[30px] w-[200px]" />
@@ -117,6 +166,28 @@ const TaskSummaryPage = () => {
                 countSize="text-5xl"
                 labelSize="lg"
                 squareColor={chartConfig.assignedTasks.color}
+              />
+              <CountLabel
+                lineHeight={'normal'}
+                label={'In-Progress'}
+                count={tasks?.IN_PROGRESS ?? 0}
+                align="start"
+                isList={true}
+                listOpacity={30}
+                countSize="text-4xl"
+                labelSize="lg"
+                squareColor={chartConfig.progress.color}
+              />
+              <CountLabel
+                lineHeight={'normal'}
+                label={'In-Review'}
+                count={tasks?.IN_REVIEW ?? 0}
+                align="start"
+                isList={true}
+                listOpacity={30}
+                countSize="text-3xl"
+                labelSize="lg"
+                squareColor={chartConfig.review.color}
               />
             </div>
           </div>

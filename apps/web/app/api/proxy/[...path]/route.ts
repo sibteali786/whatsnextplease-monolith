@@ -183,10 +183,11 @@ async function handleRequest(request: NextRequest, params: { path: string[] }, m
         contentType.includes('multipart/form-data') ||
         contentType.includes('application/octet-stream')
       ) {
-        // Forward raw body for file uploads
-        options.body = await request.blob();
-        // Don't set Content-Type — let fetch set it with boundary
-        delete (headers as Record<string, string>)['Content-Type'];
+        options.body = request.body;
+
+        (options as RequestInit & { duplex: 'half' }).duplex = 'half';
+
+        headers['Content-Type'] = contentType;
       } else {
         try {
           const body = await request.json();
