@@ -14,6 +14,7 @@ const getUsers = async ({ cursor, pageSize = 10, search = '' }: GetUsersListPara
     const searchFilter = search?.trim()
       ? {
           OR: [
+            { username: { contains: search, mode: Prisma.QueryMode.insensitive } },
             { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
             { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
             { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
@@ -36,6 +37,7 @@ const getUsers = async ({ cursor, pageSize = 10, search = '' }: GetUsersListPara
       select: {
         id: true,
         designation: true,
+        username: true,
         firstName: true,
         lastName: true,
         address: true,
