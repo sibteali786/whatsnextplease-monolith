@@ -415,7 +415,7 @@ export default function EditTaskDialog({
         assignedToClientId: task?.associatedClient?.id || '',
         skills: task.taskSkills || [],
         timeForTask: formatOriginalEstimate(Number(task.timeForTask)) ?? '1d',
-        type: task.type as TaskType,
+        type: task?.type || undefined,
         overTime:
           task.overTime && Number(task.overTime) > 0
             ? formatOriginalEstimate(Number(task.overTime))

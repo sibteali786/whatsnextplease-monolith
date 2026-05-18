@@ -97,6 +97,29 @@ export const generateUserTaskColumns = (
       },
     },
     {
+      id: 'client',
+      header: ({ column }: { column: Column<TaskTable, unknown> }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Client
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const createdByClient = row.original.createdByClient;
+        const associatedClient = row.original.associatedClient;
+        const client = createdByClient || associatedClient;
+        const companyName = client?.companyName?.trim();
+        const contactName = client?.contactName?.trim();
+
+        const displayName = companyName || contactName || 'N/A';
+
+        return <span>{displayName}</span>;
+      },
+    },
+    {
       accessorKey: 'taskCategory',
       header: ({ column }) => (
         <Button
@@ -392,29 +415,7 @@ export const generateUserTaskColumns = (
         );
       },
     },
-    {
-      id: 'client',
-      header: ({ column }: { column: Column<TaskTable, unknown> }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Client
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const createdByClient = row.original.createdByClient;
-        const associatedClient = row.original.associatedClient;
-        const client = createdByClient || associatedClient;
-        const companyName = client?.companyName?.trim();
-        const contactName = client?.contactName?.trim();
 
-        const displayName = companyName || contactName || 'N/A';
-
-        return <span>{displayName}</span>;
-      },
-    },
     {
       id: 'createdByUser',
       header: ({ column }: { column: Column<TaskTable, unknown> }) => (

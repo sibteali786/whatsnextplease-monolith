@@ -14,14 +14,20 @@ export const getTasksCountByStatus = async (
 ): Promise<GetTasksCountByStatusResponse> => {
   try {
     // Validate the role
-    if (role !== Roles.TASK_AGENT && role !== Roles.CLIENT) {
-      const error = new Error('Invalid role. Only Task Agent and Client are supported.');
+    if (role !== Roles.TASK_AGENT && role !== Roles.CLIENT && role !== Roles.TASK_SUPERVISOR) {
+      const error = new Error(
+        'Invalid role. Only Task Agent, Client, and Task Supervisor are supported.'
+      );
       return handleError(error, 'getTasksCountByStatus') as GetTasksCountByStatusResponse;
     }
 
     // Determine where condition based on role
     const whereCondition =
-      role === Roles.TASK_AGENT ? { assignedToId: userId } : { createdByClientId: userId };
+      role === Roles.TASK_AGENT
+        ? { assignedToId: userId }
+        : role === Roles.CLIENT
+          ? { createdByClientId: userId }
+          : { assignedToId: undefined }; // For Task Supervisor, we want to include all tasks regardless of assignment
 
     // Fetch task counts grouped by their status (excluding overdue for now)
     const taskCounts = await prisma.task.groupBy({

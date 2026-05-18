@@ -12,7 +12,7 @@ export default function ProfileBanner({ user }: { user: UserState }) {
     router.push('/settings/myprofile');
   };
   return (
-    <Card className="h-[70px] rounded-2xl p-2 px-3 shadow-m flex mx-4 items-center justify-between profile-banner">
+    <Card className="h-auto sm:h-[70px] rounded-2xl p-2 px-3 shadow-m  flex-col sm:flex-row gap-2 flex mx-4 items-center justify-between profile-banner">
       <div className="flex items-center gap-3">
         <div className="rounded-xl p-2 border-2 border-primary">
           <UserCircle2 className="w-6 h-6 text-primary" />
@@ -26,7 +26,9 @@ export default function ProfileBanner({ user }: { user: UserState }) {
           </p>
         </div>
       </div>
-      <Button onClick={handleUpdateProfile}>Update Profile</Button>
+      <Button onClick={handleUpdateProfile} className="w-full sm:w-auto">
+        Update Profile
+      </Button>
     </Card>
   );
 }
