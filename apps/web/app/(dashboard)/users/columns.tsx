@@ -34,6 +34,7 @@ export const UserSchema = z.object({
   role: z.string().nullable(),
   firstName: z.string(),
   lastName: z.string(),
+  username: z.string().optional(),
   address: z.string().nullable(),
   city: z.string().nullable(),
   state: z.string().nullable(),
@@ -243,6 +244,18 @@ export const createColumns = (
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Roles
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+    },
+    {
+      accessorKey: 'username',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          User Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
