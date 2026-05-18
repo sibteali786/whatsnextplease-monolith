@@ -264,7 +264,7 @@ const TaskViewFilterComponent = ({ role }: { role?: Roles }) => {
     fetchViews();
   }, []);
   return (
-    <div className="flex items-center gap-2 rounded-[16px] border px-3 py-1 w-fit">
+    <div className="flex items-center gap-2 rounded-[16px] border px-3 py-1 w-fit flex-wrap">
       {Object.keys(filters).length !== 0 && (
         <Button variant={'destructive'} onClick={clearFilters} className="bg-opacity-40">
           Clear All

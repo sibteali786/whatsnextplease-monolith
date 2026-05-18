@@ -400,7 +400,7 @@ export class UserService {
             },
           },
         },
-        take: 10,
+        take: 20,
         orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
       });
 

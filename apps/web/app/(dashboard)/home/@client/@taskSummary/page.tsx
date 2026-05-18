@@ -154,7 +154,7 @@ const TaskSummaryPage = () => {
 
   return (
     <div className="col-span-2">
-      <Card className="p-6 rounded-2xl shadow-m flex">
+      <Card className="p-6 rounded-2xl shadow-m flex flex-col sm:flex-row">
         <div className="space-y-7 w-full">
           <h2 className="font-bold text-2xl">Progress</h2>
           <div className="w-full flex flex-col gap-4">

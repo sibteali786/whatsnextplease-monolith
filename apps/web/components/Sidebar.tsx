@@ -7,7 +7,6 @@ import {
   Settings,
   LayoutDashboard,
   Gamepad2,
-  FolderClock,
   UserCheck,
   Menu,
   ChevronLeft,
@@ -43,7 +42,6 @@ const ROLE_PERMISSIONS: Record<
   ],
   CLIENT: [
     { path: '/home', label: 'Home', Icon: Home },
-    { path: '/workhistory', label: 'Work History', Icon: FolderClock },
     { path: '/settings', label: 'Settings', Icon: Settings },
   ],
   TASK_SUPERVISOR: [
