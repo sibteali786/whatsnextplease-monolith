@@ -94,7 +94,10 @@ export class ClientService {
 
   async createClient(clientData: z.infer<typeof CreateClientSchema>) {
     return await prisma.client.create({
-      data: { ...clientData },
+      data: {
+        ...clientData,
+        role: { connect: { name: Roles.CLIENT } },
+      },
       select: {
         id: true,
         username: true,
