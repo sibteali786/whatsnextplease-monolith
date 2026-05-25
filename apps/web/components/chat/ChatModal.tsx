@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useChatAuth } from '@/hooks/use-chat-auth';
+import { useChatAuth, handleChatAuthError } from '@/hooks/use-chat-auth';
 
 interface ChatModalProps {
   /** Modal title */
@@ -123,6 +123,17 @@ export default function ChatModal({
     }
   }, [isFullscreen, internalOpen]);
 
+  // Handle chat auth errors from iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.source === 'chat-app' && event.data?.type === 'CHAT_AUTH_ERROR') {
+        handleChatAuthError(iframeRef);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []); // [] is correct — iframeRef is a useRef, stable across renders
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -206,10 +217,14 @@ export default function ChatModal({
           {authError && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
               <div className="flex flex-col items-center gap-4 text-center p-6">
-                <div className="text-destructive text-lg font-semibold">Authentication Failed</div>
+                <div className="text-destructive text-lg font-semibold">
+                  {authError?.includes('Session expired')
+                    ? 'Session Expired'
+                    : 'Authentication Failed'}
+                </div>
                 <p className="text-muted-foreground text-sm max-w-md">{authError}</p>
                 <Button onClick={() => window.location.reload()} variant="outline">
-                  Retry
+                  {authError?.includes('Session expired') ? 'Refresh Page' : 'Retry'}
                 </Button>
               </div>
             </div>

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { useChatAuth } from '@/hooks/use-chat-auth';
+import { useChatAuth, handleChatAuthError } from '@/hooks/use-chat-auth';
 
 const CHAT_BASE_URL = (process.env.NEXT_PUBLIC_CHAT_APP_URL || 'http://localhost:3000').replace(
   /\/embed\/?$/,
@@ -58,7 +58,7 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
     }
   }, [isAuthenticating, authError]);
 
-  // Listen for CHAT_READY message (optional, for tracking)
+  // Listen for CHAT_READY, CHAT_ERROR, and CHAT_AUTH_ERROR messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== new URL(CHAT_CONFIG.baseUrl).origin) {
@@ -78,6 +78,12 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
         console.error('❌ [WNP] Chat error:', event.data.payload?.error);
         setErrorDetails(event.data.payload?.error || 'Chat initialization failed');
         setLoadingState('error');
+      }
+
+      if (event.data?.source === 'chat-app' && event.data?.type === 'CHAT_AUTH_ERROR') {
+        console.error('❌ [WNP] Chat auth error');
+        handleChatAuthError(iframeRef);
+        return;
       }
     };
 
@@ -194,16 +200,23 @@ export default function FullPageChat({ className = '' }: FullPageChatProps) {
           )}
 
           <div className="flex gap-2 justify-center">
-            <Button
-              onClick={handleRetry}
-              variant="outline"
-              disabled={retryCount >= CHAT_CONFIG.maxRetries}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {retryCount >= CHAT_CONFIG.maxRetries
-                ? 'Max Retries'
-                : `Retry (${retryCount}/${CHAT_CONFIG.maxRetries})`}
-            </Button>
+            {errorDetails?.includes('Session expired') ? (
+              <Button onClick={() => window.location.reload()} variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Page
+              </Button>
+            ) : (
+              <Button
+                onClick={handleRetry}
+                variant="outline"
+                disabled={retryCount >= CHAT_CONFIG.maxRetries}
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                {retryCount >= CHAT_CONFIG.maxRetries
+                  ? 'Max Retries'
+                  : `Retry (${retryCount}/${CHAT_CONFIG.maxRetries})`}
+              </Button>
+            )}
 
             <Button asChild variant="outline">
               <a href={`${CHAT_CONFIG.embedUrl}`} target="_blank" rel="noopener noreferrer">
