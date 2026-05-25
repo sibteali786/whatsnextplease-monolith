@@ -41,7 +41,7 @@ export function SerialNumberPrefixInput({
           // If user hasnt set a custom prefix, use the suggested one
           if (!customPrefix) {
             setCustomPrefix(response.data.prefix);
-            onChange(undefined);
+            onChange(response.data.prefix);
           }
         }
       } catch (error) {
