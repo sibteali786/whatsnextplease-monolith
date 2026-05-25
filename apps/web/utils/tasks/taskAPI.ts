@@ -26,6 +26,7 @@ export interface UpdateTaskParams {
   overTime?: string;
   dueDate?: Date | null;
   initialComment?: string;
+  customPrefix?: string;
 }
 
 class TaskAPI {
