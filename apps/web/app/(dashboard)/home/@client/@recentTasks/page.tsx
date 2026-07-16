@@ -1,31 +1,23 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { taskPriorityColors, taskStatusColors } from '@/utils/taskUtilColorClasses';
-import { transformEnumValue } from '@/utils/utils';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { CallToAction } from '@/components/CallToAction';
+import { LinkButton } from '@/components/ui/LinkButton';
+import { ClipboardList, PlusCircle } from 'lucide-react';
 import { getCurrentUser } from '@/utils/user';
 import { Roles } from '@prisma/client';
-import { CallToAction } from '@/components/CallToAction';
-import { PlusCircle, ClipboardList } from 'lucide-react';
-import { LinkButton } from '@/components/ui/LinkButton';
 import { USER_CREATED_TASKS_CONTEXT } from '@/utils/commonUtils/taskPermissions';
 import { DurationEnum } from '@/types';
-import { TaskByUserIdResponse } from '@/utils/validationSchemas';
 import { taskApiServer } from '@/actions/taskActions';
-import { SerialNumberBadge } from '@/components/tasks/SerialNumberBadge';
+import { TaskByUserIdResponse } from '@/utils/validationSchemas';
+
+import RecentTasksTable from './task-table';
 
 const RecentTasksPage = async () => {
   const user = await getCurrentUser();
+
   if (user?.role?.name !== Roles.CLIENT) {
     return null;
   }
+
   const { data }: TaskByUserIdResponse = await taskApiServer.getTasksByUserId({
     userId: user.id,
     pageSize: 5,
@@ -33,6 +25,7 @@ const RecentTasksPage = async () => {
     duration: DurationEnum.ALL,
     context: USER_CREATED_TASKS_CONTEXT.GENERAL,
   });
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
@@ -43,7 +36,7 @@ const RecentTasksPage = async () => {
       </CardHeader>
 
       <CardContent>
-        {data && data?.length === 0 ? (
+        {(data?.length ?? 0) === 0 ? (
           <CallToAction
             title="No tasks found"
             link="/taskOfferings"
@@ -55,64 +48,18 @@ const RecentTasksPage = async () => {
             className="my-6"
           />
         ) : (
-          <Table className="border rounded-md">
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead>Serial</TableHead>
-                <TableHead className="font-medium">Task Details</TableHead>
-                <TableHead className="font-medium">Priority</TableHead>
-                <TableHead className="font-medium">Status</TableHead>
-                <TableHead className="text-right font-medium">Due Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data &&
-                data.map(task => (
-                  <TableRow
-                    key={task.id}
-                    className="hover:bg-muted/30 cursor-pointer transition-colors"
-                  >
-                    <TableCell className="font-medium">
-                      <SerialNumberBadge
-                        serialNumber={task.serialNumber}
-                        showCopy={true}
-                        size="md"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{task.description}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={`${taskPriorityColors[task.priority.priorityName]} py-1.5 px-2.5 text-xs font-medium`}
-                      >
-                        {transformEnumValue(task.priority.priorityName)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={`${taskStatusColors[task.status.statusName]} py-1.5 px-2.5 text-xs font-medium`}
-                      >
-                        {transformEnumValue(task.status.statusName)}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="text-right">
-                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : ''}
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
+          <RecentTasksTable tasks={data ?? []} />
         )}
       </CardContent>
 
-      {data && data.length > 0 && (
+      {(data?.length ?? 0) > 0 && (
         <CardFooter className="pt-1 pb-4 flex justify-end">
           <LinkButton
             href="/taskOfferings"
             className="flex items-center gap-1"
-            prefetch={true}
-            variant={'outline'}
-            size={'sm'}
+            prefetch
+            variant="outline"
+            size="sm"
           >
             <span>View All Tasks</span>
             <PlusCircle className="h-4 w-4 ml-1" />
