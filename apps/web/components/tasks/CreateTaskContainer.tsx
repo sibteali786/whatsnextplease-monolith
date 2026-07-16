@@ -132,6 +132,7 @@ export const CreateTaskContainer: React.FC<CreateTaskContainerProps> = ({
       // Do NOT reset if form was cancelled (preserve user's work)
       if (isFirstOpen || lastSubmissionWasSuccessful) {
         form.reset(getDefaultValues());
+        setCustomPrefix(undefined);
         setLastSubmissionWasSuccessful(false); // Reset flag after using it
         setIsFirstOpen(false); // No longer first open
       }
