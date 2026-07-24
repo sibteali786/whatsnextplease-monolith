@@ -155,9 +155,12 @@ export const UserTasks = ({
             // ...(selectedCategory ? [{ label: selectedCategory.categoryName }] : []),
           ]}
         />
-        <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
-          <Plus className="h-5 w-5" /> Create New Task
-        </Button>
+        {role !== Roles.CLIENT && (
+          <Button className="flex gap-2 font-bold text-base" onClick={() => createTaskHandler()}>
+            <Plus className="h-5 w-5" /> Create New Task
+          </Button>
+        )}
+
         <CreateTaskContainer open={open} setOpen={setOpen} fetchTasks={fetchTasks} />
       </div>
       <SearchNFilter

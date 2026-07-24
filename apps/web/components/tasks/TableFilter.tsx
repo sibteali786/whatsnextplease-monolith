@@ -334,30 +334,32 @@ export default function TableFilter({
         maxCount={1}
       />
       {/* View Toggle */}
-      <div className="flex gap-2 flex-wrap w-full justify-end">
-        <Button
-          variant={view === 'list' ? 'default' : 'outline'}
-          onClick={() => updateParams('view', 'list')}
-          size={'sm'}
-        >
-          List
-        </Button>
-        <Button
-          variant={view === 'timeline' ? 'default' : 'outline'}
-          onClick={() => updateParams('view', 'timeline')}
-          size={'sm'}
-        >
-          Timeline
-        </Button>
+      {role !== Roles.CLIENT && (
+        <div className="flex gap-2 flex-wrap w-full justify-end">
+          <Button
+            variant={view === 'list' ? 'default' : 'outline'}
+            onClick={() => updateParams('view', 'list')}
+            size={'sm'}
+          >
+            List
+          </Button>
+          <Button
+            variant={view === 'timeline' ? 'default' : 'outline'}
+            onClick={() => updateParams('view', 'timeline')}
+            size={'sm'}
+          >
+            Timeline
+          </Button>
 
-        <Button
-          variant={view === 'kanban' ? 'default' : 'outline'}
-          onClick={() => updateParams('view', 'kanban')}
-          size={'sm'}
-        >
-          Kanban
-        </Button>
-      </div>
+          <Button
+            variant={view === 'kanban' ? 'default' : 'outline'}
+            onClick={() => updateParams('view', 'kanban')}
+            size={'sm'}
+          >
+            Kanban
+          </Button>
+        </div>
+      )}
     </>
   );
 }
