@@ -1333,7 +1333,9 @@ export class TaskService {
           originalTask,
           changes,
           currentUser as CurrentUser,
-          assignedToClientId
+          assignedToClientId,
+          isAssignmentChanging,
+          isClientAssignmentChanging
         );
       }
     } catch (notificationError) {
@@ -1454,7 +1456,7 @@ export class TaskService {
           type: assignmentNotification.type,
           message: assignmentNotification.message,
           userId: updatedTask.assignedToId,
-          clientId: assignedToClientId || null,
+          clientId: null,
           data: assignmentNotification.data,
         });
 
@@ -1468,7 +1470,7 @@ export class TaskService {
             type: assignmentNotification.type,
             message: assignmentNotification.message,
             userId: updatedTask.assignedToId,
-            clientId: assignedToClientId || null,
+            clientId: null,
             data: assignmentNotification.data,
           }
         );
@@ -1476,6 +1478,51 @@ export class TaskService {
         await notificationService.updateDeliveryStatus(notification.id);
       } catch (error) {
         console.error('Failed to send assignment notification:', error);
+      }
+    }
+
+    // Notify assigned client if task was assigned to a client during creation
+    if (updatedTask.associatedClientId) {
+      try {
+        const clientAssignmentNotification = notificationFormatter.formatTaskAssignmentNotification(
+          {
+            taskId: updatedTask.id,
+            taskTitle: updatedTask.title,
+            priority: updatedTask.priority?.priorityName || TaskPriorityEnum.MEDIUM,
+            status: updatedTask.status?.statusName || TaskStatusEnum.NEW,
+            category: updatedTask.taskCategory?.categoryName || 'General',
+            currentUser,
+          }
+        );
+
+        const clientMessage = `Task "${updatedTask.title}" has been assigned to you by ${currentUser.name}`;
+
+        const notification = await notificationService.createNotification({
+          type: clientAssignmentNotification.type,
+          message: clientMessage,
+          userId: null,
+          clientId: updatedTask.associatedClientId,
+          data: clientAssignmentNotification.data,
+        });
+
+        await notificationService.deliverNotification(
+          {
+            type: clientAssignmentNotification.type,
+            message: clientMessage,
+            data: clientAssignmentNotification.data,
+          },
+          {
+            type: clientAssignmentNotification.type,
+            message: clientMessage,
+            userId: null,
+            clientId: updatedTask.associatedClientId,
+            data: clientAssignmentNotification.data,
+          }
+        );
+
+        await notificationService.updateDeliveryStatus(notification.id);
+      } catch (error) {
+        console.error('Failed to send client assignment notification:', error);
       }
     }
   }
@@ -1494,7 +1541,9 @@ export class TaskService {
       displayNewValue: string;
     }>,
     currentUser: CurrentUser,
-    assignedToClientId?: string
+    assignedToClientId?: string,
+    isAssignmentChanging?: boolean,
+    isClientAssignmentChanging?: boolean
   ) {
     const NotificationService = (await import('./notification.service')).NotificationService;
     const notificationService = new NotificationService();
@@ -1569,7 +1618,7 @@ export class TaskService {
     }
 
     // Handle NEW assignment notifications separately
-    if (originalTask.assignedToId !== updatedTask.assignedToId && updatedTask.assignedToId) {
+    if (isAssignmentChanging && updatedTask.assignedToId) {
       try {
         const assignmentNotification = formatter.formatTaskAssignmentNotification({
           taskId: updatedTask.id,
@@ -1584,7 +1633,7 @@ export class TaskService {
           type: assignmentNotification.type,
           message: assignmentNotification.message,
           userId: updatedTask.assignedToId,
-          clientId: assignedToClientId || null,
+          clientId: null,
           data: assignmentNotification.data,
         });
 
@@ -1598,7 +1647,7 @@ export class TaskService {
             type: assignmentNotification.type,
             message: assignmentNotification.message,
             userId: updatedTask.assignedToId,
-            clientId: assignedToClientId || null,
+            clientId: null,
             data: assignmentNotification.data,
           }
         );
@@ -1610,10 +1659,7 @@ export class TaskService {
     }
 
     // Handle NEW client assignment notifications
-    if (
-      originalTask.associatedClientId !== updatedTask.associatedClientId &&
-      updatedTask.associatedClientId
-    ) {
+    if (isClientAssignmentChanging && updatedTask.associatedClientId) {
       try {
         const clientAssignmentNotification = formatter.formatTaskAssignmentNotification({
           taskId: updatedTask.id,
@@ -1630,7 +1676,7 @@ export class TaskService {
         const notification = await notificationService.createNotification({
           type: clientAssignmentNotification.type,
           message: clientMessage,
-          userId: updatedTask.assignedToId || originalTask.assignedToId,
+          userId: null,
           clientId: updatedTask.associatedClientId,
           data: clientAssignmentNotification.data,
         });
@@ -1644,7 +1690,7 @@ export class TaskService {
           {
             type: clientAssignmentNotification.type,
             message: clientMessage,
-            userId: updatedTask.assignedToId || originalTask.assignedToId,
+            userId: null,
             clientId: updatedTask.associatedClientId,
             data: clientAssignmentNotification.data,
           }

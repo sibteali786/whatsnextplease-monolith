@@ -299,6 +299,15 @@ export default function TaskDetailsView({
                   : 'System'}
             </p>
           </div>
+          <Separator />
+          <div className="flex">
+            <h3 className="font-semibold w-1/4">Created At</h3>
+            <p className="w-3/4">
+              {taskDetails?.createdAt
+                ? new Date(taskDetails.createdAt).toLocaleDateString()
+                : 'N/A'}
+            </p>
+          </div>
 
           <Separator />
           <div className="flex">

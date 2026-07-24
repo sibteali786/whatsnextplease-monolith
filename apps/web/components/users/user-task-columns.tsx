@@ -466,19 +466,27 @@ export const generateUserTaskColumns = (
             </div>
           );
         } else {
-          return (
-            <div className="flex items-center">
-              <Button
-                variant="default"
-                onClick={e => {
-                  e.stopPropagation();
-                  return onEditTask && onEditTask(task);
-                }}
-              >
-                Assign
-              </Button>
-            </div>
-          );
+          if (role === Roles.CLIENT) {
+            return (
+              <div className="flex items-center">
+                <span className="text-muted-foreground italic">Unassigned</span>
+              </div>
+            );
+          } else {
+            return (
+              <div className="flex items-center">
+                <Button
+                  variant="default"
+                  onClick={e => {
+                    e.stopPropagation();
+                    return onEditTask && onEditTask(task);
+                  }}
+                >
+                  Assign
+                </Button>
+              </div>
+            );
+          }
         }
       },
     },
@@ -489,42 +497,46 @@ export const generateUserTaskColumns = (
 
         return (
           <div className="flex gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={e => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(task.id);
-                  }}
-                >
-                  Copy Task ID
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={e => {
-                    e.stopPropagation(); // Prevents the row click event
-                    return onEditTask && onEditTask(task);
-                  }}
-                >
-                  Edit Task
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={async e => {
-                    e.stopPropagation();
-                    return deleteTask && deleteTask(task.id);
-                  }}
-                >
-                  Delete Task
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {role !== Roles.CLIENT && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0">
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={e => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(task.id);
+                    }}
+                  >
+                    Copy Task ID
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    onClick={e => {
+                      e.stopPropagation(); // Prevents the row click event
+                      return onEditTask && onEditTask(task);
+                    }}
+                  >
+                    Edit Task
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async e => {
+                      e.stopPropagation();
+                      return deleteTask && deleteTask(task.id);
+                    }}
+                  >
+                    Delete Task
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
