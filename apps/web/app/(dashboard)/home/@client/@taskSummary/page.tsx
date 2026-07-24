@@ -10,6 +10,7 @@ import { Roles } from '@prisma/client';
 import { CircleX, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ChartConfig } from '@/components/ui/chart';
+
 const chartConfig = {
   progress: {
     label: 'In-Progress',
@@ -28,6 +29,7 @@ const chartConfig = {
     color: 'hsl(var(--chart-4))',
   },
 } satisfies ChartConfig;
+
 interface TaskStatusCounts {
   IN_PROGRESS?: number;
   COMPLETED?: number;
@@ -167,6 +169,7 @@ const TaskSummaryPage = () => {
               listOpacity={70}
               countSize="text-7xl"
               squareColor={chartConfig.progress.color}
+              status="IN_PROGRESS"
             />
             <CountLabel
               lineHeight={'normal'}
@@ -178,6 +181,7 @@ const TaskSummaryPage = () => {
               countSize="text-5xl"
               labelSize="lg"
               squareColor={chartConfig.completed.color}
+              status="COMPLETED"
             />
             <CountLabel
               lineHeight={'normal'}
@@ -189,6 +193,7 @@ const TaskSummaryPage = () => {
               countSize="text-4xl"
               labelSize="lg"
               squareColor={chartConfig.overdue.color}
+              status="OVERDUE"
             />
             <CountLabel
               lineHeight={'normal'}
@@ -200,6 +205,7 @@ const TaskSummaryPage = () => {
               countSize="text-3xl"
               labelSize="lg"
               squareColor={chartConfig.new.color}
+              status="NEW"
             />
           </div>
         </div>
