@@ -24,7 +24,7 @@ const callToActionVariants = cva(
 interface CallToActionProps extends React.HTMLAttributes<HTMLDivElement> {
   link: string;
   title: string;
-  action: string;
+  action?: string;
   helperText?: string;
   description: string;
   variant?: 'default' | 'primary' | 'destructive' | 'warning';
@@ -69,14 +69,15 @@ export function CallToAction({
         {helperText && <p className="text-sm text-muted-foreground/70">{helperText}</p>}
       </div>
 
-      {onClick ? (
-        <ActionButton />
-      ) : (
-        <LinkButton href={link} variant={buttonVariant} size="lg" className="mt-2">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          {action}
-        </LinkButton>
-      )}
+      {action &&
+        (onClick ? (
+          <ActionButton />
+        ) : (
+          <LinkButton href={link} variant={buttonVariant} size="lg" className="mt-2">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {action}
+          </LinkButton>
+        ))}
     </div>
   );
 }
