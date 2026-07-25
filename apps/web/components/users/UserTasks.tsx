@@ -145,7 +145,7 @@ export const UserTasks = ({
   useEffect(() => {
     fetchTasks();
   }, [cursor, pageSize, searchTerm, duration, statusFilter, priorityFilter, assignedToFilter]);
-
+  const isClient = role === Roles.CLIENT;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-between">
@@ -187,15 +187,23 @@ export const UserTasks = ({
         <div className="min-h-[300px] flex items-center justify-center">
           <CallToAction
             link="#"
-            action="Create Your First Task"
+            action={isClient ? undefined : 'Create Your First Task'}
             title="No Tasks Found"
-            helperText="Tasks will help you organize and track your work"
-            description="Get started by creating your first task"
+            helperText={
+              isClient
+                ? "You don't have any assigned tasks yet."
+                : 'Tasks will help you organize and track your work.'
+            }
+            description={
+              isClient
+                ? 'Tasks assigned to you by your team will appear here.'
+                : 'Get started by creating your first task.'
+            }
             variant="primary"
             iconType="plus"
             className="w-full max-w-xl mx-auto"
             buttonVariant="default"
-            onClick={createTaskHandler}
+            onClick={isClient ? undefined : createTaskHandler}
           />
         </div>
       ) : (
