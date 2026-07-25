@@ -39,10 +39,10 @@ const RecentTasksPage = async () => {
         {(data?.length ?? 0) === 0 ? (
           <CallToAction
             title="No tasks found"
-            link="/taskOfferings"
-            description="You don't have any tasks yet. Create your first task to get started."
-            action="Create Task"
-            helperText="You'll be able to track most recent of your tasks from this dashboard."
+            link="#"
+            description="Tasks assigned to you by your team will appear here."
+            action={undefined}
+            helperText="You don't have any assigned tasks yet."
             variant="primary"
             iconType="plus"
             className="my-6"
